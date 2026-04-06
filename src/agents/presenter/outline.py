@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import json
-
-import anthropic
-from pydantic import BaseModel
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 
-from agents.utils.client import strip_json_fences
-from agents.presenter.intake import DeckIntake
+from agents.utils.client import create_client, parse_json_response
+from agents.presenter.models import DeckIntake, DeckOutline
 
 console = Console()
 
@@ -26,21 +22,8 @@ produce a concise narrative arc for a slide deck. Output a JSON object with:
 Keep decks to 8-12 slides. Lead with context, end with a clear call to action."""
 
 
-class SlideOutline(BaseModel):
-    number: int
-    title: str
-    type: str
-    talking_points: list[str]
-    speaker_note: str
-
-
-class DeckOutline(BaseModel):
-    title: str
-    slides: list[SlideOutline]
-
-
 def generate_outline(intake: DeckIntake, model: str) -> DeckOutline:
-    client = anthropic.Anthropic()
+    client = create_client()
 
     context_block = ""
     if intake.codebase_summary:
@@ -60,8 +43,7 @@ def generate_outline(intake: DeckIntake, model: str) -> DeckOutline:
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    data = json.loads(raw)
+    data = parse_json_response(client, response.content[0].text, model, OUTLINE_SYSTEM)
     return DeckOutline(**data)
 
 
@@ -111,7 +93,7 @@ def approval_checkpoint(
 def _apply_edit(
     outline: DeckOutline, instruction: str, model: str, intake: DeckIntake
 ) -> DeckOutline:
-    client = anthropic.Anthropic()
+    client = create_client()
 
     user_msg = (
         f"Here is the current outline:\n{outline.model_dump_json(indent=2)}\n\n"
@@ -126,6 +108,5 @@ def _apply_edit(
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    data = json.loads(raw)
+    data = parse_json_response(client, response.content[0].text, model, OUTLINE_SYSTEM)
     return DeckOutline(**data)

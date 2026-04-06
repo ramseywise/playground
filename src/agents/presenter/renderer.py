@@ -4,8 +4,10 @@ import re
 from pathlib import Path
 
 import structlog
+from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+from pptx.oxml.ns import qn
 from pptx.util import Inches, Pt
 
 from agents.presenter.outline import DeckOutline
@@ -21,6 +23,11 @@ SLIDE_H = Inches(7.5)
 LAYOUT_TITLE = 0
 LAYOUT_CONTENT = 1
 LAYOUT_BLANK = 6
+
+# Scrim overlay: 40% opaque black over bottom third of image slides
+SCRIM_ALPHA = "40000"
+SCRIM_TOP = Inches(4.5)
+SCRIM_HEIGHT = Inches(3.0)
 
 
 def _slug(text: str) -> str:
@@ -45,7 +52,16 @@ def _add_image_slide(
             height=SLIDE_H,
         )
 
-    # Semi-transparent overlay strip at bottom for text
+    # Dark scrim at bottom third so text is readable over any background
+    scrim = slide.shapes.add_shape(1, Inches(0), SCRIM_TOP, SLIDE_W, SCRIM_HEIGHT)
+    scrim.fill.solid()
+    scrim.fill.fore_color.rgb = RGBColor(0x00, 0x00, 0x00)
+    scrim.line.fill.background()
+    srgb = scrim.fill._fill._solidFill.find(qn("a:srgbClr"))
+    alpha = etree.SubElement(srgb, qn("a:alpha"))
+    alpha.set("val", SCRIM_ALPHA)
+
+    # Text box on top of scrim
     txBox = slide.shapes.add_textbox(
         left=Inches(0.5),
         top=Inches(5.2),
@@ -165,7 +181,14 @@ def render_deck(
             _add_text_slide(prs, content)
         else:
             image_path = image_map.get(content.slide_number)
-            _add_image_slide(prs, content, image_path)
+            if image_path is None:
+                log.warning(
+                    "renderer.image.missing.fallback",
+                    slide=content.slide_number,
+                )
+                _add_text_slide(prs, content)
+            else:
+                _add_image_slide(prs, content, image_path)
 
     deck_slug = _slug(outline.title)
     out_path = output_dir / f"{deck_slug}.pptx"

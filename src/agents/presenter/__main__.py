@@ -5,20 +5,15 @@ import sys
 from pathlib import Path
 
 import structlog
-import yaml
 from rich.console import Console
 from rich.prompt import IntPrompt, Prompt
+
+from agents.utils.config import settings
 
 console = Console()
 log = structlog.get_logger(__name__)
 
-CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
 AGENT_DIR = Path(__file__).resolve().parent
-
-
-def _load_config() -> dict:
-    with CONFIG_PATH.open() as f:
-        return yaml.safe_load(f)["defaults"]
 
 
 def _configure_logging() -> None:
@@ -37,7 +32,7 @@ def _configure_logging() -> None:
 # ---------------------------------------------------------------------------
 
 
-def run_deck(cfg: dict) -> None:
+def run_deck(dry_run: bool = False) -> None:
     from agents.presenter.image_fetcher import fetch_images_for_slides
     from agents.presenter.intake import collect_deck_intake
     from agents.presenter.outline import approval_checkpoint, generate_outline
@@ -45,9 +40,9 @@ def run_deck(cfg: dict) -> None:
     from agents.presenter.slide_writer import generate_slide_content
     from agents.presenter.viz_classifier import classify_slides
 
-    model = cfg["model"]
-    slides_dir = AGENT_DIR / cfg["output"]["slides_dir"]
-    template_path = AGENT_DIR / cfg["template_path"]
+    model = settings.viz_model
+    slides_dir = settings.viz_output_dir / "slides"
+    template_path = AGENT_DIR / "template.pptx"
 
     # 1. Intake
     intake = collect_deck_intake()
@@ -61,11 +56,28 @@ def run_deck(cfg: dict) -> None:
     console.print("\n[bold yellow]Writing slide content…[/bold yellow]")
     slides = generate_slide_content(outline, intake, model)
 
+    if dry_run:
+        console.print("\n[bold cyan]Dry run — skipping image fetch and render.[/bold cyan]")
+        for slide in slides:
+            console.print(
+                f"\n[bold]{slide.slide_number}. {slide.headline}[/bold] ({slide.slide_type})"
+            )
+            for bullet in slide.body:
+                console.print(f"  • {bullet}")
+        return
+
     # 4. Viz classification + prompt building
     console.print("\n[bold yellow]Building image prompts…[/bold yellow]")
-    img_w = cfg["image"]["width"]
-    img_h = cfg["image"]["height"]
-    viz_prompts = classify_slides(slides, model, img_w, img_h)
+    img_w = settings.image_width
+    img_h = settings.image_height
+    deck_style_context = (
+        f"Deck title: {outline.title}\n"
+        f"Audience: {intake.audience}\n"
+        f"Tone: {intake.tone}\n"
+        f"Maintain visual coherence: use a consistent color palette, recurring "
+        f"visual motifs, and unified style across all slides."
+    )
+    viz_prompts = classify_slides(slides, model, deck_style_context, img_w, img_h)
 
     skipped = sum(1 for vp in viz_prompts if vp.skip_image)
     fetching = len(viz_prompts) - skipped
@@ -95,15 +107,15 @@ def run_deck(cfg: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-def run_image(cfg: dict) -> None:
+def run_image() -> None:
     from agents.presenter.image_fetcher import fetch_single_image
     from agents.presenter.intake import collect_image_intake
     from agents.presenter.viz_classifier import propose_image_concepts
 
-    model = cfg["model"]
-    images_dir = AGENT_DIR / cfg["output"]["images_dir"]
-    img_w = cfg["image"]["width"]
-    img_h = cfg["image"]["height"]
+    model = settings.viz_model
+    images_dir = settings.viz_output_dir / "images"
+    img_w = settings.image_width
+    img_h = settings.image_height
 
     # 1. Intake
     intake = collect_image_intake()
@@ -169,9 +181,9 @@ def run_image(cfg: dict) -> None:
 
         break
 
-    if not selected.pollinations_url:
+    if not selected.filled_prompt:
         console.print(
-            "[red]Selected concept has no image URL — it may be a skip_image type.[/red]"
+            "[red]Selected concept has no image prompt — it may be a skip_image type.[/red]"
         )
         sys.exit(1)
 
@@ -181,8 +193,8 @@ def run_image(cfg: dict) -> None:
     filename_slug = re.sub(r"[^\w]+", "_", selected.label.lower()).strip("_")[:40]
     filename = f"{filename_slug}.png"
 
-    console.print(f"\n[bold yellow]Fetching image…[/bold yellow]")
-    out_path = fetch_single_image(selected.pollinations_url, images_dir, filename)
+    console.print("\n[bold yellow]Fetching image…[/bold yellow]")
+    out_path = fetch_single_image(selected.filled_prompt, images_dir, filename)
 
     console.print(
         f"\n[bold green]Done![/bold green] Image saved to [cyan]{out_path}[/cyan]"
@@ -208,10 +220,12 @@ def run_image(cfg: dict) -> None:
             img_width=img_w,
             img_height=img_h,
         )
-        if new_concepts and new_concepts[0].pollinations_url:
-            slug = re.sub(r"[^\w]+", "_", new_concepts[0].label.lower()).strip("_")[:40]
+        if new_concepts and new_concepts[0].filled_prompt:
+            slug = re.sub(r"[^\w]+", "_", new_concepts[0].label.lower()).strip("_")[
+                :40
+            ]
             out_path = fetch_single_image(
-                new_concepts[0].pollinations_url, images_dir, f"{slug}_v2.png"
+                new_concepts[0].filled_prompt, images_dir, f"{slug}_v2.png"
             )
             console.print(f"[bold green]Saved:[/bold green] [cyan]{out_path}[/cyan]")
 
@@ -223,7 +237,6 @@ def run_image(cfg: dict) -> None:
 
 def main() -> None:
     _configure_logging()
-    cfg = _load_config()
 
     parser = argparse.ArgumentParser(description="Presentation authoring agent")
     parser.add_argument(
@@ -231,12 +244,25 @@ def main() -> None:
         action="store_true",
         help="Run in image-only mode (no deck generation)",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Generate outline and slide content only — skip image fetch and render",
+    )
+    parser.add_argument(
+        "--provider",
+        choices=["pollinations", "replicate"],
+        help="Override the image provider from settings",
+    )
     args = parser.parse_args()
 
+    if args.provider:
+        settings.image_provider = args.provider
+
     if args.image_only:
-        run_image(cfg)
+        run_image()
     else:
-        run_deck(cfg)
+        run_deck(dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

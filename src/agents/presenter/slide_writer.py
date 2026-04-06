@@ -1,13 +1,7 @@
 from __future__ import annotations
 
-import json
-
-import anthropic
-from pydantic import BaseModel
-
-from agents.utils.client import strip_json_fences
-from agents.presenter.intake import DeckIntake
-from agents.presenter.outline import DeckOutline, SlideOutline
+from agents.utils.client import create_client, parse_json_response
+from agents.presenter.models import DeckIntake, DeckOutline, SlideContent, SlideOutline
 
 SLIDE_SYSTEM = """You are a slide content writer for technical presentations.
 Given a slide's outline and the deck context, produce the final slide content.
@@ -15,18 +9,12 @@ Output a JSON object with:
 - "headline": punchy, scannable title (max 8 words)
 - "body": list of 2-4 bullet strings (concise, no filler)
 - "speaker_note": 2-3 sentences the presenter would say
-- "image_brief": one sentence describing the ideal supporting visual (or null if slide type is data/code_demo/team)
+- "image_brief": 2-3 sentences describing the ideal supporting visual. Be specific and
+  cinematic: describe the scene, composition, dominant colors, mood, and what the viewer
+  should feel. This brief drives AI image generation, so concrete visual details matter
+  more than abstract concepts. Set to null if slide type is data/code_demo/team.
 
 Tailor language to the audience. Avoid jargon unless the audience is technical."""
-
-
-class SlideContent(BaseModel):
-    slide_number: int
-    slide_type: str
-    headline: str
-    body: list[str]
-    speaker_note: str
-    image_brief: str | None = None
 
 
 def generate_slide_content(
@@ -34,7 +22,7 @@ def generate_slide_content(
     intake: DeckIntake,
     model: str,
 ) -> list[SlideContent]:
-    client = anthropic.Anthropic()
+    client = create_client()
     results: list[SlideContent] = []
 
     context_block = ""
@@ -57,7 +45,7 @@ def generate_slide_content(
 
 
 def _generate_one_slide(
-    client: anthropic.Anthropic,
+    client: object,
     slide: SlideOutline,
     deck_context: str,
     model: str,
@@ -81,8 +69,7 @@ def _generate_one_slide(
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    data = json.loads(raw)
+    data = parse_json_response(client, response.content[0].text, model, SLIDE_SYSTEM)
     return SlideContent(
         slide_number=slide.number,
         slide_type=slide.type,
