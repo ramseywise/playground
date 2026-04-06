@@ -6,16 +6,16 @@ from pathlib import Path
 import structlog
 from dotenv import load_dotenv
 
-from agents.research.chunker import plan_chunks
-from agents.research.extractor import extract_pages, get_page_count
-from agents.research.models import Note, NoteMetadata, resolve_topic
-from agents.research.prompts import (
+from agents.researcher.chunker import plan_chunks
+from agents.researcher.extractor import extract_pages, get_page_count
+from agents.researcher.models import Note, NoteMetadata, resolve_topic
+from agents.researcher.prompts import (
     SYSTEM_PROMPT,
     build_merge_prompt,
     build_note_prompt,
 )
-from agents.shared.client import create_client
-from agents.shared.config import load_project_context, settings
+from agents.utils.client import create_client
+from agents.utils.config import load_project_context, settings
 
 load_dotenv()
 

@@ -5,8 +5,8 @@ from pathlib import Path
 
 import structlog
 
-from agents.research.models import Note
-from agents.shared.config import settings
+from agents.researcher.models import Note
+from agents.utils.config import settings
 
 log = structlog.get_logger(__name__)
 

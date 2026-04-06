@@ -8,8 +8,8 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.util import Inches, Pt
 
-from agents.visualizer.outline import DeckOutline
-from agents.visualizer.slide_writer import SlideContent
+from agents.presenter.outline import DeckOutline
+from agents.presenter.slide_writer import SlideContent
 
 log = structlog.get_logger(__name__)
 

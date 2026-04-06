@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from agents.research.extractor import extract_toc
+from agents.researcher.extractor import extract_toc
 
 MAX_CHUNK_PAGES = 20
 

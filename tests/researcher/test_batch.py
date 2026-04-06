@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agents.research.__main__ import (
+from agents.researcher.__main__ import (
     MANIFEST_PATH,
     _find_unprocessed,
     _load_manifest,
@@ -42,14 +42,14 @@ def manifest_path(tmp_path: Path) -> Path:
 
 
 def test_load_manifest_returns_empty_when_missing(tmp_path: Path) -> None:
-    with patch("agents.research.__main__.MANIFEST_PATH", tmp_path / "nonexistent.json"):
+    with patch("agents.researcher.__main__.MANIFEST_PATH", tmp_path / "nonexistent.json"):
         manifest = _load_manifest()
     assert manifest == {}
 
 
 def test_save_and_load_manifest(tmp_path: Path) -> None:
     manifest_file = tmp_path / ".processed.json"
-    with patch("agents.research.__main__.MANIFEST_PATH", manifest_file):
+    with patch("agents.researcher.__main__.MANIFEST_PATH", manifest_file):
         data = {"0.rag/paper1.pdf": {"date": "2026-04-06", "hash": "abc123", "note": "paper1"}}
         _save_manifest(data)
         loaded = _load_manifest()
@@ -59,7 +59,7 @@ def test_save_and_load_manifest(tmp_path: Path) -> None:
 
 def test_save_manifest_creates_parent_dirs(tmp_path: Path) -> None:
     manifest_file = tmp_path / "nested" / "dir" / ".processed.json"
-    with patch("agents.research.__main__.MANIFEST_PATH", manifest_file):
+    with patch("agents.researcher.__main__.MANIFEST_PATH", manifest_file):
         _save_manifest({"key": {"val": "data"}})
     assert manifest_file.exists()
 
@@ -88,7 +88,7 @@ def test_pdf_hash_differs_for_different_content(tmp_path: Path) -> None:
 
 
 def test_find_unprocessed_all_new(readings_dir: Path) -> None:
-    with patch("agents.research.__main__.settings") as mock_settings:
+    with patch("agents.researcher.__main__.settings") as mock_settings:
         mock_settings.readings_dir = readings_dir
         unprocessed = _find_unprocessed({})
 
@@ -98,7 +98,7 @@ def test_find_unprocessed_all_new(readings_dir: Path) -> None:
 def test_find_unprocessed_skips_already_processed(readings_dir: Path) -> None:
     pdf_path = readings_dir / "0.rag" / "paper1.pdf"
 
-    with patch("agents.research.__main__.settings") as mock_settings:
+    with patch("agents.researcher.__main__.settings") as mock_settings:
         mock_settings.readings_dir = readings_dir
 
         key = _relative_key(pdf_path)
@@ -112,7 +112,7 @@ def test_find_unprocessed_skips_already_processed(readings_dir: Path) -> None:
 def test_find_unprocessed_detects_changed_hash(readings_dir: Path) -> None:
     pdf_path = readings_dir / "0.rag" / "paper1.pdf"
 
-    with patch("agents.research.__main__.settings") as mock_settings:
+    with patch("agents.researcher.__main__.settings") as mock_settings:
         mock_settings.readings_dir = readings_dir
 
         key = _relative_key(pdf_path)
@@ -127,7 +127,7 @@ def test_find_unprocessed_detects_changed_hash(readings_dir: Path) -> None:
 def test_find_unprocessed_force_returns_all(readings_dir: Path) -> None:
     pdf_path = readings_dir / "0.rag" / "paper1.pdf"
 
-    with patch("agents.research.__main__.settings") as mock_settings:
+    with patch("agents.researcher.__main__.settings") as mock_settings:
         mock_settings.readings_dir = readings_dir
 
         key = _relative_key(pdf_path)
@@ -138,7 +138,7 @@ def test_find_unprocessed_force_returns_all(readings_dir: Path) -> None:
 
 
 def test_find_unprocessed_missing_dir(tmp_path: Path) -> None:
-    with patch("agents.research.__main__.settings") as mock_settings:
+    with patch("agents.researcher.__main__.settings") as mock_settings:
         mock_settings.readings_dir = tmp_path / "nonexistent"
         unprocessed = _find_unprocessed({})
 
@@ -150,7 +150,7 @@ def test_find_unprocessed_missing_dir(tmp_path: Path) -> None:
 
 def test_relative_key_within_readings(readings_dir: Path) -> None:
     pdf = readings_dir / "0.rag" / "paper1.pdf"
-    with patch("agents.research.__main__.settings") as mock_settings:
+    with patch("agents.researcher.__main__.settings") as mock_settings:
         mock_settings.readings_dir = readings_dir
         key = _relative_key(pdf)
     assert key == "0.rag/paper1.pdf"
@@ -160,7 +160,7 @@ def test_relative_key_outside_readings(tmp_path: Path) -> None:
     pdf = tmp_path / "random" / "file.pdf"
     pdf.parent.mkdir(parents=True)
     pdf.write_bytes(b"data")
-    with patch("agents.research.__main__.settings") as mock_settings:
+    with patch("agents.researcher.__main__.settings") as mock_settings:
         mock_settings.readings_dir = tmp_path / "different_dir"
         key = _relative_key(pdf)
     assert key == str(pdf.resolve())

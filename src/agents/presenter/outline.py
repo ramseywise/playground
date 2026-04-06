@@ -8,8 +8,8 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 
-from agents.shared.client import strip_json_fences
-from agents.visualizer.intake import DeckIntake
+from agents.utils.client import strip_json_fences
+from agents.presenter.intake import DeckIntake
 
 console = Console()
 

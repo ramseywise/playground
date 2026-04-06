@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, field_validator
 
-from agents.shared.config import settings
+from agents.utils.config import settings
 
 SOURCE_TOPIC_MAP: dict[str, str] = {
     "0.rag": "rag",

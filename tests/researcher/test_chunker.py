@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agents.research.chunker import (
+from agents.researcher.chunker import (
     MAX_CHUNK_PAGES,
     Chunk,
     _hard_split,
@@ -35,7 +35,7 @@ def test_single_chunk_at_exact_limit() -> None:
 
 
 def test_hard_split_fallback_when_no_toc() -> None:
-    with patch("agents.research.chunker.extract_toc", return_value="No headings here."):
+    with patch("agents.researcher.chunker.extract_toc", return_value="No headings here."):
         chunks = plan_chunks(Path("fake.pdf"), page_count=45)
     assert all(c.end_page - c.start_page + 1 <= MAX_CHUNK_PAGES for c in chunks)
     assert chunks[0].start_page == 1
@@ -61,7 +61,7 @@ def test_toc_detected_chapters() -> None:
         "Chapter 2: Background    25\n"
         "Chapter 3: Methods       45\n"
     )
-    with patch("agents.research.chunker.extract_toc", return_value=toc_text):
+    with patch("agents.researcher.chunker.extract_toc", return_value=toc_text):
         chunks = plan_chunks(Path("fake.pdf"), page_count=60)
     assert all(c.end_page - c.start_page + 1 <= MAX_CHUNK_PAGES for c in chunks)
     # Chapter 1 and 2 span 22 and 20 pages respectively — chapter 1 oversized → sub-split
@@ -112,7 +112,7 @@ def test_chunk_model_is_pydantic() -> None:
 @pytest.mark.integration
 def test_plan_chunks_real_pdf() -> None:
     """sample.pdf is 12 pages — should return a single chunk."""
-    from agents.research.chunker import plan_chunks
+    from agents.researcher.chunker import plan_chunks
 
     chunks = plan_chunks(FIXTURE_PDF, page_count=12)
     assert len(chunks) == 1

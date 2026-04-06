@@ -6,9 +6,9 @@ Personal AI agent toolkit for processing research PDFs into an Obsidian knowledg
 
 ```
 src/agents/           # Python package (target structure — see plan)
-  shared/             # Config, Claude client, shared utilities
-  research/           # PDF → chunked notes → Obsidian vault
-  visualizer/         # Interactive presentation builder → PPTX
+  utils/              # Config, Claude client, shared utilities
+  researcher/         # PDF → chunked notes → Obsidian vault
+  presenter/          # Interactive presentation builder → PPTX
 tests/                # Mirrors src/agents/ structure
 obsidian/             # Curated knowledge corpus (vault output)
 ```
@@ -26,8 +26,8 @@ obsidian/             # Curated knowledge corpus (vault output)
 ## Tooling
 
 - `uv run pytest tests/` — full test suite
-- `uv run pytest tests/research/` — research agent tests only
-- `uv run pytest tests/visualizer/` — visualizer tests only
+- `uv run pytest tests/researcher/` — research agent tests only
+- `uv run pytest tests/presenter/` — presenter tests only
 - `.env` never committed; `.env.example` is the template
 - Formatting and linting run automatically via hooks on every file write — do not run manually unless asked
   (Requires hooks in `.claude/settings.json` — see this project's config for the reference implementation)
@@ -95,10 +95,10 @@ Start each session with `/start` (reads `.claude/docs/SESSION.md` + `CLAUDE.md`)
 
 ## Path convention
 
-All configurable paths (Dropbox readings, Obsidian vault, PDF binaries) are defined in `src/agents/shared/config.py` via `pydantic-settings` and loaded from `.env`. Never hardcode user-specific paths in source files.
+All configurable paths (Dropbox readings, Obsidian vault, PDF binaries) are defined in `src/agents/utils/config.py` via `pydantic-settings` and loaded from `.env`. Never hardcode user-specific paths in source files.
 
 ```python
-from agents.shared.config import settings
+from agents.utils.config import settings
 settings.readings_dir      # ~/Dropbox/ai_readings (default, overridable)
 settings.obsidian_vault    # ~/workspace/obsidian (default, overridable)
 ```

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from agents.research.agent import (
+from agents.researcher.agent import (
     ResearchAgent,
     _extract_relevance,
     _extract_tags,
@@ -20,15 +20,15 @@ FIXTURE_PDF = Path(__file__).parent / "fixtures" / "sample.pdf"
 
 def _make_agent() -> ResearchAgent:
     with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-fake"}):
-        with patch("agents.research.agent.create_client"):
-            with patch("agents.research.agent.load_project_context", return_value=""):
+        with patch("agents.researcher.agent.create_client"):
+            with patch("agents.researcher.agent.load_project_context", return_value=""):
                 return ResearchAgent()
 
 
 def test_agent_init_raises_without_api_key() -> None:
     with patch.dict("os.environ", {}, clear=True):
-        with patch("agents.research.agent.load_dotenv"):
-            with patch("agents.research.agent.create_client", side_effect=RuntimeError("ANTHROPIC_API_KEY not set")):
+        with patch("agents.researcher.agent.load_dotenv"):
+            with patch("agents.researcher.agent.create_client", side_effect=RuntimeError("ANTHROPIC_API_KEY not set")):
                 with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
                     ResearchAgent()
 
@@ -38,8 +38,8 @@ def test_agent_uses_env_model() -> None:
         "os.environ",
         {"ANTHROPIC_API_KEY": "sk-fake", "ANTHROPIC_MODEL": "claude-haiku-4-5-20251001"},
     ):
-        with patch("agents.research.agent.create_client"):
-            with patch("agents.research.agent.load_project_context", return_value=""):
+        with patch("agents.researcher.agent.create_client"):
+            with patch("agents.researcher.agent.load_project_context", return_value=""):
                 agent = ResearchAgent()
     assert agent.model == "claude-haiku-4-5-20251001"
 
@@ -50,8 +50,8 @@ def test_agent_defaults_to_configured_model() -> None:
         import os as _os
         saved = _os.environ.pop("ANTHROPIC_MODEL", None)
         try:
-            with patch("agents.research.agent.create_client"):
-                with patch("agents.research.agent.load_project_context", return_value=""):
+            with patch("agents.researcher.agent.create_client"):
+                with patch("agents.researcher.agent.load_project_context", return_value=""):
                     agent = ResearchAgent()
             assert agent.model is not None
         finally:
@@ -68,14 +68,14 @@ def test_process_pdf_single_chunk_two_api_calls() -> None:
     )
 
     with (
-        patch("agents.research.agent.get_page_count", return_value=12),
-        patch("agents.research.agent.plan_chunks") as mock_chunks,
-        patch("agents.research.agent.extract_pages", return_value="chunk text"),
-        patch("agents.research.agent.resolve_topic", return_value="rag"),
-        patch("agents.research.agent._vault_topics", return_value=["rag"]),
+        patch("agents.researcher.agent.get_page_count", return_value=12),
+        patch("agents.researcher.agent.plan_chunks") as mock_chunks,
+        patch("agents.researcher.agent.extract_pages", return_value="chunk text"),
+        patch("agents.researcher.agent.resolve_topic", return_value="rag"),
+        patch("agents.researcher.agent._vault_topics", return_value=["rag"]),
         patch.object(agent, "_call_claude", return_value=fake_body) as mock_call,
     ):
-        from agents.research.chunker import Chunk
+        from agents.researcher.chunker import Chunk
         mock_chunks.return_value = [Chunk(start_page=1, end_page=12, title="Full Document")]
 
         note = agent.process_pdf(Path("fake.pdf"))
@@ -94,14 +94,14 @@ def test_process_pdf_multi_chunk_calls_merge() -> None:
     fake_body = "## Summary\n**Relevance: 3/5**\n#rag"
 
     with (
-        patch("agents.research.agent.get_page_count", return_value=25),
-        patch("agents.research.agent.plan_chunks") as mock_chunks,
-        patch("agents.research.agent.extract_pages", return_value="text"),
-        patch("agents.research.agent.resolve_topic", return_value="rag"),
-        patch("agents.research.agent._vault_topics", return_value=[]),
+        patch("agents.researcher.agent.get_page_count", return_value=25),
+        patch("agents.researcher.agent.plan_chunks") as mock_chunks,
+        patch("agents.researcher.agent.extract_pages", return_value="text"),
+        patch("agents.researcher.agent.resolve_topic", return_value="rag"),
+        patch("agents.researcher.agent._vault_topics", return_value=[]),
         patch.object(agent, "_call_claude", return_value=fake_body) as mock_call,
     ):
-        from agents.research.chunker import Chunk
+        from agents.researcher.chunker import Chunk
         mock_chunks.return_value = [
             Chunk(start_page=1, end_page=20, title="Part 1"),
             Chunk(start_page=21, end_page=25, title="Part 2"),
@@ -122,14 +122,14 @@ def test_prior_summary_passed_to_second_chunk() -> None:
         return "## Summary\n**Relevance: 3/5**\n#ml"
 
     with (
-        patch("agents.research.agent.get_page_count", return_value=25),
-        patch("agents.research.agent.plan_chunks") as mock_chunks,
-        patch("agents.research.agent.extract_pages", return_value="text"),
-        patch("agents.research.agent.resolve_topic", return_value="rag"),
-        patch("agents.research.agent._vault_topics", return_value=[]),
+        patch("agents.researcher.agent.get_page_count", return_value=25),
+        patch("agents.researcher.agent.plan_chunks") as mock_chunks,
+        patch("agents.researcher.agent.extract_pages", return_value="text"),
+        patch("agents.researcher.agent.resolve_topic", return_value="rag"),
+        patch("agents.researcher.agent._vault_topics", return_value=[]),
         patch.object(agent, "_call_claude", side_effect=capture),
     ):
-        from agents.research.chunker import Chunk
+        from agents.researcher.chunker import Chunk
         mock_chunks.return_value = [
             Chunk(start_page=1, end_page=20, title="Part 1"),
             Chunk(start_page=21, end_page=25, title="Part 2"),
@@ -143,16 +143,16 @@ def test_prior_summary_passed_to_second_chunk() -> None:
 
 def test_project_context_loaded_at_init() -> None:
     with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-fake"}):
-        with patch("agents.research.agent.create_client"):
-            with patch("agents.research.agent.load_project_context", return_value="My project context"):
+        with patch("agents.researcher.agent.create_client"):
+            with patch("agents.researcher.agent.load_project_context", return_value="My project context"):
                 agent = ResearchAgent()
     assert agent.project_context == "My project context"
 
 
 def test_project_context_passed_to_chunk_prompt() -> None:
     with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-fake"}):
-        with patch("agents.research.agent.create_client"):
-            with patch("agents.research.agent.load_project_context", return_value="## Active: agents toolkit"):
+        with patch("agents.researcher.agent.create_client"):
+            with patch("agents.researcher.agent.load_project_context", return_value="## Active: agents toolkit"):
                 agent = ResearchAgent()
 
     call_prompts: list[str] = []
@@ -162,14 +162,14 @@ def test_project_context_passed_to_chunk_prompt() -> None:
         return "## Summary\n**Relevance: 3/5**\n#ml"
 
     with (
-        patch("agents.research.agent.get_page_count", return_value=10),
-        patch("agents.research.agent.plan_chunks") as mock_chunks,
-        patch("agents.research.agent.extract_pages", return_value="text"),
-        patch("agents.research.agent.resolve_topic", return_value="rag"),
-        patch("agents.research.agent._vault_topics", return_value=[]),
+        patch("agents.researcher.agent.get_page_count", return_value=10),
+        patch("agents.researcher.agent.plan_chunks") as mock_chunks,
+        patch("agents.researcher.agent.extract_pages", return_value="text"),
+        patch("agents.researcher.agent.resolve_topic", return_value="rag"),
+        patch("agents.researcher.agent._vault_topics", return_value=[]),
         patch.object(agent, "_call_claude", side_effect=capture),
     ):
-        from agents.research.chunker import Chunk
+        from agents.researcher.chunker import Chunk
         mock_chunks.return_value = [Chunk(start_page=1, end_page=10, title="Full Document")]
         agent.process_pdf(Path("fake.pdf"))
 
@@ -179,16 +179,16 @@ def test_project_context_passed_to_chunk_prompt() -> None:
 
 def test_max_tokens_configurable() -> None:
     with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-fake"}):
-        with patch("agents.research.agent.create_client"):
-            with patch("agents.research.agent.load_project_context", return_value=""):
+        with patch("agents.researcher.agent.create_client"):
+            with patch("agents.researcher.agent.load_project_context", return_value=""):
                 agent = ResearchAgent(max_tokens=2048)
     assert agent.max_tokens == 2048
 
 
 def test_max_tokens_from_env() -> None:
     with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-fake", "RESEARCH_MAX_TOKENS": "1024"}):
-        with patch("agents.research.agent.create_client"):
-            with patch("agents.research.agent.load_project_context", return_value=""):
+        with patch("agents.researcher.agent.create_client"):
+            with patch("agents.researcher.agent.load_project_context", return_value=""):
                 agent = ResearchAgent()
     assert agent.max_tokens == 1024
 

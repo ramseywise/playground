@@ -38,12 +38,12 @@ def _configure_logging() -> None:
 
 
 def run_deck(cfg: dict) -> None:
-    from agents.visualizer.image_fetcher import fetch_images_for_slides
-    from agents.visualizer.intake import collect_deck_intake
-    from agents.visualizer.outline import approval_checkpoint, generate_outline
-    from agents.visualizer.renderer import render_deck
-    from agents.visualizer.slide_writer import generate_slide_content
-    from agents.visualizer.viz_classifier import classify_slides
+    from agents.presenter.image_fetcher import fetch_images_for_slides
+    from agents.presenter.intake import collect_deck_intake
+    from agents.presenter.outline import approval_checkpoint, generate_outline
+    from agents.presenter.renderer import render_deck
+    from agents.presenter.slide_writer import generate_slide_content
+    from agents.presenter.viz_classifier import classify_slides
 
     model = cfg["model"]
     slides_dir = AGENT_DIR / cfg["output"]["slides_dir"]
@@ -96,9 +96,9 @@ def run_deck(cfg: dict) -> None:
 
 
 def run_image(cfg: dict) -> None:
-    from agents.visualizer.image_fetcher import fetch_single_image
-    from agents.visualizer.intake import collect_image_intake
-    from agents.visualizer.viz_classifier import propose_image_concepts
+    from agents.presenter.image_fetcher import fetch_single_image
+    from agents.presenter.intake import collect_image_intake
+    from agents.presenter.viz_classifier import propose_image_concepts
 
     model = cfg["model"]
     images_dir = AGENT_DIR / cfg["output"]["images_dir"]

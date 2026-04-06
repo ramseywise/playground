@@ -5,9 +5,9 @@ import json
 import anthropic
 from pydantic import BaseModel
 
-from agents.shared.client import strip_json_fences
-from agents.visualizer.intake import DeckIntake
-from agents.visualizer.outline import DeckOutline, SlideOutline
+from agents.utils.client import strip_json_fences
+from agents.presenter.intake import DeckIntake
+from agents.presenter.outline import DeckOutline, SlideOutline
 
 SLIDE_SYSTEM = """You are a slide content writer for technical presentations.
 Given a slide's outline and the deck context, produce the final slide content.
