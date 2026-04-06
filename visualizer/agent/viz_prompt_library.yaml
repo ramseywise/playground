@@ -1,0 +1,29 @@
+architecture:
+  style: "clean isometric technical diagram, blueprint aesthetic, dark navy and cyan palette, minimalist line art, no text labels"
+  template: "isometric system architecture diagram showing {components} connected by {relationships}, {cloud_or_local} infrastructure, {scale_descriptor} scale deployment"
+  skip_image: false
+
+concept:
+  style: "abstract geometric illustration, modern flat design, bold accent colors on white, symbolic and metaphorical, no literal depictions"
+  template: "abstract visual metaphor for {concept_name}: {metaphor_description}, conveying {emotional_tone}, {color_mood} color palette"
+  skip_image: false
+
+narrative:
+  style: "cinematic wide-angle photograph or editorial illustration, atmospheric lighting, storytelling composition, emotionally resonant"
+  template: "editorial photograph depicting {scene_description}, {setting}, {mood} atmosphere, {subject} as focal point, photorealistic"
+  skip_image: false
+
+data:
+  style: "n/a — use slide layout with large text and chart placeholder, no generated image"
+  template: ""
+  skip_image: true
+
+code_demo:
+  style: "n/a — flag for screenshot or code diagram; no generated image"
+  template: ""
+  skip_image: true
+
+team:
+  style: "n/a — use neutral geometric pattern or avatar placeholder from template"
+  template: ""
+  skip_image: true
