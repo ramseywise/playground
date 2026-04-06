@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from agents.visualizer.viz_classifier import (
+from agents.presenter.viz_classifier import (
     VizPrompt,
     ImageConcept,
     _build_url,
 )
-from agents.visualizer.slide_writer import SlideContent
+from agents.presenter.slide_writer import SlideContent
 
 
 def test_viz_prompt_skip_image() -> None:

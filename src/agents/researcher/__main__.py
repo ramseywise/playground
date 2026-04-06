@@ -11,7 +11,7 @@ from pathlib import Path
 import structlog
 from dotenv import load_dotenv
 
-from agents.shared.config import settings
+from agents.utils.config import settings
 
 load_dotenv()
 
@@ -81,8 +81,8 @@ def _find_unprocessed(
 
 def _run_single(pdf_path: Path, dry_run: bool, topic: str | None) -> None:
     """Process a single PDF and write note."""
-    from agents.research.agent import ResearchAgent
-    from agents.research.writer import render_note, write_note
+    from agents.researcher.agent import ResearchAgent
+    from agents.researcher.writer import render_note, write_note
 
     log.info("cli.start", pdf=str(pdf_path), dry_run=dry_run, topic=topic)
 
@@ -108,9 +108,9 @@ def _run_batch(dry_run: bool, force: bool, max_pdfs: int = 5) -> None:
             Prevents runaway token spend when many PDFs accumulate.
             Each PDF costs ~2 API calls (chunks + merge).
     """
-    from agents.research.agent import ResearchAgent
-    from agents.research.models import resolve_topic
-    from agents.research.writer import write_note
+    from agents.researcher.agent import ResearchAgent
+    from agents.researcher.models import resolve_topic
+    from agents.researcher.writer import write_note
 
     manifest = _load_manifest()
     unprocessed = _find_unprocessed(manifest, force=force)

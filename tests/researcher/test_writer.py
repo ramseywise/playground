@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from agents.research.models import Note, NoteMetadata
-from agents.research.writer import render_note, sanitize_filename, write_note
+from agents.researcher.models import Note, NoteMetadata
+from agents.researcher.writer import render_note, sanitize_filename, write_note
 
 
 def _make_note(**overrides: object) -> Note:
@@ -78,7 +78,7 @@ def test_render_note_body_follows_frontmatter() -> None:
 
 
 def test_write_note_creates_file(tmp_path: Path) -> None:
-    import agents.research.writer as writer_module
+    import agents.researcher.writer as writer_module
 
     original_topics = writer_module.OBSIDIAN_TOPICS
     original_index = writer_module.OBSIDIAN_INDEX
@@ -98,7 +98,7 @@ def test_write_note_creates_file(tmp_path: Path) -> None:
 
 
 def test_write_note_appends_index(tmp_path: Path) -> None:
-    import agents.research.writer as writer_module
+    import agents.researcher.writer as writer_module
 
     original_topics = writer_module.OBSIDIAN_TOPICS
     original_index = writer_module.OBSIDIAN_INDEX
@@ -118,7 +118,7 @@ def test_write_note_appends_index(tmp_path: Path) -> None:
 
 
 def test_write_note_raises_if_exists(tmp_path: Path) -> None:
-    import agents.research.writer as writer_module
+    import agents.researcher.writer as writer_module
 
     original_topics = writer_module.OBSIDIAN_TOPICS
     original_index = writer_module.OBSIDIAN_INDEX
@@ -136,7 +136,7 @@ def test_write_note_raises_if_exists(tmp_path: Path) -> None:
 
 
 def test_index_created_if_missing(tmp_path: Path) -> None:
-    import agents.research.writer as writer_module
+    import agents.researcher.writer as writer_module
 
     original_topics = writer_module.OBSIDIAN_TOPICS
     original_index = writer_module.OBSIDIAN_INDEX

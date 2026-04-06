@@ -29,5 +29,5 @@ testpaths = ["tests"]
 markers = ["integration: tests that hit real binaries or external services"]
 
 [project.scripts]
-research-agent = "agents.research.__main__:main"
-visualizer = "agents.visualizer.__main__:main"
+research-agent = "agents.researcher.__main__:main"
+presenter = "agents.presenter.__main__:main"

@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from agents.shared.config import settings
+from agents.utils.config import settings
 
 
 def get_page_count(pdf_path: Path) -> int:

@@ -8,8 +8,8 @@ import anthropic
 import yaml
 from pydantic import BaseModel
 
-from agents.shared.client import strip_json_fences
-from agents.visualizer.slide_writer import SlideContent
+from agents.utils.client import strip_json_fences
+from agents.presenter.slide_writer import SlideContent
 
 LIBRARY_PATH = Path(__file__).resolve().parent / "viz_prompt_library.yaml"
 

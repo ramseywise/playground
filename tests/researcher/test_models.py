@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agents.research.models import (
+from agents.researcher.models import (
     NoteMetadata,
     Note,
     SOURCE_TOPIC_MAP,
@@ -24,7 +24,7 @@ def test_resolve_topic_all_known_folders(
 ) -> None:
     pdf_path = Path("/Users/wiseer/Dropbox/ai_readings") / folder / "some_paper.pdf"
     # Patch OBSIDIAN_TOPICS to avoid creating real dirs during tests
-    import agents.research.models as models_module
+    import agents.researcher.models as models_module
 
     original = models_module.OBSIDIAN_TOPICS
     models_module.OBSIDIAN_TOPICS = tmp_path
@@ -41,7 +41,7 @@ def test_resolve_topic_knowledge_graphs() -> None:
     pdf_path = Path(
         "/Users/wiseer/Dropbox/ai_readings/2.knowledge graphs/chapter13.pdf"
     )
-    import agents.research.models as models_module
+    import agents.researcher.models as models_module
 
     from pathlib import Path as _Path
     import tempfile

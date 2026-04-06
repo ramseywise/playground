@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import anthropic
 
-from agents.shared.config import settings
+from agents.utils.config import settings
 
 
 def create_client() -> anthropic.Anthropic:
