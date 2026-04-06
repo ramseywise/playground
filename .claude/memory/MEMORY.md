@@ -9,3 +9,4 @@
 - [Graph node path coverage](feedback_graph_node_path_coverage.md) — LangGraph test patterns: trace full paths, not just node I/O
 - [Last.fm API activation](feedback_lastfm_api_activation.md) — error 10 = pending manual approval, not wrong key
 - [Agentic AI master checklist](reference_agentic_checklist.md) — Notion link; RAG, LangGraph, memory, multi-agent, eval, deployment
+- [Agent platform decisions](project_agent_platform.md) — independent processes, no LangGraph, obsidian=corpus, PDFs in Dropbox via .env
