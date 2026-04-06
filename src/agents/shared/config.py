@@ -19,6 +19,18 @@ class Settings(BaseSettings):
     pdftotext_bin: Path = Path("/opt/homebrew/bin/pdftotext")
     pdfinfo_bin: Path = Path("/opt/homebrew/bin/pdfinfo")
 
+    # Visualizer settings
+    image_provider: str = "pollinations"  # "pollinations" | "replicate"
+    pollinations_model: str = "flux"
+    pollinations_seed: int | None = None  # None = random
+    pollinations_enhance: bool = False
+    replicate_api_token: str = ""
+    viz_output_dir: Path = Path("output")
+    image_width: int = 1280
+    image_height: int = 720
+    viz_audience: str = "mixed technical and product team"
+    viz_model: str = "claude-sonnet-4-6"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @property

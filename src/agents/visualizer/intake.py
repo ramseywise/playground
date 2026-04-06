@@ -2,34 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import yaml
-from pydantic import BaseModel
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
+from agents.shared.config import settings
+from agents.visualizer.models import DeckIntake, ImageIntake
+
 console = Console()
-
-CONFIG_PATH = Path(__file__).resolve().parent / "config.yaml"
-
-
-def _load_config() -> dict:
-    with CONFIG_PATH.open() as f:
-        return yaml.safe_load(f)["defaults"]
-
-
-class DeckIntake(BaseModel):
-    goal: str
-    audience: str
-    tone: str
-    codebase_summary: str | None = None
-    use_template: bool = True
-
-
-class ImageIntake(BaseModel):
-    goal: str
-    description: str
-    audience: str
-    tone: str
 
 
 def _summarize_codebase(path: Path) -> str:
@@ -56,23 +35,18 @@ def _summarize_codebase(path: Path) -> str:
 
 
 def collect_deck_intake() -> DeckIntake:
-    cfg = _load_config()
-
     console.rule("[bold]Presentation Setup")
 
     goal = Prompt.ask("[bold]What is the goal of this presentation?")
     tone = Prompt.ask("Tone", default="professional but approachable")
 
-    default_audience = cfg["audience"]
+    default_audience = settings.viz_audience
     use_default = Confirm.ask(
         f"Use default audience?\n  [dim]{default_audience}[/dim]", default=True
     )
     audience = default_audience if use_default else Prompt.ask("Audience")
 
-    use_template = cfg["use_template"]
-    override_template = Confirm.ask(
-        f"Use slide template? ([dim]{cfg['template_path']}[/dim])", default=use_template
-    )
+    use_template = Confirm.ask("Use slide template?", default=True)
 
     codebase_summary: str | None = None
     has_codebase = Confirm.ask("Reference a codebase?", default=False)
@@ -91,20 +65,18 @@ def collect_deck_intake() -> DeckIntake:
         audience=audience,
         tone=tone,
         codebase_summary=codebase_summary,
-        use_template=override_template,
+        use_template=use_template,
     )
 
 
 def collect_image_intake() -> ImageIntake:
-    cfg = _load_config()
-
     console.rule("[bold]Image Generation Setup")
 
     goal = Prompt.ask("[bold]What is this image for?")
     description = Prompt.ask("Describe what you want to convey")
     tone = Prompt.ask("Tone / aesthetic", default="modern, clean, professional")
 
-    default_audience = cfg["audience"]
+    default_audience = settings.viz_audience
     use_default = Confirm.ask(
         f"Use default audience?\n  [dim]{default_audience}[/dim]", default=True
     )

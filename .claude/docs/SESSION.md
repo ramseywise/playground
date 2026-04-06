@@ -33,7 +33,7 @@ Docs:
 Files: `__main__.py`, `image_fetcher.py`, `intake.py`, `outline.py`, `renderer.py`, `slide_writer.py`, `viz_classifier.py`
 Stack: python-pptx, Pollinations.ai for images, rich for interactive CLI, yaml config
 Tests: `test_outline.py`, `test_viz_classifier.py` (no batch/cron equivalent)
-No plans or research docs exist for visualizer.
+Research + plan complete. See Active docs section.
 
 ## Active gotchas
 
@@ -42,11 +42,14 @@ No plans or research docs exist for visualizer.
 - `obsidian/project_context.md` is committed to repo — update it as projects evolve or it becomes stale context for the agent
 - Cron script paths are templated (`/path/to/repo`) — user must edit for their machine before `crontab -e`
 
+## Active docs
+
+- Research: `.claude/docs/research/visualizer-improvements.md`
+- Plan: `.claude/docs/plans/visualizer_improvements.md`
+
 ## Open questions / blockers
 
-- Should we run `/review` now or commit first?
-- Should the existing ch13 note be regenerated with the new template?
-- Visualizer agent: any planned refactors or is it stable?
+- Research agent: `/review` + commit still pending on branch `cord/protestant-salamander-617e`
 - Remote trigger setup: requires `/login` to claude.ai — deferred
 
 ## Next session prompt

@@ -1,34 +1,47 @@
+"""Visual prompt engineering — two-pass strategy for high-quality image prompts."""
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from urllib.parse import quote
 
-import anthropic
 import yaml
-from pydantic import BaseModel
 
-from agents.shared.client import strip_json_fences
-from agents.visualizer.slide_writer import SlideContent
+from agents.shared.client import create_client, strip_json_fences
+from agents.visualizer.models import ImageConcept, SlideContent, VizPrompt
 
 LIBRARY_PATH = Path(__file__).resolve().parent / "viz_prompt_library.yaml"
 
-CLASSIFIER_SYSTEM = """You are a visual prompt engineer. Given a slide's content and type,
-fill in the template variables for the matching viz type from the prompt library.
+# --- System prompts for two-pass strategy ---
+
+SCENE_SYSTEM = """You are a visual scene designer for presentations. Given a slide's content,
+its position in the deck, and the deck's visual style guidelines, generate a detailed scene
+description that will become an image generation prompt.
+
+Output a JSON object with:
+- "scene": 2-3 sentences describing the visual scene in vivid, specific detail
+- "key_elements": list of 3-5 concrete visual elements that must appear
+- "mood": one word for the emotional tone
+- "color_palette": 2-3 specific colors that match the deck's style
+
+Be concrete and visual. "A glowing neural network" is better than "AI technology".
+Reference the deck style context to maintain visual coherence across slides."""
+
+PROMPT_SYSTEM = """You are an expert at writing prompts for AI image generation models.
+Given a scene description and a prompt template with variables, fill in the template
+variables to produce the most visually striking, coherent image possible.
+
 Return a JSON object with the variable names as keys and your filled values as strings.
-Be specific and visual — these values become an image generation prompt."""
+Be specific and cinematic — these values are fed directly to an image generation model.
+Avoid text, words, or labels in the image. Focus on visual elements only."""
 
 CONCEPT_SYSTEM = """You are a visual creative director. Given a goal, description, audience, and tone,
 propose exactly {n} distinct image concepts. Each should be visually distinct in approach.
 Return a JSON array of objects, each with:
 - "label": short name (3-5 words)
-- "viz_type": one of architecture|concept|narrative
+- "viz_type": one of architecture|concept|narrative|timeline|comparison|process_flow
 - "description": one sentence of what the image depicts
 - "rationale": one sentence on why this suits the goal"""
-
-IMAGE_SYSTEM = """You are a visual prompt engineer. Given an image concept and viz type,
-fill in the template variables for the matching viz type from the prompt library.
-Return a JSON object with the variable names as keys and your filled values as strings."""
 
 
 def _load_library() -> dict:
@@ -36,52 +49,63 @@ def _load_library() -> dict:
         return yaml.safe_load(f)
 
 
-class VizPrompt(BaseModel):
-    slide_number: int
-    viz_type: str
-    skip_image: bool
-    pollinations_url: str | None = None
-    filled_prompt: str | None = None
-
-
-class ImageConcept(BaseModel):
-    label: str
-    viz_type: str
-    description: str
-    rationale: str
-    pollinations_url: str | None = None
-    filled_prompt: str | None = None
-
-
-def _build_url(prompt: str, width: int = 1280, height: int = 720) -> str:
-    encoded = quote(prompt)
-    return f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true"
-
-
-def _fill_template(
-    client: anthropic.Anthropic,
+def _generate_scene_description(
+    client: object,
     model: str,
+    slide_context: str,
+    deck_style_context: str,
+) -> dict:
+    """Pass 1: Generate a rich scene description from slide + deck context."""
+    user_msg = (
+        f"Deck visual style:\n{deck_style_context}\n\n"
+        f"Slide context:\n{slide_context}"
+    )
+
+    response = client.messages.create(
+        model=model,
+        max_tokens=512,
+        system=SCENE_SYSTEM,
+        messages=[{"role": "user", "content": user_msg}],
+    )
+
+    raw = strip_json_fences(response.content[0].text)
+    return json.loads(raw)
+
+
+def _translate_to_image_prompt(
+    client: object,
+    model: str,
+    scene: dict,
     template: str,
     style: str,
-    context: str,
+    scene_hint: str,
 ) -> str:
-    """Ask Claude to fill template variables; return the assembled prompt string."""
+    """Pass 2: Translate scene description into an optimized image-gen prompt."""
     import re
 
     variables = re.findall(r"\{(\w+)\}", template)
     if not variables:
         return f"{template}, {style}"
 
+    scene_description = scene.get("scene", "")
+    key_elements = ", ".join(scene.get("key_elements", []))
+    mood = scene.get("mood", "")
+    color_palette = ", ".join(scene.get("color_palette", []))
+
     user_msg = (
+        f"Scene description: {scene_description}\n"
+        f"Key visual elements: {key_elements}\n"
+        f"Mood: {mood}\n"
+        f"Color palette: {color_palette}\n"
+        f"Scene hint: {scene_hint}\n\n"
         f"Template: {template}\n"
-        f"Variables to fill: {variables}\n\n"
-        f"Context:\n{context}"
+        f"Variables to fill: {variables}"
     )
 
     response = client.messages.create(
         model=model,
         max_tokens=512,
-        system=CLASSIFIER_SYSTEM,
+        system=PROMPT_SYSTEM,
         messages=[{"role": "user", "content": user_msg}],
     )
 
@@ -94,10 +118,12 @@ def _fill_template(
 def classify_slides(
     slides: list[SlideContent],
     model: str,
+    deck_style_context: str = "",
     img_width: int = 1280,
     img_height: int = 720,
 ) -> list[VizPrompt]:
-    client = anthropic.Anthropic()
+    """Classify slides and generate image prompts using two-pass strategy."""
+    client = create_client()
     library = _load_library()
     results: list[VizPrompt] = []
 
@@ -115,23 +141,33 @@ def classify_slides(
             )
             continue
 
-        context = (
-            f"Slide headline: {slide.headline}\n"
+        slide_context = (
+            f"Slide {slide.slide_number}: {slide.headline}\n"
+            f"Type: {viz_type}\n"
             f"Bullet points: {', '.join(slide.body)}\n"
             f"Image brief: {slide.image_brief}"
         )
 
-        filled = _fill_template(
-            client, model, entry["template"], entry["style"], context
+        # Pass 1: scene description
+        scene = _generate_scene_description(
+            client, model, slide_context, deck_style_context
         )
-        url = _build_url(filled, img_width, img_height)
+
+        # Pass 2: translate to image prompt
+        filled = _translate_to_image_prompt(
+            client,
+            model,
+            scene,
+            entry["template"],
+            entry["style"],
+            entry.get("scene_hint", ""),
+        )
 
         results.append(
             VizPrompt(
                 slide_number=slide.slide_number,
                 viz_type=viz_type,
                 skip_image=False,
-                pollinations_url=url,
                 filled_prompt=filled,
             )
         )
@@ -149,7 +185,8 @@ def propose_image_concepts(
     img_width: int = 1280,
     img_height: int = 720,
 ) -> list[ImageConcept]:
-    client = anthropic.Anthropic()
+    """Propose image concepts for image-only mode."""
+    client = create_client()
     library = _load_library()
 
     system = CONCEPT_SYSTEM.format(n=n)
@@ -170,18 +207,26 @@ def propose_image_concepts(
     raw = strip_json_fences(response.content[0].text)
     concepts = [ImageConcept(**item) for item in json.loads(raw)]
 
-    # Fill prompts for each concept
+    # Fill prompts for each concept using two-pass
     for concept in concepts:
         entry = library.get(concept.viz_type, library["concept"])
         if entry["skip_image"]:
             continue
-        context = (
-            f"Goal: {goal}\nDescription: {description}\nConcept: {concept.description}"
-        )
-        filled = _fill_template(
-            client, model, entry["template"], entry["style"], context
+
+        scene = {
+            "scene": concept.description,
+            "key_elements": [concept.label],
+            "mood": tone,
+            "color_palette": [],
+        }
+        filled = _translate_to_image_prompt(
+            client,
+            model,
+            scene,
+            entry["template"],
+            entry["style"],
+            entry.get("scene_hint", ""),
         )
         concept.filled_prompt = filled
-        concept.pollinations_url = _build_url(filled, img_width, img_height)
 
     return concepts

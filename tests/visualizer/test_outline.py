@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-from agents.visualizer.outline import DeckOutline, generate_outline
-from agents.visualizer.intake import DeckIntake
+from agents.visualizer.outline import generate_outline
+from agents.visualizer.models import DeckIntake, DeckOutline
 
 
 def _fake_response(text: str) -> MagicMock:
@@ -14,7 +14,7 @@ def _fake_response(text: str) -> MagicMock:
 
 
 def test_generate_outline_parses_json() -> None:
-    """Claude returns JSON → DeckOutline model."""
+    """Claude returns JSON -> DeckOutline model."""
     fake_json = json.dumps({
         "title": "Test Deck",
         "slides": [
@@ -27,8 +27,8 @@ def test_generate_outline_parses_json() -> None:
             }
         ],
     })
-    with patch("agents.visualizer.outline.anthropic.Anthropic") as mock_cls:
-        mock_cls.return_value.messages.create.return_value = _fake_response(fake_json)
+    with patch("agents.visualizer.outline.create_client") as mock_create:
+        mock_create.return_value.messages.create.return_value = _fake_response(fake_json)
         intake = DeckIntake(goal="test", audience="eng", tone="casual")
         outline = generate_outline(intake, "claude-sonnet-4-6")
 
@@ -53,8 +53,8 @@ def test_generate_outline_strips_fences() -> None:
         ],
     })
     fenced = f"```json\n{raw}\n```"
-    with patch("agents.visualizer.outline.anthropic.Anthropic") as mock_cls:
-        mock_cls.return_value.messages.create.return_value = _fake_response(fenced)
+    with patch("agents.visualizer.outline.create_client") as mock_create:
+        mock_create.return_value.messages.create.return_value = _fake_response(fenced)
         intake = DeckIntake(goal="test", audience="eng", tone="formal")
         outline = generate_outline(intake, "claude-sonnet-4-6")
 
