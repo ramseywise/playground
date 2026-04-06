@@ -51,8 +51,9 @@ logs/
 .AppleDouble
 .LSOverride
 
-# Docs (phase artifacts)
+# Docs (phase artifacts — except .claude/docs which is version-controlled)
 docs/
+!.claude/docs/
 
 # Ruff / mypy caches
 .ruff_cache/
