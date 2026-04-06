@@ -48,11 +48,11 @@ uv run pytest tests/
 
 ```
 src/agents/
-  shared/           Config, Claude client helpers
-  research/         PDF → Obsidian notes pipeline
-  visualizer/       Presentation authoring agent
+  utils/           Config, Claude client helpers
+  researcher/      PDF → Obsidian notes pipeline
+  presenter/       Presentation authoring agent
 tests/
-  research/         Unit tests (mocked Claude calls)
-  visualizer/       Unit tests
-obsidian/           Curated knowledge corpus (vault)
+  researcher/      Unit tests (mocked Claude calls)
+  presenter/       Unit tests
+obsidian/          Curated knowledge corpus (vault)
 ```
