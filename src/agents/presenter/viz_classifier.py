@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import yaml
 
-from agents.utils.client import create_client, strip_json_fences
+from agents.utils.client import create_client, parse_json_response
 from agents.presenter.models import ImageConcept, SlideContent, VizPrompt
 
 LIBRARY_PATH = Path(__file__).resolve().parent / "viz_prompt_library.yaml"
@@ -68,8 +67,7 @@ def _generate_scene_description(
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    return json.loads(raw)
+    return parse_json_response(client, response.content[0].text, model, SCENE_SYSTEM)
 
 
 def _translate_to_image_prompt(
@@ -109,8 +107,7 @@ def _translate_to_image_prompt(
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    filled_vars = json.loads(raw)
+    filled_vars = parse_json_response(client, response.content[0].text, model, PROMPT_SYSTEM)
     filled = template.format(**{k: filled_vars.get(k, k) for k in variables})
     return f"{filled}, {style}"
 
@@ -204,8 +201,10 @@ def propose_image_concepts(
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    concepts = [ImageConcept(**item) for item in json.loads(raw)]
+    concepts = [
+        ImageConcept(**item)
+        for item in parse_json_response(client, response.content[0].text, model, system)
+    ]
 
     # Fill prompts for each concept using two-pass
     for concept in concepts:

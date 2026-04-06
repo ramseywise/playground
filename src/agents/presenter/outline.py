@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import json
-
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 
-from agents.utils.client import create_client, strip_json_fences
+from agents.utils.client import create_client, parse_json_response
 from agents.presenter.models import DeckIntake, DeckOutline
 
 console = Console()
@@ -45,8 +43,7 @@ def generate_outline(intake: DeckIntake, model: str) -> DeckOutline:
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    data = json.loads(raw)
+    data = parse_json_response(client, response.content[0].text, model, OUTLINE_SYSTEM)
     return DeckOutline(**data)
 
 
@@ -111,6 +108,5 @@ def _apply_edit(
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    data = json.loads(raw)
+    data = parse_json_response(client, response.content[0].text, model, OUTLINE_SYSTEM)
     return DeckOutline(**data)

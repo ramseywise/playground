@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
-
-from agents.utils.client import create_client, strip_json_fences
+from agents.utils.client import create_client, parse_json_response
 from agents.presenter.models import DeckIntake, DeckOutline, SlideContent, SlideOutline
 
 SLIDE_SYSTEM = """You are a slide content writer for technical presentations.
@@ -71,8 +69,7 @@ def _generate_one_slide(
         messages=[{"role": "user", "content": user_msg}],
     )
 
-    raw = strip_json_fences(response.content[0].text)
-    data = json.loads(raw)
+    data = parse_json_response(client, response.content[0].text, model, SLIDE_SYSTEM)
     return SlideContent(
         slide_number=slide.number,
         slide_type=slide.type,

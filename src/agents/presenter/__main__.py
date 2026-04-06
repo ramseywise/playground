@@ -32,7 +32,7 @@ def _configure_logging() -> None:
 # ---------------------------------------------------------------------------
 
 
-def run_deck() -> None:
+def run_deck(dry_run: bool = False) -> None:
     from agents.presenter.image_fetcher import fetch_images_for_slides
     from agents.presenter.intake import collect_deck_intake
     from agents.presenter.outline import approval_checkpoint, generate_outline
@@ -55,6 +55,16 @@ def run_deck() -> None:
     # 3. Slide content
     console.print("\n[bold yellow]Writing slide content…[/bold yellow]")
     slides = generate_slide_content(outline, intake, model)
+
+    if dry_run:
+        console.print("\n[bold cyan]Dry run — skipping image fetch and render.[/bold cyan]")
+        for slide in slides:
+            console.print(
+                f"\n[bold]{slide.slide_number}. {slide.headline}[/bold] ({slide.slide_type})"
+            )
+            for bullet in slide.body:
+                console.print(f"  • {bullet}")
+        return
 
     # 4. Viz classification + prompt building
     console.print("\n[bold yellow]Building image prompts…[/bold yellow]")
@@ -234,12 +244,25 @@ def main() -> None:
         action="store_true",
         help="Run in image-only mode (no deck generation)",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Generate outline and slide content only — skip image fetch and render",
+    )
+    parser.add_argument(
+        "--provider",
+        choices=["pollinations", "replicate"],
+        help="Override the image provider from settings",
+    )
     args = parser.parse_args()
+
+    if args.provider:
+        settings.image_provider = args.provider
 
     if args.image_only:
         run_image()
     else:
-        run_deck()
+        run_deck(dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

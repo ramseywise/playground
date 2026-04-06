@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import Protocol
 from urllib.parse import quote
@@ -14,6 +15,32 @@ from agents.utils.config import settings
 log = structlog.get_logger(__name__)
 
 FETCH_TIMEOUT = 60.0
+MAX_RETRIES = 3
+RETRY_DELAYS = (2.0, 4.0, 8.0)
+
+
+def _http_get_with_retry(url: str) -> bytes:
+    """HTTP GET with exponential backoff — up to MAX_RETRIES retries."""
+    last_exc: Exception | None = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=True) as client:
+                response = client.get(url)
+                response.raise_for_status()
+                return response.content
+        except httpx.HTTPError as exc:
+            last_exc = exc
+            if attempt < MAX_RETRIES:
+                delay = RETRY_DELAYS[attempt]
+                log.warning(
+                    "http.retry",
+                    attempt=attempt + 1,
+                    max_retries=MAX_RETRIES,
+                    url=url[:80],
+                    delay=delay,
+                )
+                time.sleep(delay)
+    raise last_exc  # type: ignore[misc]
 
 
 class ImageProvider(Protocol):
@@ -55,15 +82,12 @@ class PollinationsProvider:
         url = self._build_url(prompt, width, height)
 
         log.info("pollinations.fetch.start", url=url[:120], dest=str(dest))
-        with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=True) as client:
-            response = client.get(url)
-            response.raise_for_status()
-
-        dest.write_bytes(response.content)
+        content = _http_get_with_retry(url)
+        dest.write_bytes(content)
         log.info(
             "pollinations.fetch.done",
             dest=str(dest),
-            size_kb=len(response.content) // 1024,
+            size_kb=len(content) // 1024,
         )
         return dest
 
@@ -106,15 +130,12 @@ class ReplicateProvider:
         image_url = output[0] if isinstance(output, list) else output
         url_str = str(image_url)
 
-        with httpx.Client(timeout=FETCH_TIMEOUT, follow_redirects=True) as client:
-            response = client.get(url_str)
-            response.raise_for_status()
-
-        dest.write_bytes(response.content)
+        content = _http_get_with_retry(url_str)
+        dest.write_bytes(content)
         log.info(
             "replicate.fetch.done",
             dest=str(dest),
-            size_kb=len(response.content) // 1024,
+            size_kb=len(content) // 1024,
         )
         return dest
 
