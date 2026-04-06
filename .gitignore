@@ -61,3 +61,6 @@ docs/
 
 # Obsidian
 .obsidian/
+
+# Research agent manifest
+.processed.json
