@@ -114,6 +114,6 @@ def test_note_metadata_all_valid_sources() -> None:
 
 def test_note_model() -> None:
     meta = _valid_metadata()
-    note = Note(metadata=meta, body="## Core Claim\nSome claim here.")
-    assert note.body.startswith("## Core Claim")
+    note = Note(metadata=meta, body="## Summary\nSome summary here.")
+    assert note.body.startswith("## Summary")
     assert note.metadata.topic == "rag"

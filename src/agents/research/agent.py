@@ -3,25 +3,23 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import anthropic
 import structlog
 from dotenv import load_dotenv
 
-from agents.research.chunker import Chunk, plan_chunks
-from agents.research.extractor import get_page_count, extract_pages
+from agents.research.chunker import plan_chunks
+from agents.research.extractor import extract_pages, get_page_count
 from agents.research.models import Note, NoteMetadata, resolve_topic
 from agents.research.prompts import (
     SYSTEM_PROMPT,
     build_merge_prompt,
     build_note_prompt,
 )
-from agents.shared.config import settings
+from agents.shared.client import create_client
+from agents.shared.config import load_project_context, settings
 
 load_dotenv()
 
 log = structlog.get_logger(__name__)
-
-_DEFAULT_MODEL = "claude-sonnet-4-6"
 
 
 def _source_type(pdf_path: Path) -> str:
@@ -49,24 +47,33 @@ def _vault_topics() -> list[str]:
 
 
 class ResearchAgent:
-    def __init__(self) -> None:
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY not set — add it to .env")
-        self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = os.environ.get("ANTHROPIC_MODEL", _DEFAULT_MODEL)
-        log.info("agent.init", model=self.model)
+    def __init__(self, max_tokens: int = 4096) -> None:
+        self.client = create_client()
+        self.model = os.environ.get("ANTHROPIC_MODEL", settings.anthropic_model)
+        self.max_tokens = int(os.environ.get("RESEARCH_MAX_TOKENS", str(max_tokens)))
+        self.project_context = load_project_context()
+        log.info(
+            "agent.init",
+            model=self.model,
+            max_tokens=self.max_tokens,
+            has_project_context=bool(self.project_context),
+        )
 
     def _call_claude(self, user_prompt: str) -> str:
         message = self.client.messages.create(
             model=self.model,
-            max_tokens=4096,
+            max_tokens=self.max_tokens,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
         )
         return message.content[0].text  # type: ignore[index]
 
     def process_pdf(self, pdf_path: Path, topic_override: str | None = None) -> Note:
+        """Process a PDF into a consolidated research note.
+
+        Returns a single Note with practitioner-oriented structure,
+        page references, and [[wikilinks]] throughout.
+        """
         log.info("agent.process_pdf.start", path=str(pdf_path))
 
         page_count = get_page_count(pdf_path)
@@ -80,6 +87,7 @@ class ResearchAgent:
         source_title = pdf_path.stem
         vault_topics = _vault_topics()
 
+        # --- Phase 1: Chunk-level analysis ---
         chunk_notes: list[str] = []
         prior_summary: str = ""
 
@@ -98,21 +106,31 @@ class ResearchAgent:
                 doc_type=doc_type,
                 prior_summary=prior_summary,
                 existing_vault_topics=vault_topics,
+                project_context=self.project_context,
             )
             note_body = self._call_claude(prompt)
             chunk_notes.append(note_body)
-            # Use this chunk's output as prior context for the next chunk
             prior_summary = note_body
             log.info("agent.chunk.done", chunk=i + 1)
 
+        # --- Phase 2: Merge into consolidated note ---
         if len(chunk_notes) == 1:
-            final_body = chunk_notes[0]
+            log.info("agent.merge.single_chunk")
+            final_body = self._call_claude(
+                build_merge_prompt(
+                    chunk_notes, source_title, doc_type, self.project_context,
+                )
+            )
         else:
             log.info("agent.merge.start", n_chunks=len(chunk_notes))
-            merge_prompt = build_merge_prompt(chunk_notes, source_title, doc_type)
-            final_body = self._call_claude(merge_prompt)
+            final_body = self._call_claude(
+                build_merge_prompt(
+                    chunk_notes, source_title, doc_type, self.project_context,
+                )
+            )
             log.info("agent.merge.done")
 
+        # --- Phase 3: Build metadata ---
         relevance = _extract_relevance(final_body)
         tags = _extract_tags(final_body)
 

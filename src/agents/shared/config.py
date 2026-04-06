@@ -21,5 +21,21 @@ class Settings(BaseSettings):
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
+    @property
+    def project_context_file(self) -> Path:
+        return self.obsidian_vault / "project_context.md"
+
+
+def load_project_context() -> str:
+    """Load the project context brief for research note synthesis.
+
+    Returns empty string if the file doesn't exist — notes will omit
+    the 'Relevance to Active Work' connections rather than failing.
+    """
+    path = settings.project_context_file
+    if path.exists():
+        return path.read_text(encoding="utf-8").strip()
+    return ""
+
 
 settings = Settings()

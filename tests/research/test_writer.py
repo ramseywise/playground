@@ -21,7 +21,7 @@ def _make_note(**overrides: object) -> Note:
     )
     defaults.update(overrides)
     meta = NoteMetadata(**defaults)  # type: ignore[arg-type]
-    return Note(metadata=meta, body="## Core Claim\nSome claim here.\n")
+    return Note(metadata=meta, body="## Summary\nSome summary here.\n")
 
 
 # --- sanitize_filename ---
@@ -68,9 +68,9 @@ def test_render_note_tags_in_frontmatter() -> None:
 def test_render_note_body_follows_frontmatter() -> None:
     note = _make_note()
     rendered = render_note(note)
-    assert "## Core Claim" in rendered
+    assert "## Summary" in rendered
     fm_end = rendered.index("---\n", 4)  # second ---
-    body_start = rendered.index("## Core Claim")
+    body_start = rendered.index("## Summary")
     assert body_start > fm_end
 
 
@@ -91,7 +91,7 @@ def test_write_note_creates_file(tmp_path: Path) -> None:
         assert note_path.exists()
         content = note_path.read_text()
         assert "title: Knowledge Graph RAG" in content
-        assert "## Core Claim" in content
+        assert "## Summary" in content
     finally:
         writer_module.OBSIDIAN_TOPICS = original_topics
         writer_module.OBSIDIAN_INDEX = original_index
