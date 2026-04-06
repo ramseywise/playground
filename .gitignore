@@ -1,0 +1,63 @@
+# Environment
+.env
+.env.*
+!.env.example
+*.spotify_cache
+.spotify_cache
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.uv/
+*.pyo
+*.pyd
+*.so
+
+# Data
+data/
+
+# Models
+models/
+
+# Notebooks with output
+notebooks/
+
+# Chainlit
+.chainlit/
+chainlit.md
+
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Docs (phase artifacts)
+docs/
+
+# Ruff / mypy caches
+.ruff_cache/
+.mypy_cache/
+.pyright/
+
+# Obsidian
+.obsidian/
