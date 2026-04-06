@@ -1,16 +1,36 @@
-# Global Workspace Instructions
+# Agents — AI Research & Visualization Toolkit
 
-Project-specific layout, commands, and stack live in `{project}/CLAUDE.md` and `{project}/.claude/`.
-(`{project}` is a placeholder — replace with the actual sub-project directory name.)
+Personal AI agent toolkit for processing research PDFs into an Obsidian knowledge base and generating presentations.
+
+## Project Layout
+
+```
+src/agents/           # Python package (target structure — see plan)
+  shared/             # Config, Claude client, shared utilities
+  research/           # PDF → chunked notes → Obsidian vault
+  visualizer/         # Interactive presentation builder → PPTX
+tests/                # Mirrors src/agents/ structure
+obsidian/             # Curated knowledge corpus (vault output)
+```
+
+> **Current state**: Package restructure in progress. See `.claude/docs/plans/agent_platform_unification.md` for the active plan.
+
+## Stack
+
+- Python 3.12+, uv, ruff, pydantic v2, structlog
+- Claude API (anthropic SDK) — all LLM calls
+- pdftotext/pdfinfo for PDF extraction
+- python-pptx for slide rendering
+- Pollinations.ai for image generation (no API key)
 
 ## Tooling
 
-- `uv run pytest tests/unit/` — unit only (fast, no external deps)
+- `uv run pytest tests/` — full test suite
+- `uv run pytest tests/research/` — research agent tests only
+- `uv run pytest tests/visualizer/` — visualizer tests only
 - `.env` never committed; `.env.example` is the template
 - Formatting and linting run automatically via hooks on every file write — do not run manually unless asked
   (Requires hooks in `.claude/settings.json` — see this project's config for the reference implementation)
-
-Not Python-only? Use whatever the project's own `CLAUDE.md` defines.
 
 ## Workflow
 
@@ -73,19 +93,15 @@ Contents:
 Start each session with `/start` (reads `.claude/docs/SESSION.md` + `CLAUDE.md`), then paste the next session prompt.
 `.claude/` is gitignored — SESSION.md is local only.
 
-## Path convention (Python projects)
+## Path convention
 
-Every Python project that reads files or connects to DBs must have `src/paths.py`:
+All configurable paths (Dropbox readings, Obsidian vault, PDF binaries) are defined in `src/agents/shared/config.py` via `pydantic-settings` and loaded from `.env`. Never hardcode user-specific paths in source files.
 
 ```python
-from pathlib import Path
-REPO_ROOT = Path(__file__).resolve().parent.parent  # src/ → project root
-DB_PATH   = REPO_ROOT / "data" / "db.duckdb"
-DATA_DIR  = REPO_ROOT / "data"
+from agents.shared.config import settings
+settings.readings_dir      # ~/Dropbox/ai_readings (default, overridable)
+settings.obsidian_vault    # ~/workspace/obsidian (default, overridable)
 ```
-
-All notebooks and scripts import from `paths.py` — never use relative paths or `os.getcwd()`.
-Create this file at project start, before any file I/O code.
 
 ## Memory
 

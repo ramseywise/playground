@@ -73,7 +73,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd=$(echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command'); echo \"$cmd\" | grep -qE 'git commit' || exit 0; uv run pytest tests/unit/ --tb=short -q 2>&1; rc=$?; [ $rc -eq 0 ] && exit 0; echo 'Tests are failing. Fix them before committing.' >&2; exit 2",
+            "command": "cmd=$(echo \"$CLAUDE_TOOL_INPUT\" | jq -r '.command'); echo \"$cmd\" | grep -qE 'git commit' || exit 0; uv run pytest tests/ --tb=short -q 2>&1; rc=$?; [ $rc -eq 0 ] && exit 0; echo 'Tests are failing. Fix them before committing.' >&2; exit 2",
             "timeout": 120,
             "statusMessage": "Running tests before commit..."
           },
