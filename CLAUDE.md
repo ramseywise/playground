@@ -23,6 +23,10 @@ obsidian/             # Curated knowledge corpus (vault output)
 - python-pptx for slide rendering
 - Pollinations.ai for image generation (no API key)
 
+@.claude/rules/style.md
+@.claude/rules/logging.md
+@.claude/rules/ml.md
+
 ## Tooling
 
 - `uv run pytest tests/` — full test suite

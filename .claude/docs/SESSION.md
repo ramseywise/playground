@@ -69,3 +69,5 @@ Open: existing ch13 note uses old template, visualizer has no plans yet.
 ```
 
 _compact: 2026-04-06 20:02_
+
+_compact: 2026-04-07 23:54_
