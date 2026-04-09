@@ -5,7 +5,8 @@ Run the `.claude/docs/SESSION.md` end-of-session checklist. Work through each it
 3. **Active docs** — update to reflect the current plan/research files (or clear if task is complete)
 4. **Active gotchas** — add new non-obvious ones discovered this session; remove any that are now resolved
 5. **Open questions** — add new blockers; close resolved ones
-6. **Next session prompt** — rewrite it to reflect exactly where we are: current step + 3–5 lines of must-know context so a cold session can start immediately without reading the plan file
+6. **Next session prompt** — rewrite it to reflect exactly where we are: current step + 3-5 lines of must-know context so a cold session can start immediately without reading the plan file
+7. **Friction check** — read `.claude/friction-log.jsonl` if it exists. Surface any patterns (repeated failures, common error types). If a pattern is worth remembering (e.g., "ruff always fails on X import pattern"), save it to memory. Then truncate the log: `> .claude/friction-log.jsonl`
 
 Then check the active plan file (from `## Active docs`): mark any completed steps as done with today's date.
 

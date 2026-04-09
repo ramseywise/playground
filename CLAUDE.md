@@ -24,8 +24,6 @@ obsidian/             # Curated knowledge corpus (vault output)
 - Pollinations.ai for image generation (no API key)
 
 @.claude/rules/style.md
-@.claude/rules/logging.md
-@.claude/rules/ml.md
 
 ## Tooling
 
@@ -33,8 +31,31 @@ obsidian/             # Curated knowledge corpus (vault output)
 - `uv run pytest tests/researcher/` — research agent tests only
 - `uv run pytest tests/presenter/` — presenter tests only
 - `.env` never committed; `.env.example` is the template
-- Formatting and linting run automatically via hooks on every file write — do not run manually unless asked
-  (Requires hooks in `.claude/settings.json` — see this project's config for the reference implementation)
+
+## Hook-enforced standards
+
+All standards below are enforced via `settings.json` hooks — do not run manually.
+
+**PostToolUse (Write|Edit):**
+- ruff format + check on every `.py` write
+- `[no-print]` no `print()` in `src/` — use structlog
+- `[bare-except]` no bare `except:` — catch specific exceptions
+- `[use-structlog]` no stdlib `logging` — use structlog
+- `[use-polars]` no pandas — use polars
+- `[mutable-default]` no `def f(x=[])` — use `None` sentinel
+- File size warning at >400 lines
+- Phase artifact writes trigger compact reminder on next prompt
+
+**PostToolUse (Bash):**
+- Failed commands logged to `.claude/friction-log.jsonl`
+
+**UserPromptSubmit:**
+- Auto-injects compact reminder when a phase/step just completed
+
+**PreToolUse (Bash):**
+- `git commit` blocked if tests fail
+- `pip install` blocked — use `uv add`
+- Destructive commands (`rm -rf /`, `DROP TABLE`) blocked
 
 ## Workflow
 
