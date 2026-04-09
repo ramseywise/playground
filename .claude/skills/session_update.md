@@ -33,6 +33,10 @@ Non-obvious traps discovered during implementation. Remove when resolved.
 Blockers that need answers before the next session can proceed.
 - [ ] [question — who needs to answer it]
 
+## Skill candidates
+Repeated multi-step workflows that could become reusable skills. Captured by /end_session, consumed by /insights.
+- [workflow name]: [2-sentence description]
+
 ## Next session prompt
 [2–5 sentences. Current step + must-know context. A cold session reads only this and SESSION.md — it must be enough to start immediately without reading PLAN.md.]
 ```
