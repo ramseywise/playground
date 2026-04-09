@@ -1,4 +1,5 @@
-# Backward-compat shim — canonical location: preprocessing/indexing/indexer.py
+"""Indexing pipeline — chunk → embed → upsert orchestration."""
+
 from agents.librarian.preprocessing.indexing.indexer import (
     ChunkIndexer,
     build_indexer_for_source,

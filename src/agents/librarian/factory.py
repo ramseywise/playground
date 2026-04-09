@@ -10,19 +10,19 @@ log = get_logger(__name__)
 
 
 def _build_embedder(cfg: LibrarySettings) -> Any:
-    from agents.librarian.retrieval.embedder import MultilingualEmbedder
+    from agents.librarian.preprocessing.embedding.embedders import MultilingualEmbedder
 
     return MultilingualEmbedder(model_name=cfg.embedding_model)
 
 
 def _build_retriever(cfg: LibrarySettings, embedder: Any) -> Any:
     if cfg.retrieval_strategy == "inmemory":
-        from agents.librarian.retrieval.inmemory import InMemoryRetriever
+        from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
 
         return InMemoryRetriever()
 
     if cfg.retrieval_strategy == "opensearch":
-        from agents.librarian.retrieval.opensearch import OpenSearchRetriever
+        from agents.librarian.retrieval.infra.opensearch import OpenSearchRetriever
 
         return OpenSearchRetriever(
             embedder=embedder,
@@ -34,12 +34,12 @@ def _build_retriever(cfg: LibrarySettings, embedder: Any) -> Any:
         )
 
     if cfg.retrieval_strategy == "duckdb":
-        from agents.librarian.retrieval.duckdb import DuckDBRetriever
+        from agents.librarian.retrieval.infra.duckdb import DuckDBRetriever
 
         return DuckDBRetriever(db_path=cfg.duckdb_path)
 
     # Default: chroma (persistent, no Docker required)
-    from agents.librarian.retrieval.chroma import ChromaRetriever
+    from agents.librarian.retrieval.infra.chroma import ChromaRetriever
 
     return ChromaRetriever(
         persist_dir=cfg.chroma_persist_dir,
