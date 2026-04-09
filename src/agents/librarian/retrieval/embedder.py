@@ -1,6 +1,7 @@
-# Re-export from canonical location.
-# Embedder implementations live in preprocessing/embedder.py;
-# this shim keeps existing `retrieval.embedder` imports working.
-from agents.librarian.preprocessing.embedder import MiniLMEmbedder, MultilingualEmbedder
+# Backward-compat shim — canonical location: preprocessing/embedding/embedders.py
+from agents.librarian.preprocessing.embedding.embedders import (
+    MiniLMEmbedder,
+    MultilingualEmbedder,
+)
 
 __all__ = ["MultilingualEmbedder", "MiniLMEmbedder"]
