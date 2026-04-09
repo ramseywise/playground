@@ -28,3 +28,4 @@ class QueryPlan(BaseModel):
     query_variants: list[str]  # multi-query expansion
     needs_clarification: bool
     clarification_question: str | None = None
+    retrieval_mode: Literal["dense", "hybrid", "snippet"] = "dense"

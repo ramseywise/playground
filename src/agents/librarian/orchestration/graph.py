@@ -13,6 +13,7 @@ from agents.librarian.orchestration.subgraphs.reranker import RerankerSubgraph
 from agents.librarian.orchestration.subgraphs.retrieval import RetrievalSubgraph
 from agents.librarian.reranker.base import Reranker
 from agents.librarian.retrieval.base import Embedder, Retriever
+from agents.librarian.schemas.chunks import GradedChunk, RankedChunk
 from agents.librarian.schemas.state import LibrarianState
 from agents.librarian.utils.logging import get_logger
 
@@ -24,6 +25,7 @@ log = get_logger(__name__)
 
 _ANALYZE = "analyze"
 _RETRIEVE = "retrieve"
+_SNIPPET_RETRIEVE = "snippet_retrieve"
 _RERANK = "rerank"
 _GENERATE = "generate"
 _GATE = "gate"
@@ -40,12 +42,45 @@ def _make_analyze_node(analyzer: QueryAnalyzer) -> Any:
         analysis = analyzer.analyze(query)
         return {
             "intent": analysis.intent.value,
+            "retrieval_mode": analysis.retrieval_mode,
             "query_variants": analysis.expanded_terms[:3]
             if analysis.expanded_terms
             else [],
         }
 
     return analyze
+
+
+def _make_snippet_retrieve_node(snippet_retriever: Retriever) -> Any:
+    async def snippet_retrieve(state: LibrarianState) -> dict[str, Any]:
+        """Keyword-based retrieval from the snippet DB, bypassing embedding + reranker."""
+        query = state.get("standalone_query") or state.get("query", "")
+        results = await snippet_retriever.search(
+            query_text=query,
+            query_vector=[],
+            k=5,
+        )
+        graded = [
+            GradedChunk(chunk=r.chunk, score=r.score, relevant=True)
+            for r in results
+        ]
+        reranked = [
+            RankedChunk(chunk=r.chunk, relevance_score=r.score, rank=i + 1)
+            for i, r in enumerate(results)
+        ]
+        log.info(
+            "graph.snippet_retrieve.done",
+            query=query[:80],
+            result_count=len(results),
+        )
+        return {
+            "retrieved_chunks": results,
+            "graded_chunks": graded,
+            "reranked_chunks": reranked,
+            "confidence_score": max((r.score for r in results), default=0.0),
+        }
+
+    return snippet_retrieve
 
 
 def _make_retrieve_node(subgraph: RetrievalSubgraph) -> Any:
@@ -87,12 +122,23 @@ def _make_gate_node(subgraph: GenerationSubgraph) -> Any:
 # ---------------------------------------------------------------------------
 
 
-def _route_after_analyze(state: LibrarianState) -> Literal["retrieve", "generate"]:
-    """Direct intents skip retrieval entirely."""
+def _route_after_analyze(
+    state: LibrarianState,
+    has_snippet_retriever: bool,
+) -> Literal["retrieve", "snippet_retrieve", "generate"]:
+    """3-way routing after query analysis.
+
+    - Direct intents (conversational, out_of_scope) → generate (no retrieval)
+    - retrieval_mode == "snippet" and a snippet retriever is wired → snippet_retrieve
+    - everything else → retrieve (dense/hybrid via vector store)
+    """
     intent = state.get("intent", "lookup")
     if intent in ("conversational", "out_of_scope"):
         log.info("graph.route.direct", intent=intent)
         return "generate"
+    if has_snippet_retriever and state.get("retrieval_mode") == "snippet":
+        log.info("graph.route.snippet", intent=intent)
+        return "snippet_retrieve"
     return "retrieve"
 
 
@@ -122,12 +168,17 @@ def build_graph(
     reranker: Reranker,
     llm: Any,
     *,
+    snippet_retriever: Retriever | None = None,
     retrieval_k: int = 10,
     reranker_top_k: int = 3,
     confidence_threshold: float = 0.3,
     max_crag_retries: int = 1,
 ) -> Any:
     """Build and compile the LibrarianGraph.
+
+    When *snippet_retriever* is provided, simple factual queries are routed to
+    the snippet_retrieve node (keyword-based DuckDB FTS) instead of the vector
+    store, bypassing embedding and reranking for fast lookup.
 
     Returns a compiled LangGraph runnable (``CompiledGraph``).
     """
@@ -142,6 +193,7 @@ def build_graph(
         llm=llm, confidence_threshold=confidence_threshold
     )
 
+    has_snippet_retriever = snippet_retriever is not None
     graph = StateGraph(LibrarianState)
 
     # Register nodes
@@ -151,17 +203,27 @@ def build_graph(
     graph.add_node(_GATE, _make_gate_node(generation_sg))
     graph.add_node(_GENERATE, _make_generate_node(generation_sg))
 
+    if has_snippet_retriever:
+        graph.add_node(
+            _SNIPPET_RETRIEVE, _make_snippet_retrieve_node(snippet_retriever)  # type: ignore[arg-type]
+        )
+        graph.add_edge(_SNIPPET_RETRIEVE, _GENERATE)
+
     # Entry
     graph.add_edge(START, _ANALYZE)
 
-    # After analyze: direct intents → generate, retrieval intents → retrieve
+    # After analyze: 3-way routing
+    edge_map: dict[str, str] = {"retrieve": _RETRIEVE, "generate": _GENERATE}
+    if has_snippet_retriever:
+        edge_map["snippet_retrieve"] = _SNIPPET_RETRIEVE
+
     graph.add_conditional_edges(
         _ANALYZE,
-        _route_after_analyze,
-        {"retrieve": _RETRIEVE, "generate": _GENERATE},
+        lambda s: _route_after_analyze(s, has_snippet_retriever),
+        edge_map,
     )
 
-    # Retrieval → rerank → gate
+    # Dense/hybrid path: retrieve → rerank → gate
     graph.add_edge(_RETRIEVE, _RERANK)
     graph.add_edge(_RERANK, _GATE)
 
