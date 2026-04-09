@@ -4,14 +4,12 @@ description: Developer profile — stack, preferences, and communication style
 type: user
 ---
 
-- AI engineer on a large cross-functional team (BE/FE/ML/AI engineers + product trio — PM, designer, data analyst)
-- Primary presentation audience: this mixed technical/product team
-- Software engineer building AI-powered applications in Python
-- Comfortable with async Python, LLM orchestration (LangGraph), and modern ML tooling
+- AI engineer on a cross-functional team (BE/FE/ML/AI + PM, designer, data analyst)
+- Comfortable with async Python, LLM orchestration, modern ML tooling
 - Prefers concise, direct explanations — skip basics unless asked
-- Uses uv, ruff, pytest, Pydantic v2 as defaults
-- ML stack: PyTorch, HuggingFace/transformers, Polars, numpy, scikit-learn
-- Follows phased workflow: research → plan → execute → review (with human gates)
-- All pipeline phases run directly in the main conversation context (not subagents)
-- Workspace setup: global config in `~/.claude/`, project config in `{project}/.claude/`
-- Hooks handle formatting (ruff) and test gates (pytest before commit) — do not run these manually
+- Stack: Python 3.12+, uv, ruff, pytest, Pydantic v2, structlog, httpx, Polars, DuckDB
+- ML: PyTorch, HuggingFace/transformers, numpy, scikit-learn
+- LLM: Claude API (anthropic SDK), no LangChain in this repo
+- Follows phased workflow with human gates — all phases run in main context, not subagents
+- Hooks handle formatting and test gates — do not run manually
+- Wants memory kept minimal: user profile + project decisions + genuinely non-obvious lessons only

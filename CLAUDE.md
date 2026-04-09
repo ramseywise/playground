@@ -23,7 +23,19 @@ obsidian/             # Curated knowledge corpus (vault output)
 - python-pptx for slide rendering
 - Pollinations.ai for image generation (no API key)
 
-@.claude/rules/style.md
+## Style
+
+- `from __future__ import annotations` in all modules
+- Type annotations on all function signatures; docstrings on non-obvious functions
+- f-strings over `.format()` or `%`
+- `httpx` not `requests`; async-first for I/O; context managers for connections
+- Pydantic models at API boundaries, not raw dicts
+- Polars: lazy frames for large data, eager for small; DuckDB for local analytics
+- Parquet for intermediate data; never CSV for processed outputs
+- No magic numbers — named constants or config values
+- Functions >40 lines → split; nesting >3 levels → early returns
+- Every new function gets at least one test
+- Seed all randomness (`random.seed()`, `np.random.seed()`, etc.)
 
 ## Tooling
 
@@ -56,6 +68,16 @@ All standards below are enforced via `settings.json` hooks — do not run manual
 - `git commit` blocked if tests fail
 - `pip install` blocked — use `uv add`
 - Destructive commands (`rm -rf /`, `DROP TABLE`) blocked
+
+## Discipline
+
+- Implement one plan step at a time — do not skip ahead or refactor outside scope
+- Before multi-file changes: present numbered plan → wait for approval → execute
+- Never delete files, agents, or config without confirmation; re-present plan if scope expands
+- Confirm before touching `pyproject.toml`, CI config, or infra files
+- Never commit model weights, large data files, or notebooks with output cells
+- Ask before running: costly API calls, large file/model loads, or anything >30s
+- Prefer `--dry-run`, targeted `pytest -k`, and subsampled data for validation
 
 ## Workflow
 
