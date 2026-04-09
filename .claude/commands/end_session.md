@@ -10,6 +10,13 @@ Run the `.claude/docs/SESSION.md` end-of-session checklist. Work through each it
 
 Then check the active plan file (from `## Active docs`): mark any completed steps as done with today's date.
 
+8. **Skill candidates** — review what was done this session. If you notice a multi-step workflow that was repeated (or would likely recur in future sessions), add it to `## Skill candidates` in SESSION.md:
+   ```
+   ## Skill candidates
+   - [workflow name]: [2-sentence description of the repeated pattern and when it triggers]
+   ```
+   Don't create the skill yet — just capture the signal. Run `/insights` to analyze accumulated candidates and generate skills.
+
 Finally, check if anything from this session is worth saving to memory (non-obvious decisions, lessons that apply to future projects). If yes, write or update the relevant memory file.
 
 Keep everything terse. No trailing summaries.
