@@ -16,6 +16,16 @@ dependencies = [
 
 [project.optional-dependencies]
 replicate = ["replicate>=1.0.0"]
+librarian = [
+    "langgraph>=0.4.0",
+    "langchain-core>=0.3.0",
+    "langchain-anthropic>=0.3.0",
+    "opensearch-py>=2.7.0",
+    "sentence-transformers>=3.0.0",
+    "ragas>=0.2.0",
+    "deepeval>=2.0.0",
+    "langfuse>=2.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
