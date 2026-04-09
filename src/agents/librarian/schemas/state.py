@@ -19,6 +19,7 @@ class LibrarianState(TypedDict, total=False):
 
     # Planning output
     intent: str
+    retrieval_mode: str  # "dense" | "hybrid" | "snippet"
     plan: QueryPlan
     skip_retrieval: bool
 

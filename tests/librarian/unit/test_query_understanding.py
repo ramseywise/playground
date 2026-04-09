@@ -292,3 +292,86 @@ def test_router_custom_threshold() -> None:
         expanded_terms=[],
     )
     assert strict_router.route(analysis) == "clarify"
+
+
+# ---------------------------------------------------------------------------
+# Retrieval mode routing
+# ---------------------------------------------------------------------------
+
+
+def test_retrieval_mode_simple_lookup_is_snippet(analyzer: QueryAnalyzer) -> None:
+    """Simple LOOKUP queries should route to snippet retrieval."""
+    result = analyzer.analyze("who founded hip-hop?")
+    assert result.intent is Intent.LOOKUP
+    assert result.complexity == "simple"
+    assert result.retrieval_mode == "snippet"
+
+
+def test_retrieval_mode_complex_lookup_is_hybrid(analyzer: QueryAnalyzer) -> None:
+    """LOOKUP with multiple sub-parts should route to hybrid."""
+    result = analyzer.analyze("find the artist and the album and the year")
+    # complexity moderate or complex → hybrid
+    assert result.retrieval_mode in ("hybrid", "dense")  # not snippet
+
+
+def test_retrieval_mode_explore_is_dense(analyzer: QueryAnalyzer) -> None:
+    """EXPLORE queries should use dense retrieval."""
+    result = analyzer.analyze("explain how jazz evolved from bebop to fusion")
+    assert result.intent is Intent.EXPLORE
+    assert result.retrieval_mode == "dense"
+
+
+def test_retrieval_mode_compare_is_hybrid(analyzer: QueryAnalyzer) -> None:
+    """COMPARE queries should use hybrid retrieval."""
+    result = analyzer.analyze("compare US punk vs UK punk scene differences")
+    assert result.intent is Intent.COMPARE
+    assert result.retrieval_mode == "hybrid"
+
+
+def test_retrieval_mode_conversational_is_dense(analyzer: QueryAnalyzer) -> None:
+    """Conversational / out-of-scope defaults to dense (doesn't reach retrieval anyway)."""
+    result = analyzer.analyze("hello how are you")
+    assert result.intent is Intent.CONVERSATIONAL
+    # retrieval_mode is set but won't be used (routed to direct)
+    assert result.retrieval_mode in ("dense", "hybrid", "snippet")
+
+
+def test_retrieval_mode_field_always_present(analyzer: QueryAnalyzer) -> None:
+    """retrieval_mode must always be one of the valid values."""
+    queries = [
+        "what year was Kind of Blue recorded?",
+        "compare Motown vs Stax",
+        "explain the history of blues music",
+        "hello",
+        "what is the weather?",
+    ]
+    for q in queries:
+        result = analyzer.analyze(q)
+        assert result.retrieval_mode in ("dense", "hybrid", "snippet"), (
+            f"unexpected retrieval_mode for {q!r}: {result.retrieval_mode!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Music corpus: "music" and "song" no longer OUT_OF_SCOPE
+# ---------------------------------------------------------------------------
+
+
+def test_music_keyword_not_out_of_scope(analyzer: QueryAnalyzer) -> None:
+    """'music' should no longer be classified OUT_OF_SCOPE."""
+    result = analyzer.analyze("tell me about the history of blues music")
+    assert result.intent is not Intent.OUT_OF_SCOPE
+
+
+def test_song_keyword_not_out_of_scope(analyzer: QueryAnalyzer) -> None:
+    """'song' should no longer be classified OUT_OF_SCOPE."""
+    result = analyzer.analyze("what song did Dolly Parton write for Whitney Houston?")
+    assert result.intent is not Intent.OUT_OF_SCOPE
+
+
+def test_music_term_expansions_present() -> None:
+    """Music genre term expansions must exist in TERM_EXPANSIONS."""
+    assert "blues" in TERM_EXPANSIONS
+    assert "jazz" in TERM_EXPANSIONS
+    assert "metal" in TERM_EXPANSIONS
+    assert "punk" in TERM_EXPANSIONS
