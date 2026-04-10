@@ -4,9 +4,15 @@ description: "Parse Claude Code session JSONL files and surface workflow improve
 tools: Read, Bash, Write
 ---
 
-Run Claude Code session insights analysis.
+Analyze workflow patterns and generate actionable improvements. Runs two analyses in sequence.
 
-## Usage
+If `$ARGUMENTS` is `skills-only`, skip to step 2.
+
+---
+
+## 1. Session insights
+
+Run the JSONL parser:
 
 ```bash
 # Dry run — extract stats only, no API call
@@ -19,13 +25,11 @@ uv run python src/agents/utils/session_insights.py
 uv run python src/agents/utils/session_insights.py --projects-dir ~/.claude/projects --output ~/.claude/usage-data/report.html
 ```
 
-If `$ARGUMENTS` is provided, pass it as additional CLI args.
+Also read `.claude/friction-log.jsonl` if it exists — surface any repeated failure patterns.
 
-## After running
+Write findings to `.claude/docs/insights/[date].md`.
 
-Review the output for actionable patterns. Focus on the 3-5 strongest signals:
-
-### Friction signals
+Review the output for these signals:
 
 | Signal | What to look for | Workflow implication |
 |--------|-----------------|----------------------|
@@ -37,21 +41,6 @@ Review the output for actionable patterns. Focus on the 3-5 strongest signals:
 | **Error: `user_rejected`** | High count | Permission model too tight or commands surprising the user |
 | **Session duration vs messages** | Long sessions, few messages | Steps sized too large |
 
-### Context engineering problems
-
-- **Frequent compacts**: always-loaded files too large, or plan/research docs bloating context
-- **High `edit_failed` rate**: editing without reading first, or plan has wrong line numbers
-- **High interruption rate**: agent making surprising decisions; need smaller steps or clearer scope
-- **Bash dominates**: using shell for file reads instead of Read/Grep/Glob
-
-### What the data cannot tell you
-
-- Whether the work was correct (only whether tests passed)
-- Whether a deviation from the plan was good or bad
-- Why a user interrupted (reviewing vs. correcting)
-
-## Output
-
 For each pattern identified:
 
 ```
@@ -62,5 +51,23 @@ For each pattern identified:
 ```
 
 Limit to 3-5 patterns. End with a **Priority** section: which single change would have the highest impact.
+
+---
+
+## 2. Skill suggestions
+
+Load the `insights_skill_suggest` skill. Review `## Skill candidates` in SESSION.md and friction log patterns. For each candidate: evaluate, generate skill files if warranted, clean up candidates list.
+
+---
+
+## Output
+
+```
+| Area | Finding | Action taken |
+|------|---------|-------------|
+| [insight or skill candidate] | [what was found] | [recommendation or skill created] |
+```
+
+Keep output terse. This command is meant to run periodically — not produce a report to read.
 
 If any finding is worth preserving long-term, save it as a feedback memory via `/end`.

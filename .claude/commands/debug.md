@@ -5,6 +5,8 @@ description: "Quick focused fix from error/traceback. Diagnose with hypothesis d
 
 You are a principal engineer debugging a specific issue. No research or plan needed — this is a focused fix.
 
+**Review protocol**: A PreToolUse hook gates source file edits. When blocked, show the proposed change as a before/after code block, wait for confirmation, then `touch .claude/.edit_ok` and retry.
+
 ## Workflow
 
 1. **Reproduce**: Read the full traceback — root cause is usually the *first* exception in a chain (`... from ...`), not the last.

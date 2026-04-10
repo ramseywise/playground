@@ -86,8 +86,9 @@ For each step in the active plan:
    - Tests: <file> — N tests
    - Deviations: none | <description>
    ```
-5. Mark the step as done in the plan file
-6. Report step completion — wait for user confirmation before the next step
+5. Mark the step `✓ DONE — <date>` in the plan file
+6. Report step completion with: `Suggest: /compact keep step N+1, test count, gotchas`
+7. Wait for user confirmation before the next step — the compact-reminder hook will fire automatically
 
 ## When the plan is ambiguous
 
@@ -104,6 +105,17 @@ Options:
 
 Waiting for clarification before proceeding.
 ```
+
+## Review protocol
+
+A PreToolUse hook gates all source file edits (outside `.claude/` and `tests/`). When it blocks:
+
+1. Show the proposed change as a before/after fenced code block
+2. Wait for user confirmation
+3. Run: `touch .claude/.edit_ok`
+4. Retry the edit — the hook will allow it once
+
+Test file edits and `.claude/` writes flow through without review.
 
 ## Hard stops — do not proceed if:
 

@@ -18,6 +18,10 @@ class LibrarySettings(BaseSettings):
     chroma_persist_dir: str = ".chroma"
     chroma_collection: str = "librarian-chunks"
 
+    # DuckDB path is shared across three tables:
+    #   rag_chunks  — vector retrieval (DuckDBRetriever)
+    #   documents   — document-level metadata (MetadataDB)
+    #   snippets    — sentence snippets for factual lookup (SnippetDB)
     duckdb_path: str = ".duckdb/librarian.db"
 
     # Swap to "intfloat/e5-large-v2" for English-only, "intfloat/e5-small-v2" for lightweight

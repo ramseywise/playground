@@ -27,6 +27,16 @@ TERM_EXPANSIONS: dict[str, list[str]] = {
     "k8s": ["kubernetes", "cluster", "pod", "container", "helm"],
     "ml": ["machine learning", "model", "training", "inference"],
     "llm": ["large language model", "gpt", "claude", "inference", "prompt"],
+    # Music genre terms
+    "hip-hop": ["rap", "hip hop", "emcee", "mc", "dj", "breakbeat"],
+    "hiphop": ["rap", "hip hop", "emcee", "mc", "dj", "breakbeat"],
+    "blues": ["delta blues", "chicago blues", "electric blues", "twelve-bar"],
+    "jazz": ["bebop", "swing", "fusion", "improvisation", "big band"],
+    "metal": ["heavy metal", "doom", "thrash", "black metal", "riff"],
+    "punk": ["hardcore", "new wave", "post-punk", "diy", "three-chord"],
+    "soul": ["rhythm and blues", "rnb", "gospel", "motown", "stax"],
+    "electronic": ["synthesizer", "drum machine", "techno", "house", "edm"],
+    "country": ["honky-tonk", "nashville", "bluegrass", "outlaw country"],
 }
 
 # ---------------------------------------------------------------------------
@@ -69,11 +79,8 @@ _INTENT_RULES: list[tuple[list[str], Intent]] = [
             "weather",
             "stock price",
             "sports score",
-            "news",
             "recipe",
             "movie",
-            "music",
-            "song",
         ],
         Intent.OUT_OF_SCOPE,
     ),
@@ -135,6 +142,7 @@ class QueryAnalysis:
     sub_queries: list[str]
     complexity: Literal["simple", "moderate", "complex"]
     expanded_terms: list[str]
+    retrieval_mode: Literal["dense", "hybrid", "snippet"] = "dense"
 
 
 # ---------------------------------------------------------------------------
@@ -155,11 +163,14 @@ class QueryAnalyzer:
         complexity = self._score_complexity(sub_queries, entities)
         expanded_terms = self._expand_terms(query_lower)
 
+        retrieval_mode = self._select_retrieval_mode(intent, complexity)
+
         log.debug(
             "query_understanding.analyze",
             intent=intent.value,
             confidence=confidence,
             complexity=complexity,
+            retrieval_mode=retrieval_mode,
             sub_query_count=len(sub_queries),
         )
         return QueryAnalysis(
@@ -169,6 +180,7 @@ class QueryAnalyzer:
             sub_queries=sub_queries,
             complexity=complexity,
             expanded_terms=expanded_terms,
+            retrieval_mode=retrieval_mode,
         )
 
     # ------------------------------------------------------------------
@@ -246,6 +258,32 @@ class QueryAnalyzer:
         if effective >= _MODERATE_THRESHOLD:
             return "moderate"
         return "simple"
+
+    # ------------------------------------------------------------------
+    # Retrieval mode selection
+    # ------------------------------------------------------------------
+
+    def _select_retrieval_mode(
+        self,
+        intent: Intent,
+        complexity: Literal["simple", "moderate", "complex"],
+    ) -> Literal["dense", "hybrid", "snippet"]:
+        """Choose a retrieval strategy based on intent and query complexity.
+
+        Rules (first match wins):
+          - LOOKUP + simple   → snippet  (fast factual lookup from snippet DB)
+          - LOOKUP + moderate → hybrid   (mix BM25 + vector for specific terms)
+          - COMPARE           → hybrid   (BM25 finds named entities; vector finds context)
+          - EXPLORE           → dense    (semantic similarity over broad topic)
+          - default           → dense
+        """
+        if intent == Intent.LOOKUP:
+            if complexity == "simple":
+                return "snippet"
+            return "hybrid"
+        if intent == Intent.COMPARE:
+            return "hybrid"
+        return "dense"
 
     # ------------------------------------------------------------------
     # Term expansion

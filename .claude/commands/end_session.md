@@ -107,20 +107,31 @@ Present a short table of findings and wait for user confirmation before taking a
 
 ---
 
-## 4. Session insights (optional)
+## 4. Session insights
 
-If `src/agents/utils/session_insights.py` exists:
+**Friction log:** If `.claude/friction-log.jsonl` exists, read it. Surface any patterns (repeated failures, common error types). If a pattern is worth remembering (e.g., "ruff always fails on X import pattern"), save it to memory. Then truncate the log: `> .claude/friction-log.jsonl`
+
+**JSONL analysis:** If `src/agents/utils/session_insights.py` exists:
 
 ```bash
 uv run python src/agents/utils/session_insights.py --session current --dry-run
 ```
 
 Review the output for friction signals:
-- High tool error rate -> plans with wrong file paths?
-- Many user interruptions -> steps too large or ambiguous?
-- High compact frequency -> documents or skills too large?
+- High tool error rate → plans with wrong file paths?
+- Many user interruptions → steps too large or ambiguous?
+- High compact frequency → documents or skills too large?
 
 If any pattern is worth preserving, save it as a feedback memory.
+
+**Skill candidates:** Review what was done this session. If you notice a multi-step workflow that was repeated (or would likely recur in future sessions), add it to `## Skill candidates` in SESSION.md:
+
+```
+## Skill candidates
+- [workflow name]: [2-sentence description of the repeated pattern and when it triggers]
+```
+
+Don't create the skill yet — just capture the signal. Run `/insights` to analyze accumulated candidates and generate skills.
 
 ---
 
