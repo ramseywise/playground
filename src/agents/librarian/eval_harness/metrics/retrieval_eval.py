@@ -1,9 +1,9 @@
 """Retrieval evaluation harness.
 
 Computes hit_rate@k and MRR over a golden dataset, traces each query,
-and clusters failures with FailureClusterer.
+and clusters failures with the RAG-aware FailureClusterer.
 
-CLI: python -m eval.retrieval_eval --golden data/golden_silver.jsonl
+Uses generic tracing from ``eval.tasks.tracing`` with RAG extensions.
 """
 
 from __future__ import annotations
@@ -14,11 +14,11 @@ from typing import Any
 from agents.librarian.eval_harness.tasks.tracing import (
     FailureCluster,
     FailureClusterer,
-    PipelineTracer,
 )
 from agents.librarian.eval_harness.tasks.models import GoldenSample, RetrievalMetrics
 from agents.librarian.schemas.retrieval import RetrievalResult
 from agents.librarian.utils.logging import get_logger
+from eval.tasks.tracing import PipelineTracer
 
 log = get_logger(__name__)
 
@@ -78,7 +78,7 @@ async def evaluate_retrieval(
         )
         reciprocal_ranks.append(rr)
 
-        trace.retrieval_confidence = max((r.score for r in results[:k]), default=0.0)
+        trace.confidence = max((r.score for r in results[:k]), default=0.0)
         trace.status = "success" if hit else "failure"
         trace.failure_reason = None if hit else "expected_doc_not_in_top_k"
 

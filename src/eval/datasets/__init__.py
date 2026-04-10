@@ -1,1 +1,1 @@
-"""Golden dataset loading utilities."""
+"""Golden dataset loading utilities and snippet store interfaces."""
