@@ -12,17 +12,20 @@ If `$ARGUMENTS` is `skills-only`, skip to step 2.
 
 ## 1. Session insights
 
-Run the JSONL parser:
+Run the cartographer agent's JSONL parser:
 
 ```bash
 # Dry run — extract stats only, no API call
-uv run python src/agents/utils/session_insights.py --dry-run
+uv run cartographer --dry-run
 
 # Full HTML report (requires ANTHROPIC_API_KEY)
-uv run python src/agents/utils/session_insights.py
+uv run cartographer
 
 # Custom paths
-uv run python src/agents/utils/session_insights.py --projects-dir ~/.claude/projects --output ~/.claude/usage-data/report.html
+uv run cartographer --projects-dir ~/.claude/projects --output ~/.claude/usage-data/report.html
+
+# Cron-triggered analysis (SESSION.md + friction log)
+uv run cartographer --cron
 ```
 
 Also read `.claude/friction-log.jsonl` if it exists — surface any repeated failure patterns.

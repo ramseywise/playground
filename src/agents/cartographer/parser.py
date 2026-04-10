@@ -1,9 +1,7 @@
-#!/usr/bin/env python3
-"""Claude Code Insights — reads ~/.claude/projects/**/*.jsonl, extracts session
-stats, calls the Anthropic API once to generate a qualitative HTML report,
-and writes it to ~/.claude/usage-data/report.html.
+"""Claude Code session JSONL parser — extracts session stats and generates reports.
 
-Requires: ANTHROPIC_API_KEY env var (or pass --key <key>)
+Reads ~/.claude/projects/**/*.jsonl, computes per-session and aggregate metrics,
+optionally calls the Anthropic API to generate an HTML insights report.
 """
 
 from __future__ import annotations
@@ -13,12 +11,14 @@ import json
 import os
 import re
 import sys
-import urllib.error
-import urllib.request
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+import structlog
+
+log = structlog.get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -334,7 +334,7 @@ def aggregate(sessions: list[dict[str, Any]]) -> dict[str, Any]:
 # API call
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT = """\
 You are analyzing a developer's Claude Code usage data. Generate a rich, insightful HTML report.
 
 Return ONLY valid HTML starting with <!DOCTYPE html> — no markdown fences, no commentary outside the HTML.
@@ -365,24 +365,24 @@ from the data. Avoid generic advice. Reference specific numbers from the stats.
 
 def call_claude(api_key: str, prompt: str, model: str = "claude-sonnet-4-6") -> str:
     """Call the Anthropic API to generate an HTML report."""
-    payload = {
-        "model": model,
-        "max_tokens": 8192,
-        "messages": [{"role": "user", "content": prompt}],
-    }
-    data = json.dumps(payload).encode()
-    req = urllib.request.Request(
+    import httpx
+
+    resp = httpx.post(
         "https://api.anthropic.com/v1/messages",
-        data=data,
         headers={
             "x-api-key": api_key,
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         },
-        method="POST",
+        json={
+            "model": model,
+            "max_tokens": 8192,
+            "messages": [{"role": "user", "content": prompt}],
+        },
+        timeout=120,
     )
-    with urllib.request.urlopen(req, timeout=120) as resp:  # noqa: S310
-        result = json.loads(resp.read())
+    resp.raise_for_status()
+    result = resp.json()
     return result["content"][0]["text"]
 
 
@@ -442,41 +442,37 @@ def main() -> None:
 
     api_key = args.key or os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key and not args.dry_run:
-        print(
-            "Error: ANTHROPIC_API_KEY not set. Pass --key or set the env var.",
-            file=sys.stderr,
-        )
+        log.error("parser.no_api_key", msg="Set ANTHROPIC_API_KEY or pass --key")
         sys.exit(1)
 
     projects_dir = Path(args.projects_dir).expanduser()
     output_path = Path(args.output).expanduser()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"Scanning sessions in {projects_dir}...")
+    log.info("parser.scanning", path=str(projects_dir))
     sessions = iter_sessions(projects_dir)
-    print(f"Found {len(sessions)} sessions")
+    log.info("parser.found_sessions", count=len(sessions))
 
     if not sessions:
-        print("No sessions found.", file=sys.stderr)
+        log.error("parser.no_sessions")
         sys.exit(1)
 
     agg = aggregate(sessions)
-    print(f"Date range: {agg['date_range']}")
-    print(f"Total user messages: {agg['total_user_messages']}")
+    log.info("parser.aggregated", date_range=agg["date_range"], messages=agg["total_user_messages"])
 
     if args.dry_run:
-        print("\n--- Aggregate stats ---")
-        print(json.dumps(agg, indent=2))
+        # Dry run outputs JSON to stdout for the /insights command to read
+        sys.stdout.write(json.dumps(agg, indent=2))
+        sys.stdout.write("\n")
         return
 
-    print(f"Calling Claude API ({args.model}) to generate report...")
+    log.info("parser.calling_api", model=args.model)
     prompt = build_prompt(sessions, agg)
 
     try:
         html = call_claude(api_key, prompt, model=args.model)
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode()
-        print(f"API error {exc.code}: {body}", file=sys.stderr)
+    except Exception as exc:
+        log.error("parser.api_error", error=str(exc))
         sys.exit(1)
 
     # Ensure it starts with <!DOCTYPE
@@ -485,14 +481,10 @@ def main() -> None:
         if match:
             html = match.group(0)
         else:
-            print(
-                "Warning: response doesn't look like HTML, saving anyway.",
-                file=sys.stderr,
-            )
+            log.warning("parser.html_not_detected", msg="Response doesn't look like HTML")
 
     output_path.write_text(html)
-    print(f"\nReport written to: {output_path}")
-    print(f"Open with: open {output_path}")
+    log.info("parser.report_written", path=str(output_path))
 
 
 if __name__ == "__main__":

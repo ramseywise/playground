@@ -9,6 +9,7 @@ src/agents/           # Python package (target structure — see plan)
   utils/              # Config, Claude client, shared utilities
   researcher/         # PDF → chunked notes → Obsidian vault
   presenter/          # Interactive presentation builder → PPTX
+  cartographer/       # Session JSONL parser → workflow insights + cron
 tests/                # Mirrors src/agents/ structure
 obsidian/             # Curated knowledge corpus (vault output)
 ```

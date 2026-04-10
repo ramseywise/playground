@@ -9,22 +9,23 @@
 ## 1. Current Architecture
 
 The visualizer has two modes:
+
 - **Deck mode** (`run_deck`): intake → outline → slide content → viz classification → image fetch → PPTX render
 - **Image-only mode** (`run_image`): intake → concept proposals → user picks → image fetch
 
 **Files** (8 source, 2 test):
 
-| File | LOC | Responsibility |
-|------|-----|----------------|
-| `__main__.py` | 243 | CLI entry point, orchestration for both modes |
-| `intake.py` | 119 | Rich-based interactive intake (DeckIntake, ImageIntake models) |
-| `outline.py` | 132 | Claude generates deck outline → DeckOutline model, approval loop |
-| `slide_writer.py` | 91 | Claude generates per-slide content (headline, bullets, speaker note, image brief) |
-| `viz_classifier.py` | 188 | Claude fills prompt templates from viz_prompt_library.yaml → Pollinations URLs |
-| `image_fetcher.py` | 52 | httpx GET to Pollinations, writes PNG to disk |
-| `renderer.py` | 175 | python-pptx: builds .pptx from slide content + image map |
-| `config.yaml` | 13 | Defaults (model, audience, output dirs, image dims) |
-| `viz_prompt_library.yaml` | 30 | 6 viz types with style strings and prompt templates |
+| File                      | LOC | Responsibility                                                                    |
+| ------------------------- | --- | --------------------------------------------------------------------------------- |
+| `__main__.py`             | 243 | CLI entry point, orchestration for both modes                                     |
+| `intake.py`               | 119 | Rich-based interactive intake (DeckIntake, ImageIntake models)                    |
+| `outline.py`              | 132 | Claude generates deck outline → DeckOutline model, approval loop                  |
+| `slide_writer.py`         | 91  | Claude generates per-slide content (headline, bullets, speaker note, image brief) |
+| `viz_classifier.py`       | 188 | Claude fills prompt templates from viz_prompt_library.yaml → Pollinations URLs    |
+| `image_fetcher.py`        | 52  | httpx GET to Pollinations, writes PNG to disk                                     |
+| `renderer.py`             | 175 | python-pptx: builds .pptx from slide content + image map                          |
+| `config.yaml`             | 13  | Defaults (model, audience, output dirs, image dims)                               |
+| `viz_prompt_library.yaml` | 30  | 6 viz types with style strings and prompt templates                               |
 
 **Tests**: Only 2 test files (8 tests total) covering outline parsing and VizPrompt/ImageConcept model construction. No tests for renderer, slide_writer, image_fetcher, or intake.
 
@@ -37,6 +38,7 @@ The visualizer has two modes:
 **Current state**: Pollinations.ai with a single URL-based API call per slide. No model selection, no seed control, no retry logic.
 
 **Problems**:
+
 - No `model` parameter in Pollinations URL — defaults to whatever their backend chooses
 - No `seed` parameter — results are non-reproducible; you can't re-run and get the same deck
 - Only 3 viz types produce images (architecture, concept, narrative) — limited visual variety
@@ -46,6 +48,7 @@ The visualizer has two modes:
 - `nologo=true` is the only parameter used; Pollinations supports `enhance=true`, `model=flux`, `seed=N`
 
 **Opportunities**:
+
 - Add `model=flux` (or allow config override) for better image quality
 - Add `seed` parameter for reproducible runs
 - Add `enhance=true` to let Pollinations auto-improve prompts
@@ -59,6 +62,7 @@ The visualizer has two modes:
 **Current state**: Each slide gets one LLM call to fill template variables. The prompts are generic.
 
 **Problems**:
+
 - `_fill_template()` asks Claude to fill `{variables}` from a template, but gives it minimal context
 - The slide's narrative arc, position in the deck, and relationship to adjacent slides are not considered
 - No chain-of-thought or multi-turn refinement for critical slides (title slide, conclusion)
@@ -66,6 +70,7 @@ The visualizer has two modes:
 - The concept proposal system for image-only mode generates 3 concepts but doesn't allow mixing elements from multiple concepts
 
 **Opportunities**:
+
 - Two-pass prompt strategy: first generate a detailed scene description, then translate to image-gen prompt
 - Feed deck-level visual coherence instructions (consistent color palette, style, recurring motifs)
 - Weight important slides (title, conclusion) with more detailed prompting
@@ -77,6 +82,7 @@ The visualizer has two modes:
 **Current state**: Two layouts — full-bleed image with text overlay, or basic text slide. Hardcoded font sizes, positions, and colors.
 
 **Problems**:
+
 - No `template.pptx` file exists — config references it but it's missing, so every deck uses python-pptx defaults (plain white)
 - `_add_image_slide()` puts text at a fixed position (y=5.2") with white text — unreadable on light images
 - No semi-transparent overlay/scrim behind text (the comment says "semi-transparent overlay strip" but it's just a plain textbox)
@@ -88,6 +94,7 @@ The visualizer has two modes:
 - Layout is the same for every image slide regardless of content type
 
 **Opportunities**:
+
 - Create a proper default template.pptx with branded master slides
 - Add a dark scrim/gradient overlay behind text on image slides for readability
 - Multiple layout strategies per viz type (architecture → labeled diagram layout, narrative → full-bleed cinematic, concept → split image/text)
@@ -100,6 +107,7 @@ The visualizer has two modes:
 **Current state**: Config is a standalone YAML file loaded ad-hoc. No integration with shared `Settings` from `config.py`.
 
 **Problems**:
+
 - Visualizer has its own `config.yaml` + `_load_config()` in both `__main__.py` and `intake.py` — duplicated
 - Not integrated with `src/agents/shared/config.py` (`pydantic-settings`) — can't override via `.env`
 - Anthropic client is instantiated raw (`anthropic.Anthropic()`) in every module instead of using `shared.client.create_client()`
@@ -108,6 +116,7 @@ The visualizer has two modes:
 - `image_fetcher.py` uses a type comment `list[VizPrompt]` to avoid circular imports — messy
 
 **Opportunities**:
+
 - Migrate config to `shared/config.py` pydantic-settings model (consistent with research agent)
 - Single `create_client()` usage across all modules
 - Output path configurable via `.env` (default to project-level `output/` not inside `src/`)
@@ -118,6 +127,7 @@ The visualizer has two modes:
 **Current state**: Minimal error handling. JSON parse failures crash the process. Image fetch failures are logged but lost.
 
 **Problems**:
+
 - `json.loads()` on Claude output has no fallback — malformed JSON crashes the run
 - No retry logic on Claude API calls (transient failures, rate limits)
 - Image fetch timeout is 60s but no retry — a slow Pollinations response = missing slide image
@@ -125,6 +135,7 @@ The visualizer has two modes:
 - No cost tracking or token usage reporting
 
 **Opportunities**:
+
 - Add JSON parse retry with re-prompting (ask Claude to fix its output)
 - Add httpx retry with backoff for image fetches
 - Graceful degradation: render text-only layout for slides where image fetch fails, notify user
@@ -136,6 +147,7 @@ The visualizer has two modes:
 **Current state**: 8 tests covering outline parsing and model construction. No integration-style tests.
 
 **Problems**:
+
 - 0 tests for `renderer.py` — the most brittle module (python-pptx layout logic)
 - 0 tests for `slide_writer.py` — Claude JSON parsing
 - 0 tests for `image_fetcher.py` — HTTP fetch logic
@@ -143,6 +155,7 @@ The visualizer has two modes:
 - No test for the end-to-end deck workflow with mocked Claude responses
 
 **Opportunities**:
+
 - Add renderer tests (generate a .pptx, assert slide count, check for images)
 - Add slide_writer tests (mock Claude, verify SlideContent parsing)
 - Add image_fetcher tests (mock httpx, verify file writing and error handling)
@@ -153,6 +166,7 @@ The visualizer has two modes:
 **Current state**: Rich-based interactive CLI. Linear workflow, no resume/undo.
 
 **Problems**:
+
 - No way to save/resume a partially-completed deck
 - Image-only mode revision loop appends `_v2` suffix — no proper versioning
 - No preview of images before final render (user sees the deck after it's done)
@@ -160,6 +174,7 @@ The visualizer has two modes:
 - Codebase summary is top-level `ls` + README — shallow
 
 **Opportunities**:
+
 - Save intermediate state (outline, content, image map) to YAML/JSON so runs can be resumed
 - Add `--preview` flag that opens each image for approval before rendering
 - Add `--regenerate-slide N` to re-fetch a single image
@@ -169,15 +184,15 @@ The visualizer has two modes:
 
 ## 3. Priority Ranking
 
-| Priority | Area | Impact | Effort |
-|----------|------|--------|--------|
-| 1 | Prompt engineering pipeline | High — directly improves output quality | Medium |
-| 2 | Image generation quality | High — Pollinations params + retry | Low-Medium |
-| 3 | PPTX rendering quality | High — the final user-facing output | Medium-High |
-| 4 | Config & architecture | Medium — consistency, maintainability | Low |
-| 5 | Error handling & resilience | Medium — production reliability | Low-Medium |
-| 6 | Test coverage | Medium — safety net for all changes | Medium |
-| 7 | UX & workflow | Low-Medium — nice-to-have | Medium |
+| Priority | Area                        | Impact                                  | Effort      |
+| -------- | --------------------------- | --------------------------------------- | ----------- |
+| 1        | Prompt engineering pipeline | High — directly improves output quality | Medium      |
+| 2        | Image generation quality    | High — Pollinations params + retry      | Low-Medium  |
+| 3        | PPTX rendering quality      | High — the final user-facing output     | Medium-High |
+| 4        | Config & architecture       | Medium — consistency, maintainability   | Low         |
+| 5        | Error handling & resilience | Medium — production reliability         | Low-Medium  |
+| 6        | Test coverage               | Medium — safety net for all changes     | Medium      |
+| 7        | UX & workflow               | Low-Medium — nice-to-have               | Medium      |
 
 ---
 

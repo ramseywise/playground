@@ -54,3 +54,4 @@ markers = ["integration: tests that hit real binaries or external services"]
 [project.scripts]
 research-agent = "agents.researcher.__main__:main"
 presenter = "agents.presenter.__main__:main"
+cartographer = "agents.cartographer.__main__:main"

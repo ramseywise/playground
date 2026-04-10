@@ -111,10 +111,10 @@ Present a short table of findings and wait for user confirmation before taking a
 
 **Friction log:** If `.claude/friction-log.jsonl` exists, read it. Surface any patterns (repeated failures, common error types). If a pattern is worth remembering (e.g., "ruff always fails on X import pattern"), save it to memory. Then truncate the log: `> .claude/friction-log.jsonl`
 
-**JSONL analysis:** If `src/agents/utils/session_insights.py` exists:
+**JSONL analysis:** Run the cartographer agent:
 
 ```bash
-uv run python src/agents/utils/session_insights.py --session current --dry-run
+uv run cartographer --dry-run
 ```
 
 Review the output for friction signals:
