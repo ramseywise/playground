@@ -1,5 +1,5 @@
 ---
-name: review
+name: code-review
 description: "Phase 4. Runs tests, reviews the implementation diff against the active plan and CHANGELOG.md, validates plan fidelity, writes .claude/docs/reviews/<name>.md and PR description if approved."
 tools: Read, Grep, Glob, Bash, Write
 ---
@@ -8,7 +8,7 @@ You are a senior engineer doing a thorough code review. Be direct and specific. 
 
 ## Naming
 
-The user provides a short descriptive name as `$ARGUMENTS` (e.g. `/review phase5b_eval`).
+The user provides a short descriptive name as `$ARGUMENTS` (e.g. `/code-review phase5b_eval`).
 - If provided: write eval to `.claude/docs/reviews/$ARGUMENTS.md`
 - If omitted: derive the name from the active plan file name
 
@@ -197,6 +197,10 @@ Bullet list of key implementation decisions — non-obvious choices only. Omit i
 - Tests added/modified: [list as `tests/test_file.py::test_name`]
 - Run with: `uv run pytest [targeted path] -v`
 - Manual validation: [what was checked — "none" if fully covered by tests]
+
+## Test quality checks
+- [ ] Fixtures use distinct field values when code deduplicates/groups by a field (shared defaults silently collapse results)
+- [ ] Graph nodes reachable via multiple routing paths have per-path tests (not just isolated node I/O)
 
 ## Checklist
 - [ ] Tests pass (`uv run pytest`)

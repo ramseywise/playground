@@ -72,7 +72,7 @@ Date: [today]
 [ ] Execute-ready — no blockers
 [ ] Needs iteration — [N] blockers below
 
-## Blockers (must resolve before /execute)
+## Blockers (must resolve before /execute-plan)
 ### B1: [short title]
 **Step**: Step N
 **Issue**: [what's wrong]
@@ -116,6 +116,6 @@ After editing, report: what changed, downstream effects, and whether to re-run r
 
 After producing the review:
 - If there are blockers: apply fixes to the plan file for issues you can resolve yourself, then list remaining questions for the human
-- If execute-ready: say so clearly and suggest running `/compact` before `/execute`
+- If execute-ready: say so clearly and suggest running `/compact` before `/execute-plan`
 
-**Next step**: `/execute` when the plan is clean.
+**Next step**: `/execute-plan` when the plan is clean.

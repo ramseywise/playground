@@ -26,10 +26,20 @@ log = structlog.get_logger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 CLAUDE_DIR = REPO_ROOT / ".claude"
-SESSION_FILE = CLAUDE_DIR / "docs" / "SESSION.md"
+SESSIONS_DIR = CLAUDE_DIR / "sessions"
 FRICTION_LOG = CLAUDE_DIR / "friction-log.jsonl"
 COMMANDS_DIR = CLAUDE_DIR / "commands"
 INSIGHTS_DIR = CLAUDE_DIR / "docs" / "insights"
+
+
+def _read_latest_session(sessions_dir: Path) -> str:
+    """Read the most recent session file from the sessions directory."""
+    if not sessions_dir.exists():
+        return ""
+    files = sorted(sessions_dir.glob("*.md"), reverse=True)
+    if not files:
+        return ""
+    return files[0].read_text(encoding="utf-8")
 
 
 def _read_if_exists(path: Path) -> str:
@@ -121,7 +131,7 @@ def run_analysis() -> str:
         log.error("cron.no_api_key")
         sys.exit(1)
 
-    session_md = _read_if_exists(SESSION_FILE)
+    session_md = _read_latest_session(SESSIONS_DIR)
     friction_log = _read_friction_log(FRICTION_LOG)
     existing_commands = _list_commands(COMMANDS_DIR)
 

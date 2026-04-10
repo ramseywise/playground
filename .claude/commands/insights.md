@@ -1,10 +1,10 @@
 ---
 name: insights
-description: "Parse Claude Code session JSONL files and surface workflow improvement signals. Optionally generates an HTML report via the Anthropic API."
+description: "Parse Claude Code session JSONL files, surface workflow improvement signals, and suggest new skills. Delegates heavy lifting to the cartographer agent."
 tools: Read, Bash, Write
 ---
 
-Analyze workflow patterns and generate actionable improvements. Runs two analyses in sequence.
+Analyze workflow patterns and generate actionable improvements.
 
 If `$ARGUMENTS` is `skills-only`, skip to step 2.
 
@@ -32,6 +32,8 @@ Also read `.claude/friction-log.jsonl` if it exists — surface any repeated fai
 
 Write findings to `.claude/docs/insights/[date].md`.
 
+### Interpretation framework
+
 Review the output for these signals:
 
 | Signal | What to look for | Workflow implication |
@@ -43,6 +45,23 @@ Review the output for these signals:
 | **Top tools** | Bash dominates over Read/Edit | Over-reliance on shell; not using dedicated tools |
 | **Error: `user_rejected`** | High count | Permission model too tight or commands surprising the user |
 | **Session duration vs messages** | Long sessions, few messages | Steps sized too large |
+| **Parallel session overlap** | High = intentional multi-agent | Low = single-threaded; consider background agents |
+
+### Patterns that indicate context engineering problems
+
+- **Frequent compacts in same session** → always-loaded files too large, or plan docs bloating context. Fix: move `@`-includes to project-level; trim SESSION.md.
+- **High `edit_failed` rate** → editing files without reading first, or plan has wrong paths. Fix: enforce read-before-edit; add plan_check before execute.
+- **High interruption rate** → agent making surprising decisions. Fix: smaller plan steps; clearer "done when" conditions.
+- **Bash dominates tool usage** → using shell for file reads/searches. Fix: reinforce Read/Grep/Glob preference in hooks.
+
+### What the data cannot tell you
+
+- Whether the work was correct (only whether tests passed)
+- Whether a deviation from the plan was good or bad
+- Why a user interrupted (reviewing vs. correcting)
+- Whether token usage was efficient for the task complexity
+
+Do not over-interpret low-signal metrics. A long session on a hard problem is not a problem.
 
 For each pattern identified:
 
@@ -59,7 +78,21 @@ Limit to 3-5 patterns. End with a **Priority** section: which single change woul
 
 ## 2. Skill suggestions
 
-Load the `insights_skill_suggest` skill. Review `## Skill candidates` in SESSION.md and friction log patterns. For each candidate: evaluate, generate skill files if warranted, clean up candidates list.
+Review `## Skill candidates` in SESSION.md and friction log patterns.
+
+For each candidate, apply these filters:
+
+**Worth a skill if:**
+- The workflow has 3+ steps that recur across sessions
+- The trigger is recognizable (user says a phrase, or a file pattern appears)
+- The steps are concrete enough to automate
+
+**NOT worth a skill if:**
+- One-off workflow unlikely to recur
+- Already covered by an existing command
+- Too vague to define a clear trigger and steps
+
+For approved candidates: generate a `.md` file in `.claude/commands/`, remove the candidate from SESSION.md. For rejected candidates: explain why and remove from list.
 
 ---
 
@@ -73,4 +106,4 @@ Load the `insights_skill_suggest` skill. Review `## Skill candidates` in SESSION
 
 Keep output terse. This command is meant to run periodically — not produce a report to read.
 
-If any finding is worth preserving long-term, save it as a feedback memory via `/end`.
+If any finding is worth preserving long-term, save it as a project memory.

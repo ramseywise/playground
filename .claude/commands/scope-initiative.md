@@ -1,5 +1,5 @@
 ---
-name: initiative-scoping
+name: scope-initiative
 description: "Take a named initiative and produce a Linear-ready technical backlog: failure modes, HMWs, research section, task backlog with acceptance criteria and t-shirt sizes, dependency mapping, and Linear hierarchy. Use when an initiative is named and agreed on."
 tools: Read, Bash, Grep, Glob, WebSearch, Write
 ---

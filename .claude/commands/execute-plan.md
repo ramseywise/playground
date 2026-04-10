@@ -1,5 +1,5 @@
 ---
-name: execute
+name: execute-plan
 description: "Phase 3. Implements the active plan from SESSION.md one step at a time, confirms with user between steps, updates .claude/docs/CHANGELOG.md."
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
@@ -147,4 +147,4 @@ A clean execution has zero deviations. Deviations are not failures — hiding th
 - Next: Step [N+1] — waiting for confirmation
 ```
 
-**Next step**: `/review <name>` after all steps are complete.
+**Next step**: `/code-review <name>` after all steps are complete.
