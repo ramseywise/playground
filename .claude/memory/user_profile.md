@@ -10,6 +10,4 @@ type: user
 - Stack: Python 3.12+, uv, ruff, pytest, Pydantic v2, structlog, httpx, Polars, DuckDB
 - ML: PyTorch, HuggingFace/transformers, numpy, scikit-learn
 - LLM: Claude API (anthropic SDK), no LangChain in this repo
-- Follows phased workflow with human gates — all phases run in main context, not subagents
-- Hooks handle formatting and test gates — do not run manually
 - Wants memory kept minimal: user profile + project decisions + genuinely non-obvious lessons only

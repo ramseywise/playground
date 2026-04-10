@@ -17,10 +17,11 @@ Key facts:
 - Raw PDFs (~1GB) in Dropbox, accessed via `.env` path
 - Deployment: CLI tools + cron — no web server or API gateway
 - Future agents: possibly RAG search, websearch — keep shared core extensible but lightweight
+- GitHub repo is private/free-tier constrained; local hooks and pre-commit carry most enforcement
+- LangChain is only used in the librarian agent; the rest of the repo uses the bare anthropic SDK
 
 ## Repo
 
 - `ramseywise/playground` — private repo on GitHub Free
 - Branch protection rulesets require GitHub Pro ($4/mo) or making repo public — not available on current plan
 - Claude Code hooks + pre-commit provide local enforcement in the meantime
-- LangChain used in librarian agent only (via langchain_anthropic); rest of repo is bare anthropic SDK
