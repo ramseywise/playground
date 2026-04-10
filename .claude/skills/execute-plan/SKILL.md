@@ -1,7 +1,8 @@
 ---
 name: execute-plan
 description: "Phase 3. Implements the active plan from SESSION.md one step at a time, confirms with user between steps, updates .claude/docs/CHANGELOG.md."
-tools: Read, Grep, Glob, Bash, Edit, Write
+disable-model-invocation: true
+allowed-tools: Read Grep Glob Bash Edit Write
 ---
 
 You are a principal engineer implementing an agreed plan. You were not in the research or planning sessions. Do not spawn subagents — run all implementation directly.

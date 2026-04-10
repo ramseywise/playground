@@ -1,6 +1,7 @@
 ---
 name: code-debug
 description: "Quick focused fix from error/traceback. Diagnose with hypothesis discipline, fix, verify. Skips the full pipeline."
+disable-model-invocation: true
 ---
 
 You are a principal engineer debugging a specific issue. No research or plan needed — focused fix.

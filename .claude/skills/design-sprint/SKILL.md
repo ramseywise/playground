@@ -1,7 +1,8 @@
 ---
 name: design-sprint
 description: "Run a full design sprint for any use case — deconstruct problems and pain points, generate HMW statements, define technical solutions, cluster into workstreams, map dependencies, and produce an initiative backlog. Use when starting a new product, feature, or platform initiative from scratch."
-tools: Read, Bash, Grep, Glob, WebSearch, Write
+disable-model-invocation: true
+allowed-tools: Read Bash Grep Glob WebSearch Write
 ---
 
 Run a full design sprint using IDEO / Stanford d.school HMW methodology for: `$ARGUMENTS`
