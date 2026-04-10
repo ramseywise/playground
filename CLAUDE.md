@@ -55,9 +55,13 @@ Do NOT create `CHANGES.md`, `RESEARCH.md`, `PLAN.md`, or `EVAL.md` at the projec
 
 All commands run **directly in the current conversation** — do not spawn subagents or use the Skill/Agent tools for pipeline phases.
 
-Ad-hoc (skip pipeline): `/debug`, `/code_review`, `/refactor`.
+Ad-hoc (skip pipeline): `/debug`, `/refactor`.
 
-Use `/pipeline` to see phases and start from any point.
+Utilities: `/insights`, `/rag-research`, `/insights-analysis`.
+
+Planning: `/design-sprint`, `/initiative-scoping`.
+
+Each phase command suggests the next step when complete. All commands are self-contained — no separate skills directory.
 
 ## Issue Tracking
 

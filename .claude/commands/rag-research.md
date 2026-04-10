@@ -1,6 +1,7 @@
 ---
-name: rag_research
-description: "Research a RAG system design decision. Covers retrieval strategies, chunking, embedding models, reranking options, evaluation frameworks, observability, and multi-agent architecture patterns. Use when designing or extending a RAG pipeline and needing a structured trade-off analysis before committing to an approach."
+name: rag-research
+description: "Research a RAG system design decision. Covers retrieval strategies, chunking, embedding models, reranking, evaluation, observability, and multi-agent architecture patterns."
+tools: Read, Bash, Grep, Glob, WebSearch, Write
 ---
 
 Research the following RAG design question: $ARGUMENTS
@@ -49,7 +50,7 @@ For each option, cover:
 - **What to validate**: what to measure in the eval suite to confirm the choice
 
 ### Open questions
-Questions that can't be answered without running experiments or waiting on external decisions.
+Questions that cannot be answered without running experiments or waiting on external decisions.
 
 ---
 
@@ -59,4 +60,4 @@ Questions that can't be answered without running experiments or waiting on exter
 - "Best practice" claims require a source or benchmark
 - If a technique requires GPU and GPU availability is unknown, flag this as a day-one blocker
 - Danish/multilingual requirements must be treated as hard constraints, not nice-to-haves
-- Don't recommend an approach without stating when it breaks down
+- Do not recommend an approach without stating when it breaks down
