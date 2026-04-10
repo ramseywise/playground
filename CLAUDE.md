@@ -2,6 +2,8 @@
 
 Personal AI agent toolkit for processing research PDFs into an Obsidian knowledge base and generating presentations.
 
+Stable user preferences and project facts live in `.claude/memory/`; keep this file focused on repo operating rules and workflow.
+
 ## Project Layout
 
 ```
@@ -106,7 +108,7 @@ A PreToolUse hook gates source file edits (outside `.claude/` and `tests/`). Whe
 
 Non-trivial tasks follow phases. Each writes an artifact the next reads. **Human reviews each artifact before the next phase.**
 
-All phase artifacts live in `{project}/.claude/docs/` and are gitignored. Only `CLAUDE.md` and `SESSION.md` live at the project root.
+All phase artifacts live in `{project}/.claude/docs/` and are gitignored.
 
 | Phase | Skill | Artifact |
 |-------|-------|----------|
@@ -148,6 +150,7 @@ Linear ↔ GitHub integration is active. See `~/.claude/CLAUDE.md` for full conv
 - Between execute steps: use a short `/compact` prompt with current step, test count, open gotchas, and next actions
 - **Do not spawn subagents or use Skill tool for research/plan/execute phases** — do the work directly in the main context so the user can follow and interject. Use Write/WebSearch/Read tools directly.
 
+<<<<<<< cord/finish-eval-refactoring-211c9c
 ### Session metadata convention
 
 Per-session files live in `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Run `/end` to write one at session close.
@@ -158,6 +161,8 @@ The cartographer agent reads these files for friction analysis (`uv run cartogra
 
 `.claude/sessions/` is gitignored — local only.
 
+=======
+>>>>>>> main
 ## Path convention
 
 All configurable paths (Dropbox readings, Obsidian vault, PDF binaries) are defined in `src/agents/utils/config.py` via `pydantic-settings` and loaded from `.env`. Never hardcode user-specific paths in source files.
@@ -170,17 +175,4 @@ settings.obsidian_vault    # ~/workspace/obsidian (default, overridable)
 
 ## Memory
 
-Memory has two locations only — nothing else:
-
-- **Workspace-level** (`~/.claude/projects/-repo/memory/`): cross-project lessons, global patterns
-- **Project-level** (`{project}/.claude/memory/`): project-specific state, decisions — version-controlled
-
-Never write memory to any Dropbox path or any other `~/.claude/projects/` bucket. The Dropbox-based projects no longer exist.
-
-### Feedback patterns go in enforcement, not memory
-
-Code quality patterns (test traps, review heuristics) → add as checklist items in `/code-review`.
-Workflow conventions → add to CLAUDE.md directly.
-Hook-enforceable rules → add to `settings.json` hooks.
-
-Only save a feedback memory when the guidance is cross-cutting behavioral advice that doesn't fit in a specific skill, hook, or CLAUDE.md section.
+Project memory lives in `.claude/memory/` and should stay short: user preferences, durable repo facts, and only non-obvious lessons that do not fit here.
