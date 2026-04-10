@@ -108,8 +108,8 @@ Non-trivial tasks follow phases. Each writes an artifact the next reads. **Human
 
 All phase artifacts live in `{project}/.claude/docs/` and are gitignored. Only `CLAUDE.md` and `SESSION.md` live at the project root.
 
-| Phase | Command | Artifact |
-|-------|---------|----------|
+| Phase | Skill | Artifact |
+|-------|-------|----------|
 | 1. Research | `/research-review <name>` | `.claude/docs/research/<name>.md` |
 | 1a. Iterate | `/research-review review\|refine\|argue` | (updates research file) |
 | 2. Plan | `/plan-review <name>` | `.claude/docs/plans/<name>.md` |
@@ -120,7 +120,7 @@ All phase artifacts live in `{project}/.claude/docs/` and are gitignored. Only `
 
 All phase artifacts live in `.claude/docs/` — do NOT create them at the project root.
 
-All commands run **directly in the current conversation** — no subagents for pipeline phases.
+All skills run **directly in the current conversation** — no subagents for pipeline phases.
 
 Ad-hoc: `/code-debug`, `/plan-refactor`. Utilities: `/insights`, `/end-session`. Planning: `/design-sprint`, `/scope-initiative`. Git: `/quick-commit`, `/quick-pr`.
 
@@ -183,4 +183,4 @@ Code quality patterns (test traps, review heuristics) → add as checklist items
 Workflow conventions → add to CLAUDE.md directly.
 Hook-enforceable rules → add to `settings.json` hooks.
 
-Only save a feedback memory when the guidance is cross-cutting behavioral advice that doesn't fit in a specific command, hook, or CLAUDE.md section.
+Only save a feedback memory when the guidance is cross-cutting behavioral advice that doesn't fit in a specific skill, hook, or CLAUDE.md section.

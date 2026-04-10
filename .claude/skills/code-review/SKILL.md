@@ -1,7 +1,8 @@
 ---
 name: code-review
 description: "Phase 4. Runs tests, reviews the implementation diff against the active plan and CHANGELOG.md, validates plan fidelity, writes .claude/docs/reviews/<name>.md and PR description if approved."
-tools: Read, Grep, Glob, Bash, Write
+disable-model-invocation: true
+allowed-tools: Read Grep Glob Bash Write
 ---
 
 You are a senior engineer doing a thorough code review. Be direct and specific. Flag real problems only — style is the linter's job.

@@ -1,7 +1,8 @@
 ---
 name: quick-pr
 description: "All-in-one: stage, commit, push, open PR, resolve merge conflicts, and merge — single command end to end."
-tools: Read, Grep, Glob, Bash, Write
+disable-model-invocation: true
+allowed-tools: Read Grep Glob Bash Write
 ---
 
 End-to-end PR flow for the current working tree.

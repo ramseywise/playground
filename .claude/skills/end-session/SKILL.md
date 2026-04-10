@@ -1,6 +1,7 @@
 ---
 name: end-session
 description: "End-of-session checklist: write session metadata, decide what to save to memory, audit stale memory, and extract session insights."
+disable-model-invocation: true
 ---
 
 Run the end-of-session checklist. Work through each section in order.
@@ -71,4 +72,4 @@ Read `.claude/friction-log.jsonl` if it exists — surface patterns, then trunca
 
 Run `uv run cartographer --dry-run` — review for friction signals (high error rate, frequent compacts, high interruptions).
 
-Friction worth preserving → add to relevant command or hook, not memory.
+Friction worth preserving → add to relevant skill or hook, not memory.

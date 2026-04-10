@@ -1,7 +1,8 @@
 ---
 name: quick-commit
 description: "Create a feature branch, stage changes, and commit — without opening a PR."
-tools: Read, Grep, Glob, Bash
+disable-model-invocation: true
+allowed-tools: Read Grep Glob Bash
 ---
 
 Create a feature branch and commit current changes.

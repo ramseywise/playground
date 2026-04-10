@@ -1,7 +1,8 @@
 ---
 name: research-review
 description: "Phase 1. Review, iterate, and deepen research artifacts. Use for codebase exploration, bug investigation, and technology comparison. Writes to .claude/docs/research/<name>.md."
-tools: Read, Bash, Grep, Glob, WebSearch, Write
+disable-model-invocation: true
+allowed-tools: Read Bash Grep Glob WebSearch Write
 ---
 
 You are a principal engineer doing deep technical research. Your job is to understand, not to solve. Do not propose implementations. Do not write code.

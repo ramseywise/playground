@@ -1,7 +1,8 @@
 ---
 name: insights
 description: "Parse Claude Code session JSONL files, surface workflow improvement signals, and suggest new skills. Delegates heavy lifting to the cartographer agent."
-tools: Read, Bash, Write
+disable-model-invocation: true
+allowed-tools: Read Bash Write
 ---
 
 Analyze workflow patterns and generate actionable improvements.
@@ -36,7 +37,7 @@ Review `## Skill candidates` in session files and friction log patterns.
 **Worth a skill if**: 3+ recurring steps, recognizable trigger, concrete enough to automate.
 **Not worth a skill if**: one-off, already covered, too vague.
 
-For approved candidates: generate `.claude/commands/<name>.md`, remove from session file. For rejected: explain and remove.
+For approved candidates: generate `.claude/skills/<name>/SKILL.md`, remove from session file. For rejected: explain and remove.
 
 ## Output
 
