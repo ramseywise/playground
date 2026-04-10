@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.messages import AIMessage
 
 from agents.librarian.factory import create_librarian
 from agents.librarian.retrieval.inmemory import InMemoryRetriever
@@ -32,7 +31,7 @@ def _cfg(**kwargs: object) -> LibrarySettings:
 
 def _mock_llm(response: str = "answer") -> MagicMock:
     llm = MagicMock()
-    llm.ainvoke = AsyncMock(return_value=AIMessage(content=response))
+    llm.generate = AsyncMock(return_value=response)
     return llm
 
 

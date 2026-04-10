@@ -3,7 +3,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 
 from agents.librarian.orchestration.graph import (
     build_graph,
@@ -60,7 +60,7 @@ def _make_graph(
     mock_reranker.rerank = AsyncMock(return_value=reranker_results)
 
     mock_llm = MagicMock()
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content=llm_response))
+    mock_llm.generate = AsyncMock(return_value=llm_response)
 
     return build_graph(
         retriever=mock_retriever,
@@ -81,27 +81,27 @@ def _make_graph(
 
 def test_route_analyze_lookup_goes_retrieve() -> None:
     state: LibrarianState = {"query": "q", "intent": "lookup"}
-    assert _route_after_analyze(state) == "retrieve"
+    assert _route_after_analyze(state, has_snippet_retriever=False) == "retrieve"
 
 
 def test_route_analyze_explore_goes_retrieve() -> None:
     state: LibrarianState = {"query": "q", "intent": "explore"}
-    assert _route_after_analyze(state) == "retrieve"
+    assert _route_after_analyze(state, has_snippet_retriever=False) == "retrieve"
 
 
 def test_route_analyze_conversational_goes_generate() -> None:
     state: LibrarianState = {"query": "hi", "intent": "conversational"}
-    assert _route_after_analyze(state) == "generate"
+    assert _route_after_analyze(state, has_snippet_retriever=False) == "generate"
 
 
 def test_route_analyze_out_of_scope_goes_generate() -> None:
     state: LibrarianState = {"query": "weather?", "intent": "out_of_scope"}
-    assert _route_after_analyze(state) == "generate"
+    assert _route_after_analyze(state, has_snippet_retriever=False) == "generate"
 
 
 def test_route_analyze_missing_intent_defaults_retrieve() -> None:
     state: LibrarianState = {"query": "q"}
-    assert _route_after_analyze(state) == "retrieve"
+    assert _route_after_analyze(state, has_snippet_retriever=False) == "retrieve"
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +171,7 @@ async def test_graph_conversational_skips_retrieval() -> None:
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="hello!"))
+    mock_llm.generate = AsyncMock(return_value="hello!")
 
     graph = build_graph(
         retriever=mock_retriever,
@@ -193,7 +193,7 @@ async def test_graph_out_of_scope_skips_retrieval() -> None:
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="out of scope"))
+    mock_llm.generate = AsyncMock(return_value="out of scope")
 
     graph = build_graph(
         retriever=mock_retriever,
@@ -234,7 +234,7 @@ async def test_graph_crag_retry_on_low_confidence() -> None:
     # Returns empty → confidence = 0.0, below threshold=0.3
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="fallback answer"))
+    mock_llm.generate = AsyncMock(return_value="fallback answer")
 
     graph = build_graph(
         retriever=mock_retriever,
@@ -259,7 +259,7 @@ async def test_graph_no_retry_when_max_retries_zero() -> None:
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="no retry"))
+    mock_llm.generate = AsyncMock(return_value="no retry")
 
     graph = build_graph(
         retriever=mock_retriever,

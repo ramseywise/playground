@@ -39,12 +39,11 @@ def inmemory_retriever() -> InMemoryRetriever:
 
 @pytest.fixture()
 def mock_llm() -> MagicMock:
-    """Patches ChatAnthropic.ainvoke with a configurable AsyncMock.
+    """Mock LLM with ``generate(system, messages) -> str`` interface.
 
     Usage in tests:
-        mock_llm.ainvoke.return_value = AIMessage(content="...")
+        mock_llm.generate.return_value = "the answer"
     """
     llm = MagicMock()
-    llm.ainvoke = AsyncMock()
-    llm.with_structured_output = MagicMock(return_value=llm)
+    llm.generate = AsyncMock()
     return llm

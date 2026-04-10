@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain_core.messages import HumanMessage, SystemMessage
-
 from agents.librarian.generation.prompts import get_system_prompt
 from agents.librarian.schemas.chunks import RankedChunk
 from agents.librarian.schemas.retrieval import Intent
@@ -15,12 +13,31 @@ log = get_logger(__name__)
 _DIRECT_INTENTS = {Intent.CONVERSATIONAL.value, Intent.OUT_OF_SCOPE.value}
 _CONTEXT_SEP = "\n---\n"
 
+# LangGraph BaseMessage.type → anthropic API role mapping
+_ROLE_MAP: dict[str, str] = {"human": "user", "ai": "assistant"}
+
+
+def _message_to_dict(msg: Any) -> dict[str, str]:
+    """Convert a LangGraph BaseMessage to an anthropic API message dict.
+
+    Handles both BaseMessage objects (from langgraph state) and plain dicts.
+    """
+    if isinstance(msg, dict):
+        return msg
+    role = _ROLE_MAP.get(getattr(msg, "type", ""), "user")
+    content = msg.content if hasattr(msg, "content") else str(msg)
+    return {"role": role, "content": content}
+
 
 def build_prompt(
     state: LibrarianState,
     ranked_chunks: list[RankedChunk],
-) -> tuple[str, list[Any]]:
+) -> tuple[str, list[dict[str, str]]]:
     """Build (system_prompt, messages_for_llm) from state and ranked chunks.
+
+    Returns messages as plain dicts ``{"role": ..., "content": ...}`` suitable
+    for the anthropic messages API.  BaseMessage objects from langgraph state
+    are converted at this boundary.
 
     Direct intents (conversational, out_of_scope): no context injected.
     Retrieval intents: context block = top-k chunks joined with '---'.
@@ -29,7 +46,7 @@ def build_prompt(
     intent = state.get("intent", Intent.LOOKUP.value)
     system_prompt = get_system_prompt(intent)
 
-    history = list(state.get("messages", []))
+    history = [_message_to_dict(m) for m in state.get("messages", [])]
 
     if intent in _DIRECT_INTENTS or not ranked_chunks:
         return system_prompt, history
@@ -40,12 +57,13 @@ def build_prompt(
     context_block = _CONTEXT_SEP.join(context_parts)
 
     query = state.get("standalone_query") or state.get("query", "")
-    grounded_message = HumanMessage(
-        content=f"Use the following sources to answer the question.\n\n{context_block}\n\nQuestion: {query}"
-    )
+    grounded_message: dict[str, str] = {
+        "role": "user",
+        "content": f"Use the following sources to answer the question.\n\n{context_block}\n\nQuestion: {query}",
+    }
 
     # Replace the last human message with the grounded version, or append
-    if history and isinstance(history[-1], HumanMessage):
+    if history and history[-1].get("role") == "user":
         messages = history[:-1] + [grounded_message]
     else:
         messages = history + [grounded_message]
@@ -56,12 +74,14 @@ def build_prompt(
 async def call_llm(
     llm: Any,
     system: str,
-    messages: list[Any],
+    messages: list[dict[str, str]],
 ) -> str:
-    """Invoke the LLM with system prompt prepended. Returns response text."""
-    full_messages = [SystemMessage(content=system)] + messages
-    response = await llm.ainvoke(full_messages)
-    content = response.content if hasattr(response, "content") else str(response)
+    """Invoke the LLM and return the response text.
+
+    Expects *llm* to implement ``generate(system, messages) -> str``
+    (i.e. ``AnthropicLLM`` or a mock with the same interface).
+    """
+    content = await llm.generate(system, messages)
     log.info("generation.llm.done", chars=len(content))
     return content
 

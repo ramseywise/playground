@@ -132,18 +132,12 @@ def llm_listwise(mock_llm: MagicMock) -> LLMListwiseReranker:
     return LLMListwiseReranker(llm=mock_llm)
 
 
-def _mock_response(content: str) -> MagicMock:
-    m = MagicMock()
-    m.content = content
-    return m
-
-
 @pytest.mark.asyncio
 async def test_llm_listwise_happy_path(
     llm_listwise: LLMListwiseReranker, mock_llm: MagicMock
 ) -> None:
-    mock_llm.ainvoke = AsyncMock(
-        return_value=_mock_response(
+    mock_llm.generate = AsyncMock(
+        return_value=(
             '[{"rank": 1, "doc_index": 0, "relevance_score": 0.95},'
             ' {"rank": 2, "doc_index": 2, "relevance_score": 0.80},'
             ' {"rank": 3, "doc_index": 1, "relevance_score": 0.60},'
@@ -160,8 +154,8 @@ async def test_llm_listwise_happy_path(
 async def test_llm_listwise_top_k_limits(
     llm_listwise: LLMListwiseReranker, mock_llm: MagicMock
 ) -> None:
-    mock_llm.ainvoke = AsyncMock(
-        return_value=_mock_response(
+    mock_llm.generate = AsyncMock(
+        return_value=(
             '[{"rank": 1, "doc_index": 0, "relevance_score": 0.9},'
             ' {"rank": 2, "doc_index": 1, "relevance_score": 0.8},'
             ' {"rank": 3, "doc_index": 2, "relevance_score": 0.7},'
@@ -181,7 +175,7 @@ async def test_llm_listwise_top_k_limits(
 async def test_llm_listwise_total_parse_failure_fallback(
     llm_listwise: LLMListwiseReranker, mock_llm: MagicMock
 ) -> None:
-    mock_llm.ainvoke = AsyncMock(return_value=_mock_response("not valid json at all"))
+    mock_llm.generate = AsyncMock(return_value="not valid json at all")
     results = await llm_listwise.rerank("query", _graded_list(), top_k=4)
     assert len(results) == 4
     assert all(r.relevance_score == 0.5 for r in results)
@@ -191,7 +185,7 @@ async def test_llm_listwise_total_parse_failure_fallback(
 async def test_llm_listwise_exception_fallback(
     llm_listwise: LLMListwiseReranker, mock_llm: MagicMock
 ) -> None:
-    mock_llm.ainvoke = AsyncMock(side_effect=RuntimeError("API down"))
+    mock_llm.generate = AsyncMock(side_effect=RuntimeError("API down"))
     results = await llm_listwise.rerank("query", _graded_list(), top_k=4)
     assert len(results) == 4
     assert all(r.relevance_score == 0.5 for r in results)
@@ -202,8 +196,8 @@ async def test_llm_listwise_partial_parse_appends_missing(
     llm_listwise: LLMListwiseReranker, mock_llm: MagicMock
 ) -> None:
     # Only ranks 2 of 4 docs — missing c3, c4 should be appended at 0.5
-    mock_llm.ainvoke = AsyncMock(
-        return_value=_mock_response(
+    mock_llm.generate = AsyncMock(
+        return_value=(
             '[{"rank": 1, "doc_index": 0, "relevance_score": 0.9},'
             ' {"rank": 2, "doc_index": 1, "relevance_score": 0.8}]'
         )
@@ -220,8 +214,8 @@ async def test_llm_listwise_partial_parse_appends_missing(
 async def test_llm_listwise_clamps_score_to_range(
     llm_listwise: LLMListwiseReranker, mock_llm: MagicMock
 ) -> None:
-    mock_llm.ainvoke = AsyncMock(
-        return_value=_mock_response(
+    mock_llm.generate = AsyncMock(
+        return_value=(
             '[{"rank": 1, "doc_index": 0, "relevance_score": 2.5},'
             ' {"rank": 2, "doc_index": 1, "relevance_score": -0.3}]'
         )
@@ -234,10 +228,8 @@ async def test_llm_listwise_clamps_score_to_range(
 async def test_llm_listwise_strips_markdown_fences(
     llm_listwise: LLMListwiseReranker, mock_llm: MagicMock
 ) -> None:
-    mock_llm.ainvoke = AsyncMock(
-        return_value=_mock_response(
-            '```json\n[{"rank": 1, "doc_index": 0, "relevance_score": 0.9}]\n```'
-        )
+    mock_llm.generate = AsyncMock(
+        return_value='```json\n[{"rank": 1, "doc_index": 0, "relevance_score": 0.9}]\n```'
     )
     results = await llm_listwise.rerank("query", _graded_list()[:1], top_k=1)
     assert results[0].relevance_score == 0.9

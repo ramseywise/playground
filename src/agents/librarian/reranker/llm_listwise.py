@@ -46,13 +46,11 @@ class LLMListwiseReranker:
         user_msg = f"Query: {query}\n\nDocuments:\n{doc_list}"
 
         try:
-            response = await self._llm.ainvoke(
-                [
-                    {"role": "system", "content": _SYSTEM_PROMPT},
-                    {"role": "user", "content": user_msg},
-                ]
+            raw = await self._llm.generate(
+                system=_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_msg}],
+                max_tokens=1024,
             )
-            raw = response.content if hasattr(response, "content") else str(response)
             ranked = self._parse(raw, chunks)
         except Exception as exc:
             log.error("reranker.llm_listwise.failed", error=str(exc))
