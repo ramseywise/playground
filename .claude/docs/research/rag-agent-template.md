@@ -1,4 +1,4 @@
-# RESEARCH: RAG Agent Template
+# Research: RAG Agent Template
 
 > Consolidated research for `playground/src/rag_template`.
 > Covers all strategies experimented with in help-assistant + listen-wiseer,

@@ -1,4 +1,4 @@
-# RAG System — Component Tradeoffs
+# Research: RAG System — Component Tradeoffs
 
 Decision log for the Librarian agent. One section per pipeline stage.
 

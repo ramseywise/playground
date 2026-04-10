@@ -1,4 +1,4 @@
-# Plan — Library: Multi-Source RAG Template
+# Plan — Librarian Agent: Multi-Source RAG Template
 
 > Target: `src/agents/librarian/` + `tests/librarian/`
 > Scope: `src/` + unit tests only — no API, no infra, no frontend.
@@ -32,6 +32,7 @@ unless an arrow indicates otherwise.
 ## Step 1 — Package scaffold + pyproject.toml
 
 **Files to create:**
+
 ```
 src/agents/librarian/__init__.py
 src/agents/librarian/schemas/__init__.py
@@ -51,6 +52,7 @@ tests/librarian/unit/conftest.py
 `conftest.py` is created here as a stub with the `reset_registry` autouse fixture and placeholder comments for `MockEmbedder`, `InMemoryRetriever`, and mock LLM fixtures. These are populated in Step 4 (retrieval). All subsequent steps assume conftest is fully populated.
 
 **`pyproject.toml` additions** (confirm before touching):
+
 ```toml
 [project.optional-dependencies]
 library = [
@@ -74,12 +76,14 @@ Install: `uv add --optional library langgraph langchain-core langchain-anthropic
 ## Step 2 — Schemas
 
 **Files:**
+
 - `src/agents/librarian/schemas/chunks.py`
 - `src/agents/librarian/schemas/retrieval.py`
 - `src/agents/librarian/schemas/state.py`
 - `tests/librarian/unit/test_schemas.py`
 
 ### `chunks.py`
+
 ```python
 class ChunkMetadata(BaseModel):
     # Core (always required)
@@ -117,6 +121,7 @@ class RankedChunk(BaseModel):
 ```
 
 ### `retrieval.py`
+
 ```python
 class Intent(str, Enum):
     LOOKUP = "lookup"           # find a specific fact or record
@@ -139,6 +144,7 @@ class QueryPlan(BaseModel):
 ```
 
 ### `state.py`
+
 ```python
 class LibrarianState(TypedDict, total=False):
     # Core
@@ -169,7 +175,7 @@ class LibrarianState(TypedDict, total=False):
     fallback_requested: bool   # set True when confidence_gate fires
 ```
 
-**`messages` vs all other fields:** `messages` uses the `add_messages` reducer — nodes that return `{"messages": [...]}` *append* to the list. All other `LibrarianState` fields are *replace-on-update* (last writer wins). Tests must account for this: asserting `state["messages"][-1]` not `state["messages"][0]`.
+**`messages` vs all other fields:** `messages` uses the `add_messages` reducer — nodes that return `{"messages": [...]}` _append_ to the list. All other `LibrarianState` fields are _replace-on-update_ (last writer wins). Tests must account for this: asserting `state["messages"][-1]` not `state["messages"][0]`.
 
 **Test:** validate Pydantic models reject bad input; TypedDict field access works.
 
@@ -180,11 +186,13 @@ class LibrarianState(TypedDict, total=False):
 **Must run before Step 3.** `LibrarySettings` is consumed by Steps 5+ (reranker strategy, planning_mode, confidence_threshold). Implement utils immediately after schemas so all subsequent steps can import from config.
 
 **Files:**
+
 - `src/agents/librarian/utils/config.py` — `LibrarySettings` (pydantic-settings)
 - `src/agents/librarian/utils/logging.py` — `configure_logging`, `get_logger` (structlog)
 - `src/agents/librarian/utils/tracing.py` — `get_langfuse_handler`
 
 ### `LibrarySettings`
+
 ```python
 class LibrarySettings(BaseSettings):
     anthropic_api_key: str = ""
@@ -218,11 +226,13 @@ class LibrarySettings(BaseSettings):
 ```
 
 **Embedding model options** (configured via `EMBEDDING_MODEL` env var):
+
 - `intfloat/multilingual-e5-large` — default; 100+ languages, 1024-dim, ~560MB
 - `intfloat/e5-large-v2` — English-only, same dim, ~20% faster
 - `intfloat/e5-small-v2` — English-only, 384-dim, lightweight for low-resource environments
 
 ### `tracing.py`
+
 ```python
 def get_langfuse_handler(session_id: str, user_id: str | None = None) -> CallbackHandler | None:
     """Returns LangFuse CallbackHandler if LANGFUSE_ENABLED=true, else None."""
@@ -235,12 +245,14 @@ No tests for utils (config validation + logger are covered by usage in other tes
 ## Step 3 — Ingestion module
 
 **Files:**
+
 - `src/agents/librarian/ingestion/base.py` — `Chunker` Protocol + `ChunkerConfig`
 - `src/agents/librarian/ingestion/html_aware.py` — `HtmlAwareChunker`
 - `src/agents/librarian/ingestion/parent_doc.py` — `ParentDocChunker`
 - `tests/librarian/unit/test_ingestion.py`
 
 ### `base.py`
+
 ```python
 class ChunkerConfig(BaseModel):
     max_tokens: int = 512
@@ -252,6 +264,7 @@ class Chunker(Protocol):
 ```
 
 ### `HtmlAwareChunker`
+
 - Detect heading boundaries via regex (h1–h3 markers in plain text)
 - Per-section recursive split: `\n\n → \n → sentence → word`
 - Handles both `doc["text"]` and `doc["full_text"]` (field variance across source connectors)
@@ -259,6 +272,7 @@ class Chunker(Protocol):
 - `_make_doc_id(url, section)` → SHA256 16-char hash
 
 ### `ParentDocChunker`
+
 - Small child chunks (indexed for retrieval) tagged with `parent_id`
 - Parent = full section chunk (returned at generation time)
 - Child chunk IDs: `{parent_id}_child{i}`
@@ -271,6 +285,7 @@ parent/child ID linking.
 ## Step 4 — Retrieval module
 
 **Files:**
+
 - `src/agents/librarian/retrieval/base.py` — `Retriever` Protocol, `Embedder` Protocol
 - `src/agents/librarian/retrieval/opensearch.py` — `OpenSearchRetriever`
 - `src/agents/librarian/retrieval/inmemory.py` — `InMemoryRetriever` (for tests)
@@ -279,6 +294,7 @@ parent/child ID linking.
 - `tests/librarian/unit/test_retrieval.py`
 
 ### `base.py`
+
 ```python
 class Embedder(Protocol):
     # E5 prefix rule lives here — enforced at protocol level
@@ -299,6 +315,7 @@ class Retriever(Protocol):
 ```
 
 ### `OpenSearchRetriever`
+
 - Async OpenSearch client
 - `hybrid_search`: BM25 weight + k-NN weight configurable (default 0.3/0.7)
 - Bulk upsert with embedding field
@@ -306,6 +323,7 @@ class Retriever(Protocol):
   set to the corpus language; wrong analyzer silently degrades recall on non-English text
 
 ### `InMemoryRetriever`
+
 - Stores chunks in a list
 - Cosine similarity for vector search
 - BM25-like term overlap for keyword search
@@ -313,6 +331,7 @@ class Retriever(Protocol):
 - No Docker dependency — all unit tests use this
 
 ### `MultilingualEmbedder`
+
 - SentenceTransformer wrapper
 - `embed_query` adds `"query: "` prefix (E5 requirement)
 - `embed_passage` adds `"passage: "` prefix
@@ -320,6 +339,7 @@ class Retriever(Protocol):
 - Swap to `e5-large-v2` for English-only corpora (same dim, faster)
 
 ### `MockEmbedder`
+
 - Returns random fixed-dimension vectors (default 1024-dim matching E5)
 - Seed-stable: `np.random.default_rng(seed=42).random(dim)`
 - Used in all unit tests — no model load
@@ -334,12 +354,14 @@ class Retriever(Protocol):
 ## Step 5 — Reranker module
 
 **Files:**
+
 - `src/agents/librarian/reranker/base.py` — `Reranker` Protocol
 - `src/agents/librarian/reranker/cross_encoder.py` — `CrossEncoderReranker`
 - `src/agents/librarian/reranker/llm_listwise.py` — `LLMListwiseReranker`
 - `tests/librarian/unit/test_reranker.py`
 
 ### `base.py`
+
 ```python
 class Reranker(Protocol):
     async def rerank(
@@ -353,6 +375,7 @@ class Reranker(Protocol):
 ```
 
 ### `CrossEncoderReranker`
+
 - Model: `cross-encoder/ms-marco-MiniLM-L-6-v2` (via sentence-transformers)
 - Loaded once at instantiation (not per-request)
 - Scores each (query, chunk.text) pair
@@ -360,6 +383,7 @@ class Reranker(Protocol):
 - Returns top-k by score
 
 ### `LLMListwiseReranker`
+
 - Structured output call to Haiku:
   ```
   Given the query and these N documents, rank them by relevance.
@@ -380,11 +404,13 @@ class Reranker(Protocol):
 ## Step 6 — Generation module
 
 **Files:**
+
 - `src/agents/librarian/generation/prompts.py` — system prompt constants
 - `src/agents/librarian/generation/generator.py` — `build_prompt`, `call_llm`, `extract_citations`
 - `tests/librarian/unit/test_generator.py`
 
 ### `prompts.py`
+
 ```python
 SYSTEM_PROMPTS: dict[str, str] = {
     "lookup": "You are a precise research assistant. Answer directly from the provided sources...",
@@ -396,6 +422,7 @@ SYSTEM_PROMPTS: dict[str, str] = {
 ```
 
 ### `generator.py`
+
 ```python
 def build_prompt(
     state: LibrarianState,
@@ -423,10 +450,12 @@ def extract_citations(ranked_chunks: list[RankedChunk]) -> list[dict]:
 ## Step 7 — Query understanding
 
 **Files:**
+
 - `src/agents/librarian/orchestration/query_understanding.py` — `QueryAnalyzer`, `QueryRouter`
 - `tests/librarian/unit/test_query_understanding.py`
 
 ### `QueryAnalyzer`
+
 - Rule-based keyword intent classification
 - Query expansion (TERM_EXPANSIONS dictionary — domain-agnostic defaults)
 - Entity extraction (regex: identifiers, dates, quantities, version numbers)
@@ -438,6 +467,7 @@ def extract_citations(ranked_chunks: list[RankedChunk]) -> list[dict]:
 strings. Never add an INTENT_MAP translation layer in the calling graph node.
 
 ### `QueryRouter`
+
 ```python
 class QueryRouter:
     def route(self, analysis: QueryAnalysis) -> Literal["retrieve", "direct", "clarify"]:
@@ -551,6 +581,7 @@ Registry.register("reranker", "llm_listwise", LLMListwiseReranker)
 
 `Registry.clear()` lives only in `conftest.py` — never in application code. Use an autouse
 fixture so every test starts with a clean registry:
+
 ```python
 @pytest.fixture(autouse=True)
 def reset_registry():
@@ -558,6 +589,7 @@ def reset_registry():
     yield
     Registry.clear()
 ```
+
 This fixture is defined in `tests/librarian/unit/conftest.py` (scaffolded in Step 1, wired here).
 
 **Test:** create by name, list registered strategies, unknown name raises `KeyError` with
@@ -588,6 +620,7 @@ class LibrarianGraph:
 ```
 
 **Graph structure:**
+
 ```
 START → plan_node
   → [direct]  → generation_subgraph → confidence_gate → END
@@ -596,6 +629,7 @@ START → plan_node
 ```
 
 **`plan_node`** (supervisor-level, not a subgraph):
+
 - Calls `QueryAnalyzer.analyze()` + `QueryRouter.route()`
 - `QueryRouter.route()` returns `"retrieve" | "direct" | "clarify"` — these must be mapped
   to node names before passing to `Command(goto=...)`:
@@ -609,12 +643,14 @@ START → plan_node
 - Returns `Command(goto=_ROUTE_MAP[route], update={intent, plan, skip_retrieval})`
 
 **`confidence_gate`** (supervisor-level node):
+
 - `confident = state["confidence_score"] >= threshold`
 - If not confident: replace `response` with a "no confident answer found" message,
   set `fallback_requested = True`
 - Simple rule, no LLM call
 
 **Routing via `Command`:**
+
 ```python
 def plan_node(state: LibrarianState) -> Command:
     analysis = _analyzer.analyze(state["query"])
@@ -626,6 +662,7 @@ def plan_node(state: LibrarianState) -> Command:
 ```
 
 **Factory function:**
+
 ```python
 def build_library_graph(
     *,
@@ -652,6 +689,7 @@ def build_library_graph(
 ## Step 14 — Eval suite
 
 **Files:**
+
 - `src/agents/librarian/evals/models.py`
 - `src/agents/librarian/evals/extract_golden.py`
 - `src/agents/librarian/evals/retrieval_eval.py`
@@ -660,6 +698,7 @@ def build_library_graph(
 - `tests/librarian/unit/test_evals.py`
 
 ### `models.py`
+
 ```python
 class GoldenSample(BaseModel):
     query_id: str
@@ -689,17 +728,20 @@ class EvalRunConfig(BaseModel):
 ```
 
 ### `extract_golden.py`
+
 - Tiered extraction: gold (hand-curated with chunk IDs) / silver (human-validated) / bronze (inferred from interaction logs)
 - Deduplication keyed on `(query, doc_url)` pair — NOT record ID
 - CLI: `python -m agents.library.evals.extract_golden --records data/records.jsonl --tier silver`
 
 ### `retrieval_eval.py`
+
 - `evaluate_retrieval(golden: list[GoldenSample], retrieve_fn, k=5) -> RetrievalMetrics`
 - hit_rate@k: % of queries where expected URL appears in top-k results
 - MRR: mean reciprocal rank of the first relevant result
 - Failure clustering: group failed queries by pattern (no results / wrong intent / score too low)
 
 ### `answer_eval.py`
+
 - `AnswerJudge`: Haiku-based evaluator
 - Evaluates: faithfulness, relevance, completeness (0–1 scores)
 - Returns `JudgeResult(is_correct, score, reasoning)`
@@ -707,6 +749,7 @@ class EvalRunConfig(BaseModel):
 - Cost gate: `settings.confirm_expensive_ops` (from `LibrarySettings`) — never commit as True
 
 ### `generate_synthetic.py`
+
 - Takes a corpus of chunks, generates (query, expected_doc_url) pairs via LLM
 - Output: JSONL compatible with `GoldenSample` schema
 - Cost gate: `settings.confirm_expensive_ops` (from `LibrarySettings`) — never commit as True
