@@ -6,32 +6,19 @@ grading criteria, golden datasets, and metrics.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any, Protocol, runtime_checkable
 
-
-@dataclass
-class JudgeResult:
-    """Standardised output from any evaluation judge."""
-
-    is_correct: bool
-    score: float  # 0.0–1.0
-    reasoning: str
-    details: dict[str, Any] | None = None
+from eval.models import EvalTask, GraderResult
 
 
 @runtime_checkable
 class Grader(Protocol):
-    """Evaluates a single (input, output, expected) triple."""
+    """Evaluates a single task and returns a standardised result."""
 
-    async def grade(
-        self,
-        *,
-        query: str,
-        response: str,
-        context: str = "",
-        expected: str = "",
-    ) -> JudgeResult: ...
+    @property
+    def grader_type(self) -> str: ...
+
+    async def grade(self, task: EvalTask) -> GraderResult: ...
 
 
 @runtime_checkable

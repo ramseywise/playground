@@ -1,36 +1,14 @@
-"""Evaluation data models.
+"""Evaluation data models for the librarian agent.
 
-Canonical location for eval-related schemas.  Previously lived in
-``eval_harness/tasks/models.py``.
+``EvalRunConfig`` is re-exported from the shared ``eval.models`` package.
+``GoldenSample`` and ``RetrievalMetrics`` are librarian-specific.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from eval.models import EvalRunConfig  # noqa: F401 — re-export
 
-from pydantic import BaseModel, Field
-
-
-class EvalRunConfig(BaseModel):
-    """Configuration snapshot for a single evaluation run.
-
-    Logged alongside metrics so results are reproducible and comparable
-    across prompt versions, corpus versions, and retrieval settings.
-    """
-
-    run_name: str = ""
-    prompt_version: str = "v0.1.0"
-    model_id: str = "claude-haiku-4-5-20251001"
-    eval_dataset: str = ""  # filename or label, e.g. "golden_synthetic_en"
-    corpus_version: str = ""  # e.g. "20260327", "first_pancake"
-    top_k: int = 5
-    notes: str = ""
-    timestamp: datetime = Field(default_factory=datetime.now)
-
-    def summary(self) -> dict:
-        return self.model_dump(exclude={"timestamp"}) | {
-            "timestamp": self.timestamp.isoformat()
-        }
+from pydantic import BaseModel
 
 
 class GoldenSample(BaseModel):
