@@ -41,6 +41,28 @@ class LibrarySettings(BaseSettings):
         False  # cost gate for generate_synthetic + answer_eval
     )
 
+    # API settings
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+    api_cors_origins: list[str] = ["*"]
+
+    # S3 data lake
+    s3_bucket: str = ""
+    s3_raw_prefix: str = "raw/"
+    s3_artifacts_prefix: str = "artifacts/"
+    s3_region: str = ""  # falls back to AWS_DEFAULT_REGION / boto3 chain
+
+    # Snowflake (MCP server)
+    snowflake_account: str = ""
+    snowflake_user: str = ""
+    snowflake_password: str = ""
+    snowflake_warehouse: str = ""
+    snowflake_database: str = ""
+    snowflake_schema: str = "PUBLIC"
+
+    # Lambda
+    lambda_execution: bool = False
+
     langfuse_enabled: bool = False
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""

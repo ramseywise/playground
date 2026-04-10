@@ -7,6 +7,8 @@ transitively, but we don't import from it in production code paths).
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+
 import anthropic
 
 from agents.librarian.utils.logging import get_logger
@@ -17,7 +19,9 @@ log = get_logger(__name__)
 class AnthropicLLM:
     """Direct anthropic SDK wrapper for LLM calls.
 
-    Interface: ``generate(system, messages) -> str``
+    Interface:
+        ``generate(system, messages) -> str`` — full response
+        ``stream(system, messages) -> AsyncIterator[str]`` — token-by-token
 
     Used by both the generation agent and the LLM listwise reranker.
     Replaces ``ChatAnthropic`` from ``langchain-anthropic`` — same
@@ -51,6 +55,23 @@ class AnthropicLLM:
             output_chars=len(text),
         )
         return text
+
+    async def stream(
+        self,
+        system: str,
+        messages: list[dict[str, str]],
+        max_tokens: int = 4096,
+    ) -> AsyncIterator[str]:
+        """Yield text chunks as they arrive from the Anthropic streaming API."""
+        async with self._client.messages.stream(
+            model=self._model,
+            system=system,
+            messages=messages,  # type: ignore[arg-type]
+            max_tokens=max_tokens,
+        ) as response_stream:
+            async for text in response_stream.text_stream:
+                yield text
+        log.debug("llm.stream.done", model=self._model)
 
     @property
     def model(self) -> str:

@@ -173,6 +173,30 @@ class IngestionPipeline:
         docs = load_directory(directory, glob_pattern)
         return await self.ingest_documents(docs)
 
+    async def ingest_s3_object(
+        self, bucket: str, key: str, region: str = ""
+    ) -> IngestionResult:
+        """Load a single object from S3 and ingest it."""
+        import asyncio
+
+        from agents.librarian.ingestion.s3_loader import S3DocumentLoader
+
+        loader = S3DocumentLoader(bucket=bucket, region=region)
+        doc = await asyncio.to_thread(loader.load_object, key)
+        return await self.ingest_document(doc)
+
+    async def ingest_s3_prefix(
+        self, bucket: str, prefix: str, region: str = ""
+    ) -> list[IngestionResult]:
+        """Load all matching objects under an S3 prefix and ingest them."""
+        import asyncio
+
+        from agents.librarian.ingestion.s3_loader import S3DocumentLoader
+
+        loader = S3DocumentLoader(bucket=bucket, region=region)
+        docs = await asyncio.to_thread(loader.load_prefix, prefix)
+        return await self.ingest_documents(docs)
+
     # ------------------------------------------------------------------
     # Snippet extraction
     # ------------------------------------------------------------------

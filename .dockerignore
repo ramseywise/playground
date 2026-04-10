@@ -1,0 +1,13 @@
+.venv/
+.git/
+.claude/
+tests/
+*.pyc
+__pycache__/
+.chroma/
+.duckdb/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+obsidian/
+*.egg-info/
