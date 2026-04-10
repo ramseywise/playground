@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Any
 
 from agents.librarian.generation.generator import (
@@ -48,6 +49,35 @@ class GenerationSubgraph:
         return {
             "response": response_text,
             "citations": citations,
+        }
+
+    async def run_stream(
+        self, state: LibrarianState
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream generation: yield token chunks, then final metadata.
+
+        Events emitted:
+            {"event": "token", "data": "<text chunk>"}
+            {"event": "done", "data": {"response": "...", "citations": [...]}}
+        """
+        reranked = list(state.get("reranked_chunks") or [])
+        system, messages = build_prompt(state, reranked)
+        citations = extract_citations(reranked)
+
+        full_response: list[str] = []
+        async for chunk in self._llm.stream(system, messages):
+            full_response.append(chunk)
+            yield {"event": "token", "data": chunk}
+
+        response_text = "".join(full_response)
+        log.info(
+            "generation.subgraph.stream.done",
+            response_chars=len(response_text),
+            citation_count=len(citations),
+        )
+        yield {
+            "event": "done",
+            "data": {"response": response_text, "citations": citations},
         }
 
     def confidence_gate(self, state: LibrarianState) -> dict[str, Any]:

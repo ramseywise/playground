@@ -1,0 +1,31 @@
+services:
+  librarian-api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file: ../../.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  playground:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      LIBRARIAN_API_URL: http://librarian-api:8000
+    command: >
+      sh -c "pip install streamlit && streamlit run playground/librarian_chat.py
+      --server.port=8501 --server.address=0.0.0.0"
+    volumes:
+      - ../../playground:/app/playground:ro
+    depends_on:
+      librarian-api:
+        condition: service_healthy

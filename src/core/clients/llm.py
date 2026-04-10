@@ -8,6 +8,7 @@ Future providers (Vercel AI, Google ADK) implement the same protocols.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Protocol, runtime_checkable
 
 import anthropic
@@ -113,6 +114,25 @@ class AnthropicLLM:
             output_chars=len(text),
         )
         return text
+
+    async def stream(
+        self,
+        system: str,
+        messages: list[dict[str, str]],
+        max_tokens: int = 4096,
+    ) -> AsyncIterator[str]:
+        """Yield text chunks as they arrive from the Anthropic streaming API."""
+        if self._async_client is None:
+            self._async_client = anthropic.AsyncAnthropic(api_key=self._api_key)
+        async with self._async_client.messages.stream(
+            model=self._model,
+            system=system,
+            messages=messages,  # type: ignore[arg-type]
+            max_tokens=max_tokens,
+        ) as response_stream:
+            async for text in response_stream.text_stream:
+                yield text
+        log.debug("llm.stream.done", model=self._model)
 
     @property
     def model(self) -> str:

@@ -31,6 +31,22 @@ librarian = [
     "duckdb>=1.0",
     "numpy>=1.26",
     "scikit-learn>=1.4",
+    "boto3>=1.35.0",
+]
+api = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sse-starlette>=2.0.0",
+]
+playground = [
+    "streamlit>=1.40.0",
+]
+lambda = [
+    "mangum>=0.19.0",
+]
+mcp = [
+    "mcp>=1.0.0",
+    "snowflake-connector-python>=3.12.0",
 ]
 
 [build-system]
@@ -60,3 +76,7 @@ markers = ["integration: tests that hit real binaries or external services"]
 research-agent = "agents.researcher.__main__:main"
 presenter = "agents.presenter.__main__:main"
 cartographer = "agents.cartographer.__main__:main"
+librarian-api = "agents.librarian.api.app:main"
+mcp-snowflake = "agents.librarian.mcp.snowflake_server:main"
+mcp-s3 = "agents.librarian.mcp.s3_server:main"
+mcp-librarian = "agents.librarian.mcp.librarian_server:main"
