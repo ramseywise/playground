@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from collections import defaultdict
@@ -263,9 +262,13 @@ def aggregate(sessions: list[dict[str, Any]]) -> dict[str, Any]:
             sessions_involved.add(sess_b["session_id"])
 
     overlap_messages = sum(
-        s["user_message_count"] for s in sessions if s["session_id"] in sessions_involved
+        s["user_message_count"]
+        for s in sessions
+        if s["session_id"] in sessions_involved
     )
-    overlap_pct = round(overlap_messages / total_user_msgs * 100) if total_user_msgs else 0
+    overlap_pct = (
+        round(overlap_messages / total_user_msgs * 100) if total_user_msgs else 0
+    )
 
     # Time-of-day buckets
     hour_counts: dict[int, int] = defaultdict(int)
@@ -273,9 +276,13 @@ def aggregate(sessions: list[dict[str, Any]]) -> dict[str, Any]:
         hour_counts[hour] += 1
 
     median_rt = (
-        sorted(all_response_times)[len(all_response_times) // 2] if all_response_times else 0
+        sorted(all_response_times)[len(all_response_times) // 2]
+        if all_response_times
+        else 0
     )
-    avg_rt = sum(all_response_times) / len(all_response_times) if all_response_times else 0
+    avg_rt = (
+        sum(all_response_times) / len(all_response_times) if all_response_times else 0
+    )
 
     # Response time distribution
     rt_buckets: dict[str, int] = {
@@ -364,26 +371,15 @@ from the data. Avoid generic advice. Reference specific numbers from the stats.
 
 
 def call_claude(api_key: str, prompt: str, model: str = "claude-sonnet-4-6") -> str:
-    """Call the Anthropic API to generate an HTML report."""
-    import httpx
+    """Call the Anthropic API to generate an HTML report via shared LLM client."""
+    from core.clients.llm import AnthropicLLM
 
-    resp = httpx.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": model,
-            "max_tokens": 8192,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        timeout=120,
+    llm = AnthropicLLM(model=model, api_key=api_key)
+    return llm.generate_sync(
+        system="You are an expert data analyst generating HTML reports.",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=8192,
     )
-    resp.raise_for_status()
-    result = resp.json()
-    return result["content"][0]["text"]
 
 
 def build_prompt(sessions: list[dict[str, Any]], agg: dict[str, Any]) -> str:
@@ -434,13 +430,18 @@ def main() -> None:
     parser.add_argument("--key", help="Anthropic API key (or set ANTHROPIC_API_KEY)")
     parser.add_argument("--output", default="~/.claude/usage-data/report.html")
     parser.add_argument("--projects-dir", default="~/.claude/projects")
-    parser.add_argument("--model", default="claude-sonnet-4-6")
+    parser.add_argument(
+        "--model", default=None, help="Model ID (default: from settings)"
+    )
     parser.add_argument(
         "--dry-run", action="store_true", help="Extract stats only, skip API call"
     )
     args = parser.parse_args()
 
-    api_key = args.key or os.environ.get("ANTHROPIC_API_KEY", "")
+    from core.config.settings import BaseSettings
+
+    _cfg = BaseSettings()
+    api_key = args.key or _cfg.anthropic_api_key
     if not api_key and not args.dry_run:
         log.error("parser.no_api_key", msg="Set ANTHROPIC_API_KEY or pass --key")
         sys.exit(1)
@@ -458,7 +459,11 @@ def main() -> None:
         sys.exit(1)
 
     agg = aggregate(sessions)
-    log.info("parser.aggregated", date_range=agg["date_range"], messages=agg["total_user_messages"])
+    log.info(
+        "parser.aggregated",
+        date_range=agg["date_range"],
+        messages=agg["total_user_messages"],
+    )
 
     if args.dry_run:
         # Dry run outputs JSON to stdout for the /insights command to read
@@ -466,11 +471,12 @@ def main() -> None:
         sys.stdout.write("\n")
         return
 
-    log.info("parser.calling_api", model=args.model)
+    model = args.model or _cfg.model_sonnet
+    log.info("parser.calling_api", model=model)
     prompt = build_prompt(sessions, agg)
 
     try:
-        html = call_claude(api_key, prompt, model=args.model)
+        html = call_claude(api_key, prompt, model=model)
     except Exception as exc:
         log.error("parser.api_error", error=str(exc))
         sys.exit(1)
@@ -481,7 +487,9 @@ def main() -> None:
         if match:
             html = match.group(0)
         else:
-            log.warning("parser.html_not_detected", msg="Response doesn't look like HTML")
+            log.warning(
+                "parser.html_not_detected", msg="Response doesn't look like HTML"
+            )
 
     output_path.write_text(html)
     log.info("parser.report_written", path=str(output_path))

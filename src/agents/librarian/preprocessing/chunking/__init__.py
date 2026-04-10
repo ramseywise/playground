@@ -1,14 +1,11 @@
-"""Chunking strategies — modularized by method.
+"""Re-export from canonical location: ingestion/chunking/.
 
-- utils.py:      Shared helpers (make_doc_id, splitting primitives, measurement)
-- strategies.py: FixedChunker, OverlappingChunker, StructuredChunker, AdjacencyChunker
-- html_aware.py: HtmlAwareChunker (heading-boundary + recursive fallback)
-- parent_doc.py: ParentDocChunker (two-level parent/child strategy)
+Chunking strategies now live in ``agents.librarian.ingestion.chunking``.
 """
 
-from agents.librarian.preprocessing.chunking.html_aware import HtmlAwareChunker
-from agents.librarian.preprocessing.chunking.parent_doc import ParentDocChunker
-from agents.librarian.preprocessing.chunking.strategies import (
+from agents.librarian.ingestion.chunking.html_aware import HtmlAwareChunker  # noqa: F401
+from agents.librarian.ingestion.chunking.parent_doc import ParentDocChunker  # noqa: F401
+from agents.librarian.ingestion.chunking.strategies import (  # noqa: F401
     AdjacencyChunker,
     FixedChunker,
     OverlappingChunker,

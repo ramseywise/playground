@@ -1,31 +1,20 @@
-"""Document parsing — cleaning, dedup, language detection, enrichment.
+"""Re-export from canonical location: ingestion/parsing/."""
 
-Submodules:
-- cleaning.py:    clean_text, remove_boilerplate
-- dedup.py:       compute_text_hash, deduplicate_exact, deduplicate_fuzzy
-- language.py:    detect_language, filter_by_language
-- enrichment.py:  extract_metadata, enrich_documents
-- pipeline.py:    preprocess_corpus (full pipeline orchestrator)
-"""
-
-from agents.librarian.preprocessing.parsing.cleaning import (
-    clean_text,
-    remove_boilerplate,
-)
-from agents.librarian.preprocessing.parsing.dedup import (
+from agents.librarian.ingestion.parsing.cleaning import clean_text, remove_boilerplate  # noqa: F401
+from agents.librarian.ingestion.parsing.dedup import (  # noqa: F401
     compute_text_hash,
     deduplicate_exact,
     deduplicate_fuzzy,
 )
-from agents.librarian.preprocessing.parsing.enrichment import (
+from agents.librarian.ingestion.parsing.enrichment import (
     enrich_documents,
     extract_metadata,
-)
-from agents.librarian.preprocessing.parsing.language import (
+)  # noqa: F401
+from agents.librarian.ingestion.parsing.language import (
     detect_language,
     filter_by_language,
-)
-from agents.librarian.preprocessing.parsing.pipeline import preprocess_corpus
+)  # noqa: F401
+from agents.librarian.ingestion.parsing.pipeline import preprocess_corpus  # noqa: F401
 
 __all__ = [
     "clean_text",
