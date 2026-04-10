@@ -1,30 +1,11 @@
+"""Re-export from canonical location: infra.config.logging.
+
+Logging setup now lives in the shared infra layer.
+This module re-exports for backward compatibility within the librarian.
+"""
+
 from __future__ import annotations
 
-import structlog
+from infra.config.logging import configure_logging, get_logger  # noqa: F401
 
-
-def configure_logging(*, render_json: bool = False) -> None:
-    """Call once at startup. render_json=True for prod/CI (JSON lines)."""
-    processors: list[structlog.types.Processor] = [
-        structlog.contextvars.merge_contextvars,
-        structlog.stdlib.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-    ]
-    if render_json:
-        processors.append(structlog.processors.JSONRenderer())
-    else:
-        processors.append(structlog.dev.ConsoleRenderer())
-
-    structlog.configure(
-        processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(20),  # INFO
-        context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
-        cache_logger_on_first_use=True,
-    )
-
-
-def get_logger(name: str) -> structlog.stdlib.BoundLogger:
-    return structlog.get_logger(name)
+__all__ = ["configure_logging", "get_logger"]
