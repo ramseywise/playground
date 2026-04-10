@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agents.librarian.factory import create_librarian
-from agents.librarian.orchestration.subgraphs.generation import GenerationSubgraph
+from agents.librarian.orchestration.nodes.generation import GenerationSubgraph
 from agents.librarian.utils.config import LibrarySettings, settings as _default_settings
 from agents.librarian.utils.llm import AnthropicLLM
 from agents.librarian.utils.logging import get_logger

@@ -1,14 +1,19 @@
-"""Thin Claude API client helper and shared LLM utilities."""
+"""Thin Claude API client helper and shared LLM utilities.
+
+Now delegates to ``infra.clients.llm`` for the unified LLM client and
+``infra.parsing.json`` for JSON parsing.  This module re-exports for
+backward compatibility with researcher and presenter.
+"""
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import anthropic
 import structlog
 
 from agents.utils.config import settings
+from core.parsing.json import strip_json_fences  # noqa: F401 — re-export
 
 log = structlog.get_logger(__name__)
 
@@ -18,14 +23,6 @@ def create_client() -> anthropic.Anthropic:
     if not settings.anthropic_api_key:
         raise RuntimeError("ANTHROPIC_API_KEY not set — add it to .env")
     return anthropic.Anthropic(api_key=settings.anthropic_api_key)
-
-
-def strip_json_fences(text: str) -> str:
-    """Strip markdown code fences from LLM JSON output."""
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    return text
 
 
 def parse_json_response(
@@ -39,6 +36,8 @@ def parse_json_response(
     On the first JSONDecodeError, re-prompts Claude with the malformed output
     and an instruction to return valid JSON. Raises on the second failure.
     """
+    import json
+
     raw = strip_json_fences(response_text)
     try:
         return json.loads(raw)

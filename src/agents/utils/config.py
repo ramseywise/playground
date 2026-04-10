@@ -1,17 +1,27 @@
-"""Shared configuration for all agents — loaded from .env via pydantic-settings."""
+"""Agent-specific configuration — extends infra.config.BaseSettings.
+
+Researcher and presenter settings live here; librarian has its own
+``LibrarySettings`` that also extends ``BaseSettings``.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+from core.config.settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Central config for all agents. Every field is overridable via .env or env vars."""
+    """Settings for researcher + presenter agents.  Extends shared BaseSettings."""
 
-    anthropic_api_key: str = ""  # validated at call time, not import time
-    anthropic_model: str = "claude-sonnet-4-6"
+    # Aliases for backward compat — map to BaseSettings fields
+    @property
+    def anthropic_api_key(self) -> str:  # type: ignore[override]
+        return super().anthropic_api_key
+
+    @property
+    def anthropic_model(self) -> str:
+        return self.model_sonnet
 
     # Research agent paths
     readings_dir: Path = Path.home() / "Dropbox" / "ai_readings"
@@ -30,8 +40,6 @@ class Settings(BaseSettings):
     image_height: int = 720
     viz_audience: str = "mixed technical and product team"
     viz_model: str = "claude-sonnet-4-6"
-
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @property
     def project_context_file(self) -> Path:

@@ -1,20 +1,10 @@
+"""Re-export from canonical location: protocols/.
+
+All protocols now live in ``agents.librarian.protocols``.
+"""
+
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from agents.librarian.protocols.reranker import Reranker  # noqa: F401
 
-from agents.librarian.schemas.chunks import GradedChunk, RankedChunk
-
-
-@runtime_checkable
-class Reranker(Protocol):
-    async def rerank(
-        self,
-        query: str,
-        chunks: list[GradedChunk],
-        top_k: int = 3,
-    ) -> list[RankedChunk]:
-        """Return chunks sorted by relevance_score desc, len <= top_k.
-
-        relevance_score ∈ [0, 1]; rank is 1-indexed.
-        """
-        ...
+__all__ = ["Reranker"]
