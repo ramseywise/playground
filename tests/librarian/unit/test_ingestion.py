@@ -9,8 +9,8 @@ import pytest
 
 from agents.librarian.ingestion.loaders import load_directory, load_markdown_file
 from agents.librarian.ingestion.pipeline import IngestionPipeline, IngestionResult, _sha256
-from agents.librarian.retrieval.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.mock_embedder import MockEmbedder
+from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
+from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
 from agents.librarian.storage.metadata_db import MetadataDB
 from agents.librarian.storage.snippet_db import SnippetDB
 
@@ -51,7 +51,7 @@ def pipeline(
     meta_db: MetadataDB,
     snippet_db: SnippetDB,
 ) -> IngestionPipeline:
-    from agents.librarian.preprocessing.chunker import FixedChunker
+    from agents.librarian.preprocessing.chunking.strategies import FixedChunker
 
     return IngestionPipeline(
         chunker=FixedChunker(),

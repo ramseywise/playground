@@ -1,6 +1,6 @@
-"""Indexing pipeline — chunk → embed → upsert orchestration."""
+"""Re-export from canonical location: ingestion/indexing/."""
 
-from agents.librarian.preprocessing.indexing.indexer import (
+from agents.librarian.ingestion.indexing.indexer import (  # noqa: F401
     ChunkIndexer,
     build_indexer_for_source,
 )

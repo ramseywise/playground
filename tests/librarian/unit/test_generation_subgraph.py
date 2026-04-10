@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.orchestration.subgraphs.generation import (
+from agents.librarian.orchestration.nodes.generation import (
     DEFAULT_CONFIDENCE_GATE,
     GenerationSubgraph,
 )

@@ -12,15 +12,18 @@ Or schedule via Claude Code remote trigger / system cron.
 from __future__ import annotations
 
 import json
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-import anthropic
 import structlog
 
+from core.clients.llm import AnthropicLLM
+from core.config.settings import BaseSettings
+
 log = structlog.get_logger(__name__)
+
+_settings = BaseSettings()
 
 # --- Paths ---
 
@@ -125,9 +128,8 @@ Keep analysis terse and actionable."""
 
 
 def run_analysis() -> str:
-    """Run the insights analysis via Anthropic SDK."""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not api_key:
+    """Run the insights analysis via shared LLM client."""
+    if not _settings.anthropic_api_key:
         log.error("cron.no_api_key")
         sys.exit(1)
 
@@ -139,23 +141,21 @@ def run_analysis() -> str:
         log.info("cron.no_data", msg="No session or friction data to analyze")
         return "No session data available for analysis."
 
-    client = anthropic.Anthropic(api_key=api_key)
+    llm = AnthropicLLM(
+        model=_settings.model_sonnet,
+        api_key=_settings.anthropic_api_key,
+    )
 
     prompt = build_analysis_prompt(session_md, friction_log, existing_commands)
 
-    log.info("cron.calling_api", model="claude-sonnet-4-6")
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4096,
+    log.info("cron.calling_api", model=_settings.model_sonnet)
+    response_text = llm.generate_sync(
+        system="You are a workflow analysis assistant.",
         messages=[{"role": "user", "content": prompt}],
+        max_tokens=4096,
     )
 
-    response_text = message.content[0].text
-    log.info(
-        "cron.done",
-        input_tokens=message.usage.input_tokens,
-        output_tokens=message.usage.output_tokens,
-    )
+    log.info("cron.done", output_chars=len(response_text))
     return response_text
 
 
@@ -199,7 +199,9 @@ def extract_and_write_commands(report: str) -> list[str]:
                 if content.startswith("---") and "name:" in content:
                     for cl in content_lines:
                         if cl.strip().startswith("name:"):
-                            name = cl.split(":", 1)[1].strip().strip('"').replace(" ", "_")
+                            name = (
+                                cl.split(":", 1)[1].strip().strip('"').replace(" ", "_")
+                            )
                             filename = f"{name}.md"
                             cmd_path = COMMANDS_DIR / filename
                             cmd_path.write_text(content + "\n", encoding="utf-8")

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 
 from agents.librarian.preprocessing.base import Chunker, ChunkerConfig
-from agents.librarian.preprocessing.html_aware import HtmlAwareChunker, _make_doc_id
-from agents.librarian.preprocessing.parent_doc import ParentDocChunker
+from agents.librarian.preprocessing.chunking.html_aware import HtmlAwareChunker, _make_doc_id
+from agents.librarian.preprocessing.chunking.parent_doc import ParentDocChunker
 
 
 # ---------------------------------------------------------------------------
