@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.orchestration.subgraphs.reranker import RerankerSubgraph
+from agents.librarian.orchestration.nodes.reranker import RerankerSubgraph
 from agents.librarian.schemas.chunks import (
     Chunk,
     ChunkMetadata,

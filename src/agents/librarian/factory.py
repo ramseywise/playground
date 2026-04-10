@@ -64,6 +64,11 @@ def _build_reranker(cfg: LibrarySettings, llm: Any) -> Any:
 
         return LLMListwiseReranker(llm=llm)
 
+    if cfg.reranker_strategy == "passthrough":
+        from agents.librarian.reranker.passthrough import PassthroughReranker
+
+        return PassthroughReranker()
+
     # Default: cross_encoder
     from agents.librarian.reranker.cross_encoder import CrossEncoderReranker
 

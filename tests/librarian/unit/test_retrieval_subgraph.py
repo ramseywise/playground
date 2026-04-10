@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.orchestration.subgraphs.retrieval import (
+from agents.librarian.orchestration.nodes.retrieval import (
     RetrievalSubgraph,
     _grade_chunks,
 )

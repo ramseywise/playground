@@ -8,9 +8,9 @@ from agents.librarian.orchestration.query_understanding import (
     QueryAnalyzer,
     QueryRouter,
 )
-from agents.librarian.orchestration.subgraphs.generation import GenerationSubgraph
-from agents.librarian.orchestration.subgraphs.reranker import RerankerSubgraph
-from agents.librarian.orchestration.subgraphs.retrieval import RetrievalSubgraph
+from agents.librarian.orchestration.nodes.generation import GenerationSubgraph
+from agents.librarian.orchestration.nodes.reranker import RerankerSubgraph
+from agents.librarian.orchestration.nodes.retrieval import RetrievalSubgraph
 from agents.librarian.reranker.base import Reranker
 from agents.librarian.retrieval.base import Embedder, Retriever
 from agents.librarian.schemas.chunks import GradedChunk, RankedChunk

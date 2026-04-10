@@ -1,18 +1,10 @@
+"""Re-export from canonical location: protocols/.
+
+All protocols now live in ``agents.librarian.protocols``.
+"""
+
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from agents.librarian.protocols.chunker import Chunker, ChunkerConfig  # noqa: F401
 
-from pydantic import BaseModel
-
-from agents.librarian.schemas.chunks import Chunk
-
-
-class ChunkerConfig(BaseModel):
-    max_tokens: int = 512
-    overlap_tokens: int = 64
-    min_tokens: int = 50
-
-
-@runtime_checkable
-class Chunker(Protocol):
-    def chunk_document(self, doc: dict) -> list[Chunk]: ...
+__all__ = ["Chunker", "ChunkerConfig"]
