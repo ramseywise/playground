@@ -1,6 +1,6 @@
 ---
 name: plan-review
-description: "Phase 2. Review, iterate, and refine implementation plans. Reads research from SESSION.md active docs. Writes to .claude/docs/plans/<name>.md."
+description: "Phase 2. Review, iterate, and refine implementation plans. Reads research from SESSION.md active docs and writes to .claude/docs/plans/<name>.md."
 disable-model-invocation: true
 allowed-tools: Read Grep Glob Bash Write
 ---

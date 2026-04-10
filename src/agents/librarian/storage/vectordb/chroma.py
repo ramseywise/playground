@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agents.librarian.retrieval.rrf import fuse_rankings
 from agents.librarian.retrieval.scoring import term_overlap
-from agents.librarian.schemas.chunks import Chunk, ChunkMetadata
+from agents.librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
 from agents.librarian.schemas.retrieval import RetrievalResult
 from agents.librarian.utils.logging import get_logger
 
@@ -35,7 +36,7 @@ class ChromaRetriever:
     Requires ``chromadb`` package (``uv add chromadb``).
     Data persists to ``persist_dir`` on disk — no Docker required.
 
-    Hybrid score = bm25_weight * term_overlap + vector_weight * cosine_similarity
+    Hybrid score uses Reciprocal Rank Fusion over vector and keyword rankings,
     which mirrors InMemoryRetriever's interface for test/prod parity.
     """
 
@@ -108,14 +109,16 @@ class ChromaRetriever:
             conditions = [{key: {"$eq": val}} for key, val in metadata_filter.items()]
             where = {"$and": conditions} if len(conditions) > 1 else conditions[0]
 
+        candidate_count = max(1, collection.count())
         resp = collection.query(
             query_embeddings=[query_vector],
-            n_results=min(k, max(1, collection.count())),
+            n_results=min(max(k * 3, k), candidate_count),
             where=where,
             include=["documents", "metadatas", "distances"],
         )
 
-        results: list[RetrievalResult] = []
+        vector_rank: list[GradedChunk] = []
+        keyword_rank: list[GradedChunk] = []
         ids = resp["ids"][0]
         documents = resp["documents"][0]
         metadatas_list = resp["metadatas"][0]
@@ -126,16 +129,17 @@ class ChromaRetriever:
         ):
             vec_score = _chroma_distance_to_score(dist)
             kw_score = term_overlap(query_text, text)
-            hybrid_score = self.bm25_weight * kw_score + self.vector_weight * vec_score
 
             chunk = Chunk(
                 id=chunk_id,
                 text=text,
                 metadata=ChunkMetadata(**meta),
             )
-            results.append(
-                RetrievalResult(chunk=chunk, score=hybrid_score, source="hybrid")
-            )
+            vector_rank.append(GradedChunk(chunk=chunk, score=vec_score, relevant=True))
+            keyword_rank.append(GradedChunk(chunk=chunk, score=kw_score, relevant=True))
 
-        results.sort(key=lambda r: r.score, reverse=True)
-        return results[:k]
+        fused = fuse_rankings([keyword_rank, vector_rank], top_k=k)
+        return [
+            RetrievalResult(chunk=item.chunk, score=item.score, source="hybrid")
+            for item in fused
+        ]

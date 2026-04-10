@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from typing import Any
 
+from core.clients.llm import LLMClient
 from agents.librarian.generation.generator import (
     build_prompt,
     call_llm,
@@ -27,7 +28,7 @@ class GenerationSubgraph:
 
     def __init__(
         self,
-        llm: Any,
+        llm: LLMClient,
         confidence_threshold: float = DEFAULT_CONFIDENCE_GATE,
     ) -> None:
         self._llm = llm
@@ -51,9 +52,7 @@ class GenerationSubgraph:
             "citations": citations,
         }
 
-    async def run_stream(
-        self, state: LibrarianState
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, state: LibrarianState) -> AsyncIterator[dict[str, Any]]:
         """Stream generation: yield token chunks, then final metadata.
 
         Events emitted:

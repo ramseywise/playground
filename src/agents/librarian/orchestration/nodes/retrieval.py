@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+import inspect
 from typing import Any
 
 from agents.librarian.retrieval.base import Embedder, Retriever
+from agents.librarian.retrieval.cache import RetrievalCache
 from agents.librarian.schemas.chunks import GradedChunk
 from agents.librarian.schemas.retrieval import QueryPlan, RetrievalResult
 from agents.librarian.schemas.state import LibrarianState
@@ -48,11 +51,15 @@ class RetrievalSubgraph:
         embedder: Embedder,
         top_k: int = 10,
         relevance_threshold: float = _RELEVANCE_THRESHOLD,
+        cache: RetrievalCache | None = None,
+        cache_strategy: str = "",
     ) -> None:
         self._retriever = retriever
         self._embedder = embedder
         self._top_k = top_k
         self._threshold = relevance_threshold
+        self._cache = cache
+        self._cache_strategy = cache_strategy
 
     async def run(self, state: LibrarianState) -> dict[str, Any]:
         plan: QueryPlan | None = state.get("plan")
@@ -73,15 +80,46 @@ class RetrievalSubgraph:
             top_k=self._top_k,
         )
 
-        all_results: list[RetrievalResult] = []
+        cached_results: list[RetrievalResult] = []
+        missed_variants: list[str] = []
         for variant in variants:
-            query_vector = self._embedder.embed_query(variant)
-            results = await self._retriever.search(
-                query_text=variant,
-                query_vector=query_vector,
-                k=self._top_k,
+            cached = (
+                self._cache.get(variant, self._cache_strategy, self._top_k)
+                if self._cache is not None
+                else None
             )
-            all_results.extend(results)
+            if cached is None:
+                missed_variants.append(variant)
+                continue
+            cached_results.extend(cached)
+
+        async def _embed_variant(variant: str) -> list[float]:
+            aembed_query = getattr(self._embedder, "aembed_query", None)
+            if callable(aembed_query):
+                result = aembed_query(variant)
+                if inspect.isawaitable(result):
+                    return await result
+            return await asyncio.to_thread(self._embedder.embed_query, variant)
+
+        all_results: list[RetrievalResult] = list(cached_results)
+        if missed_variants:
+            query_vectors = await asyncio.gather(
+                *(_embed_variant(variant) for variant in missed_variants)
+            )
+            result_lists = await asyncio.gather(
+                *(
+                    self._retriever.search(
+                        query_text=variant,
+                        query_vector=query_vector,
+                        k=self._top_k,
+                    )
+                    for variant, query_vector in zip(missed_variants, query_vectors)
+                )
+            )
+            for variant, results in zip(missed_variants, result_lists):
+                all_results.extend(results)
+                if self._cache is not None:
+                    self._cache.put(variant, self._cache_strategy, self._top_k, results)
 
         graded = _grade_chunks(all_results, threshold=self._threshold)
 

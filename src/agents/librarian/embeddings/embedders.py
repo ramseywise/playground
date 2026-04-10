@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from agents.librarian.utils.config import settings
 from agents.librarian.utils.logging import get_logger
 
@@ -41,11 +43,17 @@ class MultilingualEmbedder:
         model: SentenceTransformer = self._model  # type: ignore[assignment]
         return model.encode(f"query: {text}", normalize_embeddings=True).tolist()
 
+    async def aembed_query(self, text: str) -> list[float]:
+        return await asyncio.to_thread(self.embed_query, text)
+
     def embed_passage(self, text: str) -> list[float]:
         from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
 
         model: SentenceTransformer = self._model  # type: ignore[assignment]
         return model.encode(f"passage: {text}", normalize_embeddings=True).tolist()
+
+    async def aembed_passage(self, text: str) -> list[float]:
+        return await asyncio.to_thread(self.embed_passage, text)
 
     def embed_passages(self, texts: list[str]) -> list[list[float]]:
         from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
@@ -53,6 +61,9 @@ class MultilingualEmbedder:
         model: SentenceTransformer = self._model  # type: ignore[assignment]
         prefixed = [f"passage: {t}" for t in texts]
         return model.encode(prefixed, normalize_embeddings=True).tolist()
+
+    async def aembed_passages(self, texts: list[str]) -> list[list[float]]:
+        return await asyncio.to_thread(self.embed_passages, texts)
 
 
 class MiniLMEmbedder:
@@ -82,14 +93,23 @@ class MiniLMEmbedder:
         model: SentenceTransformer = self._model  # type: ignore[assignment]
         return model.encode(text, normalize_embeddings=True).tolist()
 
+    async def aembed_query(self, text: str) -> list[float]:
+        return await asyncio.to_thread(self.embed_query, text)
+
     def embed_passage(self, text: str) -> list[float]:
         from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
 
         model: SentenceTransformer = self._model  # type: ignore[assignment]
         return model.encode(text, normalize_embeddings=True).tolist()
 
+    async def aembed_passage(self, text: str) -> list[float]:
+        return await asyncio.to_thread(self.embed_passage, text)
+
     def embed_passages(self, texts: list[str]) -> list[list[float]]:
         from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
 
         model: SentenceTransformer = self._model  # type: ignore[assignment]
         return model.encode(texts, normalize_embeddings=True).tolist()
+
+    async def aembed_passages(self, texts: list[str]) -> list[list[float]]:
+        return await asyncio.to_thread(self.embed_passages, texts)

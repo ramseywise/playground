@@ -124,7 +124,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -f \".claude/.phase_complete\" ] && { rm -f .claude/.phase_complete; printf '{\"type\":\"context\",\"content\":\"Phase/step just completed. Run /compact before proceeding. Preserve: current position, test count, active gotchas, next action.\"}'; exit 0; }; exit 0",
+            "command": "[ -f \".claude/.phase_complete\" ] && { rm -f .claude/.phase_complete; printf '{\"type\":\"context\",\"content\":\"Phase/step complete. Compact if needed before proceeding. Preserve: current position, test count, gotchas, next action.\"}'; exit 0; }; exit 0",
             "timeout": 5
           }
         ]

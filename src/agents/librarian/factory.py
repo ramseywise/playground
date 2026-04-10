@@ -7,15 +7,22 @@ this is the primary injection point for tests and alternative configurations.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, cast
+
+from langgraph.graph.state import CompiledStateGraph
 
 from agents.librarian.orchestration.graph import build_graph
+from agents.librarian.orchestration.history import HistoryCondenser
 from agents.librarian.protocols import Chunker, Embedder, Reranker, Retriever
+from agents.librarian.retrieval.cache import RetrievalCache
+from agents.librarian.storage.metadata_db import MetadataDB
+from agents.librarian.storage.snippet_db import SnippetDB
 from agents.librarian.utils.config import LibrarySettings, settings as _default_settings
 from agents.librarian.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from core.clients.llm import LLMClient
+    from agents.librarian.ingestion.pipeline import IngestionPipeline
 
 log = get_logger(__name__)
 
@@ -25,7 +32,7 @@ log = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _build_storage(cfg: LibrarySettings) -> tuple[Any, Any]:
+def _build_storage(cfg: LibrarySettings) -> tuple["MetadataDB", "SnippetDB"]:
     """Build (MetadataDB, SnippetDB) backed by cfg.duckdb_path."""
     from pathlib import Path
 
@@ -36,7 +43,9 @@ def _build_storage(cfg: LibrarySettings) -> tuple[Any, Any]:
     if db_path != ":memory:":
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-    return MetadataDB(db_path), SnippetDB(db_path)
+    metadata_db = MetadataDB(db_path)
+    snippet_db = SnippetDB(db_path)
+    return cast(tuple[MetadataDB, SnippetDB], (metadata_db, snippet_db))
 
 
 def _build_embedder(cfg: LibrarySettings) -> Embedder:
@@ -96,6 +105,15 @@ def _build_llm(cfg: LibrarySettings) -> LLMClient:
     )
 
 
+def _build_history_llm(cfg: LibrarySettings) -> LLMClient:
+    from core.clients.llm import AnthropicLLM
+
+    return AnthropicLLM(
+        model=cfg.anthropic_model_haiku,
+        api_key=cfg.anthropic_api_key,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Public factories
 # ---------------------------------------------------------------------------
@@ -105,11 +123,12 @@ def create_librarian(
     cfg: LibrarySettings | None = None,
     *,
     llm: LLMClient | None = None,
+    history_llm: LLMClient | None = None,
     embedder: Embedder | None = None,
     retriever: Retriever | None = None,
     reranker: Reranker | None = None,
     snippet_retriever: Retriever | None = None,
-) -> Any:
+) -> CompiledStateGraph:
     """Build and return a compiled LibrarianGraph.
 
     Strategy selection follows *cfg* (defaults to module-level ``settings``).
@@ -129,16 +148,27 @@ def create_librarian(
     )
 
     resolved_llm = llm or _build_llm(cfg)
+    resolved_history_llm = history_llm or _build_history_llm(cfg)
     resolved_embedder = embedder or _build_embedder(cfg)
     resolved_retriever = retriever or _build_retriever(cfg, resolved_embedder)
     resolved_reranker = reranker or _build_reranker(cfg, resolved_llm)
+    resolved_history_condenser = HistoryCondenser(llm=resolved_history_llm)
+    retrieval_cache = (
+        RetrievalCache(max_size=cfg.cache_max_size, ttl_seconds=cfg.cache_ttl_seconds)
+        if cfg.cache_enabled
+        else None
+    )
 
     return build_graph(
         retriever=resolved_retriever,
         embedder=resolved_embedder,
         reranker=resolved_reranker,
         llm=resolved_llm,
+        history_llm=resolved_history_llm,
+        history_condenser=resolved_history_condenser,
         snippet_retriever=snippet_retriever,
+        cache=retrieval_cache,
+        cache_strategy=cfg.retrieval_strategy,
         retrieval_k=cfg.retrieval_k,
         reranker_top_k=cfg.reranker_top_k,
         confidence_threshold=cfg.confidence_threshold,
@@ -153,7 +183,8 @@ def create_ingestion_pipeline(
     embedder: Embedder | None = None,
     retriever: Retriever | None = None,
     chunker: Chunker | None = None,
-) -> Any:
+    retrieval_cache: RetrievalCache | None = None,
+) -> "IngestionPipeline":
     """Build an ``IngestionPipeline`` for raw-text -> vectorDB + metadataDB + traceDB.
 
     Returns a pipeline that can be used independently of the librarian graph.
@@ -172,6 +203,8 @@ def create_ingestion_pipeline(
     resolved_embedder = embedder or _build_embedder(cfg)
     resolved_retriever = retriever or _build_retriever(cfg, resolved_embedder)
     resolved_chunker = chunker or HtmlAwareChunker()
+    metadata_db: MetadataDB
+    snippet_db: SnippetDB
     metadata_db, snippet_db = _build_storage(cfg)
 
     return IngestionPipeline(
@@ -180,4 +213,5 @@ def create_ingestion_pipeline(
         vector_store=resolved_retriever,
         metadata_db=metadata_db,
         snippet_db=snippet_db,
+        retrieval_cache=retrieval_cache,
     )

@@ -1,6 +1,6 @@
 ---
 name: end-session
-description: "End-of-session checklist: write session metadata, decide what to save to memory, audit stale memory, and extract session insights."
+description: "End-of-session checklist: write session metadata, capture friction and attribution notes, decide what to save to memory, audit stale memory, and extract session insights."
 disable-model-invocation: true
 ---
 
@@ -23,9 +23,24 @@ Write to `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`:
 - **Compacted**: [yes/no]
 - **Key tools**: [top 3-5 tools used]
 - **Files touched**: [count or key files]
+- **Token hotspots**: [context augmentation, long prompts, large reads, expensive writes]
 
 ## Gotchas
 [Non-obvious traps a cold agent must know.]
+
+## Friction signals
+- [ ] Repeated tool failures
+- [ ] High Bash usage
+- [ ] Long test runs
+- [ ] Excessive compaction
+- [ ] Heavy write/edit churn
+
+## Attribution notes
+- **Primary cause:** [what actually caused the issue]
+- **Solved by:** [the specific change, command, or insight]
+- **Why it worked:** [brief mechanism]
+- **Evidence:** [file/command/result]
+- **Could hooks have caught it?** [yes/no/partial]
 
 ## Open questions
 - [ ] [unresolved blockers]
@@ -33,11 +48,16 @@ Write to `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`:
 ## Skill candidates
 [Multi-step workflows that recurred. 2-sentence description + trigger.]
 
+## Session insights
+[Short summary of what this session suggests about workflow, docs, hooks, or tool usage. Include 1-3 concrete improvements.]
+
 ## Next session prompt
 [3-5 sentences. Where are we, first action, non-obvious context.]
 ```
 
 Also mark completed steps as done in active plan files.
+
+If the session exposed reusable workflow lessons, add them to the current session file and/or the relevant skill or hook. Do not save friction telemetry to memory unless it is a stable preference or long-lived project decision.
 
 ## 2. Memory decisions
 
@@ -71,5 +91,7 @@ Present findings table, wait for confirmation before acting.
 Read `.claude/friction-log.jsonl` if it exists — surface patterns, then truncate.
 
 Run `uv run cartographer --dry-run` — review for friction signals (high error rate, frequent compacts, high interruptions).
+
+Summarize the useful findings back into the session artifact under `## Session insights` and `## Attribution notes` when possible.
 
 Friction worth preserving → add to relevant skill or hook, not memory.

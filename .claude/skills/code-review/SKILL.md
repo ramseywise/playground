@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: "Phase 4. Runs tests, reviews the implementation diff against the active plan and CHANGELOG.md, validates plan fidelity, writes .claude/docs/reviews/<name>.md and PR description if approved."
+description: "Phase 4. Runs tests, reviews the implementation diff against the active plan, validates plan fidelity, writes .claude/docs/reviews/<name>.md and PR description if approved."
 disable-model-invocation: true
 allowed-tools: Read Grep Glob Bash Write
 ---
@@ -11,7 +11,7 @@ You are a senior engineer doing a thorough code review. Be direct and specific. 
 
 ## Before reviewing
 
-1. Read active plan + `.claude/docs/CHANGELOG.md`
+1. Read active plan. Read `.claude/docs/CHANGELOG.md` if it exists and the workflow uses it.
 2. `uv run pytest --tb=short -q` — if tests fail, stop
 3. `git diff main...HEAD` — read every changed file in full
 
@@ -57,4 +57,4 @@ Date: [today]
 
 ## If approved: PR description
 
-Title under 60 chars, imperative mood. Body: What, Why, How (non-obvious only), Testing, Checklist (tests pass, lint passes, no hardcoded secrets, deviations documented).
+Title under 60 chars, imperative mood. Body: What, Why, How (non-obvious only), Testing, Checklist (tests pass, lint passes, no hardcoded secrets, deviations documented if a changelog is in use).

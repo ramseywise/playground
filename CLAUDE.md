@@ -49,7 +49,7 @@ obsidian/             # Curated knowledge corpus (vault output)
 
 ## Hook-enforced standards
 
-All standards below are enforced via `settings.json` hooks — do not run manually.
+All standards below are enforced via `settings.json` hooks where applicable — do not duplicate what hooks already enforce.
 
 **PostToolUse (Write|Edit):**
 - ruff format + check on every `.py` write
@@ -65,7 +65,7 @@ All standards below are enforced via `settings.json` hooks — do not run manual
 - Import cycle detection on `src/` edits
 - Pyright type check (advisory)
 - File size warning at >400 lines
-- Phase artifact writes trigger compact reminder on next prompt
+- Phase artifact writes trigger a compact reminder on the next prompt
 
 **PostToolUse (Bash):**
 - Failed commands logged to `.claude/friction-log.jsonl`
@@ -116,11 +116,11 @@ All phase artifacts live in `{project}/.claude/docs/` and are gitignored.
 | 1a. Iterate | `/research-review review\|refine\|argue` | (updates research file) |
 | 2. Plan | `/plan-review <name>` | `.claude/docs/plans/<name>.md` |
 | 2a. Iterate | `/plan-review review\|refine` | (updates plan file) |
-| — | `/compact` | — ← **required before execute** |
-| 3. Execute | `/execute-plan` | `.claude/docs/CHANGELOG.md` (append per step) |
+| — | `/compact` | — ← **recommended before execute** |
+| 3. Execute | `/execute-plan` | `.claude/docs/CHANGELOG.md` (append per step when used) |
 | 4. Review | `/code-review <name>` | `.claude/docs/reviews/<name>.md` + PR |
 
-All phase artifacts live in `.claude/docs/` — do NOT create them at the project root.
+All phase artifacts live in `.claude/docs/` — do NOT create them at the project root. Use root-level `docs/` only for human-facing project documentation if the repo needs it.
 
 All skills run **directly in the current conversation** — no subagents for pipeline phases.
 
@@ -145,11 +145,24 @@ Linear ↔ GitHub integration is active. See `~/.claude/CLAUDE.md` for full conv
 
 ## Context Management
 
-- Run `/compact` at 40% — do not wait for auto-compaction
+- Run `/compact` when context is getting noisy (often around 40%) — do not rely on auto-compaction
 - Run `/clear` when switching to an unrelated task
-- Between execute steps: `/compact keep current step N, test count, open gotchas, and next 2 actions`
+- Between execute steps: use a short `/compact` prompt with current step, test count, open gotchas, and next actions
 - **Do not spawn subagents or use Skill tool for research/plan/execute phases** — do the work directly in the main context so the user can follow and interject. Use Write/WebSearch/Read tools directly.
 
+<<<<<<< cord/finish-eval-refactoring-211c9c
+### Session metadata convention
+
+Per-session files live in `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Run `/end` to write one at session close.
+
+Contents: position, metadata (duration, tools, files), gotchas, friction signals, attribution notes, open questions, skill candidates, session insights, next session prompt.
+
+The cartographer agent reads these files for friction analysis (`uv run cartographer --cron`), and `/insights` can summarize patterns for any Claude-managed repo.
+
+`.claude/sessions/` is gitignored — local only.
+
+=======
+>>>>>>> main
 ## Path convention
 
 All configurable paths (Dropbox readings, Obsidian vault, PDF binaries) are defined in `src/agents/utils/config.py` via `pydantic-settings` and loaded from `.env`. Never hardcode user-specific paths in source files.

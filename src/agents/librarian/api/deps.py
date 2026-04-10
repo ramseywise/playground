@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Any
+from langgraph.graph.state import CompiledStateGraph
 
 from agents.librarian.factory import create_librarian
 from agents.librarian.orchestration.nodes.generation import GenerationSubgraph
+from agents.librarian.ingestion.pipeline import IngestionPipeline
 from agents.librarian.utils.config import LibrarySettings, settings as _default_settings
 from agents.librarian.utils.llm import AnthropicLLM
 from agents.librarian.utils.logging import get_logger
 
 log = get_logger(__name__)
 
-_graph: Any = None
+_graph: CompiledStateGraph | None = None
 _generation_sg: GenerationSubgraph | None = None
-_pipeline: Any = None
+_pipeline: IngestionPipeline | None = None
 _settings: LibrarySettings = _default_settings
 
 
@@ -36,7 +37,7 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
     )
 
 
-def get_graph() -> Any:
+def get_graph() -> CompiledStateGraph:
     """Return the compiled LangGraph graph."""
     if _graph is None:
         msg = "Graph not initialised — call init_graph() first"
@@ -61,7 +62,7 @@ def init_pipeline(cfg: LibrarySettings | None = None) -> None:
     log.info("api.deps.init_pipeline")
 
 
-def get_pipeline() -> Any:
+def get_pipeline() -> IngestionPipeline:
     """Return the ingestion pipeline."""
     if _pipeline is None:
         msg = "Pipeline not initialised — call init_pipeline() first"

@@ -48,6 +48,9 @@ class LibrarySettings(BaseSettings):
     reranker_top_k: int = 3
     max_query_variants: int = 3
     max_crag_retries: int = 1
+    cache_enabled: bool = True
+    cache_max_size: int = 256
+    cache_ttl_seconds: int = 300
     bm25_weight: float = 0.3  # hybrid search BM25 blend
     vector_weight: float = 0.7  # hybrid search vector blend
     trace_lookup_k: int = 5  # golden trace lookup count

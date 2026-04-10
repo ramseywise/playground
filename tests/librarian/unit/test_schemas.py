@@ -162,8 +162,6 @@ def test_librarian_state_partial_construction() -> None:
 
 
 def test_librarian_state_messages_key_accepts_list() -> None:
-    from langchain_core.messages import HumanMessage
-
-    state: LibrarianState = {"messages": [HumanMessage(content="hi")]}
+    state: LibrarianState = {"messages": [{"role": "user", "content": "hi"}]}
     assert len(state["messages"]) == 1
-    assert state["messages"][-1].content == "hi"
+    assert state["messages"][-1]["content"] == "hi"

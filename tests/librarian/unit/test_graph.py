@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
+from typing import Any
 
 import pytest
-from langchain_core.messages import HumanMessage
 
 from agents.librarian.orchestration.graph import (
     build_graph,
@@ -46,7 +46,7 @@ def _make_graph(
     llm_response: str = "the answer",
     confidence_threshold: float = 0.3,
     max_crag_retries: int = 1,
-) -> object:
+) -> Any:
     if reranker_results is None:
         reranker_results = [_ranked("c1", 0.9)]
 
@@ -276,7 +276,7 @@ async def test_graph_no_retry_when_max_retries_zero() -> None:
 @pytest.mark.asyncio
 async def test_graph_preserves_message_history() -> None:
     graph = _make_graph()
-    history = [HumanMessage(content="previous question")]
+    history = [{"role": "user", "content": "previous question"}]
     result = await graph.ainvoke(
         {
             "query": "follow-up",
@@ -285,3 +285,40 @@ async def test_graph_preserves_message_history() -> None:
         }
     )
     assert result["response"] == "the answer"
+
+
+@pytest.mark.asyncio
+async def test_graph_multi_turn_sets_standalone_query() -> None:
+    mock_retriever = MagicMock()
+    mock_retriever.search = AsyncMock(return_value=[])
+    mock_embedder = MagicMock()
+    mock_embedder.embed_query = MagicMock(return_value=[0.1] * 64)
+    mock_reranker = MagicMock()
+    mock_reranker.rerank = AsyncMock(return_value=[])
+    mock_llm = MagicMock()
+    mock_llm.generate = AsyncMock(return_value="final answer")
+    mock_history_llm = MagicMock()
+    mock_history_llm.generate = AsyncMock(return_value="the auth flow in Python?")
+
+    from agents.librarian.orchestration.history import HistoryCondenser
+
+    graph = build_graph(
+        retriever=mock_retriever,
+        embedder=mock_embedder,
+        reranker=mock_reranker,
+        llm=mock_llm,
+        history_condenser=HistoryCondenser(llm=mock_history_llm),
+    )
+    result = await graph.ainvoke(
+        {
+            "query": "and for Python?",
+            "messages": [
+                {"role": "user", "content": "what is the auth flow?"},
+                {"role": "assistant", "content": "It uses OAuth."},
+                {"role": "user", "content": "and for Python?"},
+            ],
+            "intent": "lookup",
+        }
+    )
+    assert result["standalone_query"] == "the auth flow in Python?"
+    mock_history_llm.generate.assert_awaited_once()

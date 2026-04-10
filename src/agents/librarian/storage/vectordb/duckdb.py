@@ -23,8 +23,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agents.librarian.retrieval.rrf import fuse_rankings
 from agents.librarian.retrieval.scoring import term_overlap
-from agents.librarian.schemas.chunks import Chunk, ChunkMetadata
+from agents.librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
 from agents.librarian.schemas.retrieval import RetrievalResult
 from agents.librarian.utils.logging import get_logger
 
@@ -37,7 +38,7 @@ _EMBEDDING_DIMS = 1024  # multilingual-e5-large default; override via constructo
 class DuckDBRetriever:
     """DuckDB-backed retriever using array_cosine_similarity for vector search.
 
-    Hybrid score = bm25_weight * term_overlap + vector_weight * cosine_similarity
+    Hybrid score uses Reciprocal Rank Fusion over vector and keyword rankings.
     Matches the InMemoryRetriever and ChromaRetriever interface for test/prod parity.
 
     Args:
@@ -182,7 +183,8 @@ class DuckDBRetriever:
                 [query_vector] + list((metadata_filter or {}).values()) + [k * 3],
             ).fetchall()
 
-            results: list[RetrievalResult] = []
+            vector_rank: list[GradedChunk] = []
+            keyword_rank: list[GradedChunk] = []
             for row in rows:
                 (
                     chunk_id,
@@ -198,10 +200,6 @@ class DuckDBRetriever:
                     vec_score,
                 ) = row
                 kw_score = term_overlap(query_text, text)
-                hybrid = self.bm25_weight * kw_score + self.vector_weight * float(
-                    vec_score or 0.0
-                )
-
                 chunk = Chunk(
                     id=chunk_id,
                     text=text,
@@ -216,12 +214,21 @@ class DuckDBRetriever:
                         parent_id=parent_id,
                     ),
                 )
-                results.append(
-                    RetrievalResult(chunk=chunk, score=hybrid, source="hybrid")
+                vector_rank.append(
+                    GradedChunk(
+                        chunk=chunk, score=float(vec_score or 0.0), relevant=True
+                    )
+                )
+                keyword_rank.append(
+                    GradedChunk(chunk=chunk, score=kw_score, relevant=True)
                 )
 
-            results.sort(key=lambda r: r.score, reverse=True)
-            log.info("duckdb.search.done", n_results=len(results[:k]))
-            return results[:k]
+            fused = fuse_rankings([keyword_rank, vector_rank], top_k=k)
+            results = [
+                RetrievalResult(chunk=item.chunk, score=item.score, source="hybrid")
+                for item in fused
+            ]
+            log.info("duckdb.search.done", n_results=len(results))
+            return results
         finally:
             conn.close()
