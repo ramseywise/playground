@@ -92,6 +92,16 @@ All standards below are enforced via `settings.json` hooks — do not run manual
 - Ask before running: costly API calls, large file/model loads, or anything >30s
 - Prefer `--dry-run`, targeted `pytest -k`, and subsampled data for validation
 
+### Review gate
+
+A PreToolUse hook gates source file edits (outside `.claude/` and `tests/`). When blocked: show before/after code block → wait for user confirmation → `touch .claude/.edit_ok` → retry.
+
+### Output conventions
+
+- **Confidence**: High / Medium / Low on findings and assumptions
+- **Severity**: [Blocking] / [Non-blocking] / [Nit] on review findings
+- **Synthesis**: conclude first, then cite evidence — never list observations without a "so what"
+
 ## Workflow
 
 Non-trivial tasks follow phases. Each writes an artifact the next reads. **Human reviews each artifact before the next phase.**
@@ -100,24 +110,19 @@ All phase artifacts live in `{project}/.claude/docs/` and are gitignored. Only `
 
 | Phase | Command | Artifact |
 |-------|---------|----------|
-| 1. Research | `/research` | `.claude/docs/RESEARCH.md` |
-| 2. Plan | `/plan` | `.claude/docs/PLAN.md` |
-| 2.5. Plan Review | `/plan-review` | `.claude/docs/PLAN.md` (iterated) |
+| 1. Research | `/research-review <name>` | `.claude/docs/research/<name>.md` |
+| 1a. Iterate | `/research-review review\|refine\|argue` | (updates research file) |
+| 2. Plan | `/plan-review <name>` | `.claude/docs/plans/<name>.md` |
+| 2a. Iterate | `/plan-review review\|refine` | (updates plan file) |
 | — | `/compact` | — ← **required before execute** |
 | 3. Execute | `/execute-plan` | `.claude/docs/CHANGELOG.md` (append per step) |
-| 4. Review | `/code-review` | `.claude/docs/EVAL.md` + PR |
+| 4. Review | `/code-review <name>` | `.claude/docs/reviews/<name>.md` + PR |
 
-Do NOT create `CHANGES.md`, `RESEARCH.md`, `PLAN.md`, or `EVAL.md` at the project root.
+All phase artifacts live in `.claude/docs/` — do NOT create them at the project root.
 
-All commands run **directly in the current conversation** — do not spawn subagents or use the Skill/Agent tools for pipeline phases.
+All commands run **directly in the current conversation** — no subagents for pipeline phases.
 
-Ad-hoc (skip pipeline): `/debug`, `/refactor`.
-
-Utilities: `/insights`.
-
-Planning: `/design-sprint`, `/scope-initiative`.
-
-Each phase command suggests the next step when complete. All commands are self-contained — no separate skills directory.
+Ad-hoc: `/code-debug`, `/plan-refactor`. Utilities: `/insights`, `/end-session`. Planning: `/design-sprint`, `/scope-initiative`. Git: `/quick-commit`, `/quick-pr`.
 
 ## Issue Tracking
 
