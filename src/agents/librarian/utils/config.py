@@ -41,12 +41,16 @@ class LibrarySettings(BaseSettings):
     reranker_strategy: str = "cross_encoder"
     planning_mode: Literal["rule_based", "llm"] = "rule_based"
 
-    # Thresholds
+    # Thresholds & retrieval tuning
     confidence_threshold: float = 0.4
+    relevance_threshold: float = 0.1  # minimum chunk score to keep
     retrieval_k: int = 10
     reranker_top_k: int = 3
     max_query_variants: int = 3
     max_crag_retries: int = 1
+    bm25_weight: float = 0.3  # hybrid search BM25 blend
+    vector_weight: float = 0.7  # hybrid search vector blend
+    trace_lookup_k: int = 5  # golden trace lookup count
     confirm_expensive_ops: bool = (
         False  # cost gate for generate_synthetic + answer_eval
     )

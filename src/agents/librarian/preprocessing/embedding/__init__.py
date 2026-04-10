@@ -1,12 +1,8 @@
-"""Embedding implementations.
+"""Re-export from canonical location: embeddings/.
 
-- MultilingualEmbedder: intfloat/multilingual-e5-large (1024-dim, E5 prefix)
-- MiniLMEmbedder: all-MiniLM-L6-v2 (384-dim, no prefix, English-only)
+Embedding implementations now live in ``agents.librarian.embeddings``.
 """
 
-from agents.librarian.preprocessing.embedding.embedders import (
-    MiniLMEmbedder,
-    MultilingualEmbedder,
-)
+from agents.librarian.embeddings.embedders import MiniLMEmbedder, MultilingualEmbedder  # noqa: F401
 
 __all__ = ["MiniLMEmbedder", "MultilingualEmbedder"]

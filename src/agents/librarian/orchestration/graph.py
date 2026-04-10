@@ -36,14 +36,14 @@ _GATE = "gate"
 # ---------------------------------------------------------------------------
 
 
-def _make_analyze_node(analyzer: QueryAnalyzer) -> Any:
+def _make_analyze_node(analyzer: QueryAnalyzer, *, max_variants: int = 3) -> Any:
     def analyze(state: LibrarianState) -> dict[str, Any]:
         query = state.get("standalone_query") or state.get("query", "")
         analysis = analyzer.analyze(query)
         return {
             "intent": analysis.intent.value,
             "retrieval_mode": analysis.retrieval_mode,
-            "query_variants": analysis.expanded_terms[:3]
+            "query_variants": analysis.expanded_terms[:max_variants]
             if analysis.expanded_terms
             else [],
         }
@@ -61,8 +61,7 @@ def _make_snippet_retrieve_node(snippet_retriever: Retriever) -> Any:
             k=5,
         )
         graded = [
-            GradedChunk(chunk=r.chunk, score=r.score, relevant=True)
-            for r in results
+            GradedChunk(chunk=r.chunk, score=r.score, relevant=True) for r in results
         ]
         reranked = [
             RankedChunk(chunk=r.chunk, relevance_score=r.score, rank=i + 1)
@@ -173,6 +172,7 @@ def build_graph(
     reranker_top_k: int = 3,
     confidence_threshold: float = 0.3,
     max_crag_retries: int = 1,
+    max_query_variants: int = 3,
 ) -> Any:
     """Build and compile the LibrarianGraph.
 
@@ -197,7 +197,9 @@ def build_graph(
     graph = StateGraph(LibrarianState)
 
     # Register nodes
-    graph.add_node(_ANALYZE, _make_analyze_node(analyzer))
+    graph.add_node(
+        _ANALYZE, _make_analyze_node(analyzer, max_variants=max_query_variants)
+    )
     graph.add_node(_RETRIEVE, _make_retrieve_node(retrieval_sg))
     graph.add_node(_RERANK, _make_rerank_node(reranker_sg))
     graph.add_node(_GATE, _make_gate_node(generation_sg))
@@ -205,7 +207,8 @@ def build_graph(
 
     if has_snippet_retriever:
         graph.add_node(
-            _SNIPPET_RETRIEVE, _make_snippet_retrieve_node(snippet_retriever)  # type: ignore[arg-type]
+            _SNIPPET_RETRIEVE,
+            _make_snippet_retrieve_node(snippet_retriever),  # type: ignore[arg-type]
         )
         graph.add_edge(_SNIPPET_RETRIEVE, _GENERATE)
 

@@ -1,12 +1,12 @@
-"""Retrieval infrastructure — vector store and search engine backends.
+"""Re-export from canonical location: storage/vectordb/.
 
-Each backend implements the Retriever Protocol from retrieval/base.py.
+Vector store backends now live in ``agents.librarian.storage.vectordb``.
 """
 
-from agents.librarian.retrieval.infra.chroma import ChromaRetriever
-from agents.librarian.retrieval.infra.duckdb import DuckDBRetriever
-from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.infra.opensearch import OpenSearchRetriever
+from agents.librarian.storage.vectordb.chroma import ChromaRetriever  # noqa: F401
+from agents.librarian.storage.vectordb.duckdb import DuckDBRetriever  # noqa: F401
+from agents.librarian.storage.vectordb.inmemory import InMemoryRetriever  # noqa: F401
+from agents.librarian.storage.vectordb.opensearch import OpenSearchRetriever  # noqa: F401
 
 __all__ = [
     "ChromaRetriever",
