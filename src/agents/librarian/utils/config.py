@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from infra.config.settings import BaseSettings
+from core.config.settings import BaseSettings
 
 
 class LibrarySettings(BaseSettings):

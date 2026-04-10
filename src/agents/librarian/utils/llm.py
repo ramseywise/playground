@@ -6,6 +6,6 @@ This module re-exports for backward compatibility within the librarian.
 
 from __future__ import annotations
 
-from infra.clients.llm import AnthropicLLM  # noqa: F401
+from core.clients.llm import AnthropicLLM  # noqa: F401
 
 __all__ = ["AnthropicLLM"]

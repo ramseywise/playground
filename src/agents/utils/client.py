@@ -13,7 +13,7 @@ import anthropic
 import structlog
 
 from agents.utils.config import settings
-from infra.parsing.json import strip_json_fences  # noqa: F401 — re-export
+from core.parsing.json import strip_json_fences  # noqa: F401 — re-export
 
 log = structlog.get_logger(__name__)
 
