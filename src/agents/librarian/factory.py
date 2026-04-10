@@ -40,14 +40,9 @@ def _build_retriever(cfg: LibrarySettings, embedder: Any) -> Any:
     if cfg.retrieval_strategy == "opensearch":
         from agents.librarian.retrieval.infra.opensearch import OpenSearchRetriever
 
-        return OpenSearchRetriever(
-            embedder=embedder,
-            host=cfg.opensearch_url,
-            index=cfg.opensearch_index,
-            http_auth=(cfg.opensearch_user, cfg.opensearch_password)
-            if cfg.opensearch_password
-            else None,
-        )
+        # OpenSearchRetriever reads connection params (url, user, password) from
+        # the module-level settings singleton; only ``index`` is passed here.
+        return OpenSearchRetriever(index=cfg.opensearch_index)
 
     if cfg.retrieval_strategy == "duckdb":
         from agents.librarian.retrieval.infra.duckdb import DuckDBRetriever
@@ -161,7 +156,7 @@ def create_ingestion_pipeline(
         graph = create_librarian(snippet_retriever=snippet_retriever)
     """
     from agents.librarian.ingestion.pipeline import IngestionPipeline
-    from agents.librarian.preprocessing.html_aware import HtmlAwareChunker
+    from agents.librarian.preprocessing.chunking.html_aware import HtmlAwareChunker
 
     cfg = cfg or _default_settings
 

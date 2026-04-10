@@ -15,8 +15,8 @@ import pytest
 
 from agents.librarian.eval_harness.metrics.retrieval_eval import evaluate_retrieval
 from agents.librarian.eval_harness.tasks.models import GoldenSample, RetrievalMetrics
-from agents.librarian.retrieval.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.mock_embedder import MockEmbedder
+from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
+from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
 from agents.librarian.schemas.retrieval import RetrievalResult
 
 # Metric floors — update these (never lower them) when quality improves

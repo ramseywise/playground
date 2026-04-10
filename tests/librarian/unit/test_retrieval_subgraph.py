@@ -8,8 +8,8 @@ from agents.librarian.orchestration.subgraphs.retrieval import (
     RetrievalSubgraph,
     _grade_chunks,
 )
-from agents.librarian.retrieval.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.mock_embedder import MockEmbedder
+from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
+from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
 from agents.librarian.schemas.chunks import Chunk, ChunkMetadata
 from agents.librarian.schemas.retrieval import Intent, QueryPlan, RetrievalResult
 from agents.librarian.schemas.state import LibrarianState

@@ -6,8 +6,8 @@ import pytest
 import pytest_asyncio
 
 from agents.librarian.eval_harness.tasks.models import GoldenSample
-from agents.librarian.retrieval.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.mock_embedder import MockEmbedder
+from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
+from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
 from agents.librarian.schemas.chunks import Chunk, ChunkMetadata
 from agents.librarian.utils.config import LibrarySettings
 
