@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
 
 from agents.librarian.generation.generator import (
     build_prompt,
@@ -38,6 +38,12 @@ def _state(**kwargs: object) -> LibrarianState:
     base: LibrarianState = {"query": "what is X?", "intent": "lookup"}
     base.update(kwargs)  # type: ignore[typeddict-item]
     return base
+
+
+@dataclass
+class _Msg:
+    type: str
+    content: str
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +136,7 @@ def test_build_prompt_multiple_chunks_joined_with_separator() -> None:
 
 
 def test_build_prompt_preserves_conversation_history() -> None:
-    history = [HumanMessage(content="hi"), AIMessage(content="hello")]
+    history = [_Msg(type="human", content="hi"), _Msg(type="ai", content="hello")]
     chunks = [_ranked("https://x.com", "T", "text", 1)]
     state = _state(intent="lookup", messages=history)
     _, messages = build_prompt(state, chunks)
@@ -141,7 +147,7 @@ def test_build_prompt_preserves_conversation_history() -> None:
 
 
 def test_build_prompt_replaces_trailing_human_message() -> None:
-    history = [HumanMessage(content="original question")]
+    history = [_Msg(type="human", content="original question")]
     chunks = [_ranked("https://x.com", "T", "text", 1)]
     state = _state(intent="lookup", messages=history)
     _, messages = build_prompt(state, chunks)

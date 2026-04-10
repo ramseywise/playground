@@ -33,6 +33,7 @@ import json
 import sys
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Literal, cast
 
 from agents.librarian.eval_harness.tasks.models import GoldenSample
 from agents.librarian.utils.logging import get_logger
@@ -83,7 +84,7 @@ def extract_samples(
     language_field: str = "language",
     difficulty_field: str = "difficulty",
     validation_level_field: str = "validation_level",
-    source_ticket_id_field: str = "source_ticket_id",
+    source_record_id_field: str = "source_record_id",
 ) -> list[GoldenSample]:
     """Extract GoldenSample objects from raw record dicts.
 
@@ -137,8 +138,11 @@ def extract_samples(
                 category=rec.get(category_field, ""),
                 language=rec.get(language_field, "en"),
                 difficulty=rec.get(difficulty_field, "medium"),
-                validation_level=tier,
-                source_ticket_id=rec.get(source_ticket_id_field, ""),
+                validation_level=cast(
+                    Literal["gold", "silver", "bronze", "synthetic"], tier
+                ),
+                source_ticket_id=rec.get(source_record_id_field)
+                or rec.get("source_ticket_id"),
             )
         )
 

@@ -202,12 +202,14 @@ async def test_run_base_query_prepended_once_even_if_in_variants(
 async def test_run_calls_retriever_once_per_variant(embedder: MockEmbedder) -> None:
     mock_retriever = MagicMock()
     mock_retriever.search = AsyncMock(return_value=[])
+    embedder.aembed_query = AsyncMock(wraps=embedder.aembed_query)  # type: ignore[method-assign]
 
     sg = RetrievalSubgraph(retriever=mock_retriever, embedder=embedder, top_k=5)
     plan = _plan(["v1", "v2"])
     await sg.run(_state(query="base", plan=plan))
     # base + v1 + v2 = 3 calls
     assert mock_retriever.search.call_count == 3
+    assert embedder.aembed_query.call_count == 3
 
 
 @pytest.mark.asyncio

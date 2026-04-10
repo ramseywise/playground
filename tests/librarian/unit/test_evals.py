@@ -315,6 +315,14 @@ def test_save_creates_parent_dirs(tmp_path: Path) -> None:
     assert nested.exists()
 
 
+def test_golden_sample_defaults_are_eval_friendly() -> None:
+    sample = GoldenSample(query_id="q1", query="q", expected_doc_url="u")
+    assert sample.language == "en"
+    assert sample.difficulty == "medium"
+    assert sample.validation_level == "silver"
+    assert sample.source_record_id is None
+
+
 # ---------------------------------------------------------------------------
 # generate_from_chunks — cost gate
 # ---------------------------------------------------------------------------

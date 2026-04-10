@@ -8,19 +8,22 @@ from __future__ import annotations
 
 from eval.models import EvalRunConfig  # noqa: F401 — re-export
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
 
 
 class GoldenSample(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     query_id: str
     query: str
     expected_doc_url: str
-    relevant_chunk_ids: list[str] = []
+    relevant_chunk_ids: list[str] = Field(default_factory=list)
     category: str = ""
-    language: str = "da"
-    difficulty: str = "easy"  # easy | medium | hard
-    validation_level: str = "silver"  # gold | silver | bronze | synthetic
-    source_ticket_id: str = ""
+    language: str = "en"
+    difficulty: Literal["easy", "medium", "hard"] = "medium"
+    validation_level: Literal["gold", "silver", "bronze", "synthetic"] = "silver"
+    source_record_id: str | None = Field(default=None, alias="source_ticket_id")
 
 
 class RetrievalMetrics(BaseModel):

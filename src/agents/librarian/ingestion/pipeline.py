@@ -11,6 +11,7 @@ from agents.librarian.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from agents.librarian.preprocessing.base import Chunker
+    from agents.librarian.retrieval.cache import RetrievalCache
     from agents.librarian.retrieval.base import Embedder, Retriever
     from agents.librarian.storage.metadata_db import MetadataDB
     from agents.librarian.storage.snippet_db import SnippetDB
@@ -20,7 +21,7 @@ log = get_logger(__name__)
 # Sentence boundary: end with . ! ? followed by whitespace or end-of-string.
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
 
-_MIN_SNIPPET_LEN = 30   # characters — discard very short fragments
+_MIN_SNIPPET_LEN = 30  # characters — discard very short fragments
 _MAX_SNIPPET_LEN = 400  # characters — discard overly long sentences
 
 
@@ -54,6 +55,7 @@ class IngestionPipeline:
         vector_store: Retriever,
         metadata_db: MetadataDB,
         snippet_db: SnippetDB,
+        retrieval_cache: RetrievalCache | None = None,
         batch_size: int = 64,
     ) -> None:
         self._chunker = chunker
@@ -61,6 +63,7 @@ class IngestionPipeline:
         self._vector_store = vector_store
         self._metadata_db = metadata_db
         self._snippet_db = snippet_db
+        self._retrieval_cache = retrieval_cache
         self._batch_size = batch_size
 
     # ------------------------------------------------------------------
@@ -76,12 +79,16 @@ class IngestionPipeline:
         text = doc.get("text", "")
         if not text:
             log.warning("ingestion.skip.empty", source_file=doc.get("source_file", ""))
-            return IngestionResult(doc_id="", chunk_count=0, snippet_count=0, skipped=True)
+            return IngestionResult(
+                doc_id="", chunk_count=0, snippet_count=0, skipped=True
+            )
 
         checksum = _sha256(text)
         if self._metadata_db.document_exists_by_checksum(checksum):
             log.info("ingestion.skip.duplicate", source_file=doc.get("source_file", ""))
-            return IngestionResult(doc_id="", chunk_count=0, snippet_count=0, skipped=True)
+            return IngestionResult(
+                doc_id="", chunk_count=0, snippet_count=0, skipped=True
+            )
 
         doc_id = _stable_id(doc.get("source_file") or doc.get("title") or checksum)
         title = doc.get("title", "")
@@ -141,6 +148,8 @@ class IngestionPipeline:
             chunk_count=len(chunks),
             snippet_count=len(sentences),
         )
+        if self._retrieval_cache is not None:
+            self._retrieval_cache.clear()
         return IngestionResult(
             doc_id=doc_id,
             chunk_count=len(chunks),

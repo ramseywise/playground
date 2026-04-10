@@ -26,9 +26,18 @@ class MockEmbedder:
         key = text.removeprefix("query: ")
         return self._get(key)
 
+    async def aembed_query(self, text: str) -> list[float]:
+        return self.embed_query(text)
+
     def embed_passage(self, text: str) -> list[float]:
         key = text.removeprefix("passage: ")
         return self._get(key)
 
+    async def aembed_passage(self, text: str) -> list[float]:
+        return self.embed_passage(text)
+
     def embed_passages(self, texts: list[str]) -> list[list[float]]:
         return [self.embed_passage(t) for t in texts]
+
+    async def aembed_passages(self, texts: list[str]) -> list[list[float]]:
+        return self.embed_passages(texts)

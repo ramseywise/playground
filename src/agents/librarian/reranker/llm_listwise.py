@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
+from core.clients.llm import LLMClient
 from agents.librarian.schemas.chunks import GradedChunk, RankedChunk
 from agents.librarian.utils.logging import get_logger
 
@@ -28,7 +28,7 @@ class LLMListwiseReranker:
     Used for experiments; cross_encoder is the prod default.
     """
 
-    def __init__(self, llm: Any) -> None:
+    def __init__(self, llm: LLMClient) -> None:
         self._llm = llm
 
     async def rerank(

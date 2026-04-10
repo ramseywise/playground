@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
@@ -12,9 +11,10 @@ from agents.librarian.schemas.retrieval import QueryPlan, RetrievalResult
 
 class LibrarianState(TypedDict, total=False):
     # Core
-    messages: Annotated[list[BaseMessage], add_messages]
+    messages: Annotated[list[object], add_messages]
     query: str
     standalone_query: str
+    conversation_id: str
     trace_id: str
 
     # Planning output

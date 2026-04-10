@@ -13,6 +13,7 @@ import hashlib
 import json
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any, Protocol, cast
 
 import structlog
 
@@ -21,6 +22,10 @@ from eval.models import EvalTask
 log = structlog.get_logger(__name__)
 
 VALID_TIERS = frozenset({"gold", "silver", "bronze", "synthetic"})
+
+
+class _SupportsModelDump(Protocol):
+    def model_dump(self) -> dict[str, Any]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +164,10 @@ def filter_by_tier(tasks: list[EvalTask], tiers: list[str]) -> list[EvalTask]:
 
 def golden_sample_to_task(sample: object) -> EvalTask:
     """Convert a librarian GoldenSample (or any Pydantic model with matching fields) to EvalTask."""
-    data = sample.model_dump() if hasattr(sample, "model_dump") else vars(sample)
+    if hasattr(sample, "model_dump"):
+        data = cast(_SupportsModelDump, sample).model_dump()
+    else:
+        data = vars(sample)
     return EvalTask(
         id=data.get("query_id", ""),
         query=data.get("query", ""),
@@ -170,7 +178,9 @@ def golden_sample_to_task(sample: object) -> EvalTask:
         metadata={
             "expected_doc_url": data.get("expected_doc_url", ""),
             "relevant_chunk_ids": data.get("relevant_chunk_ids", []),
-            "source_ticket_id": data.get("source_ticket_id", ""),
+            "source_record_id": data.get(
+                "source_record_id", data.get("source_ticket_id", "")
+            ),
             "language": data.get("language", "en"),
         },
     )

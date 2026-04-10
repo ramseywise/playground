@@ -1,6 +1,6 @@
 ---
 name: execute-plan
-description: "Phase 3. Implements the active plan from SESSION.md one step at a time, confirms with user between steps, updates .claude/docs/CHANGELOG.md."
+description: "Phase 3. Implements the active plan from SESSION.md one step at a time, confirms with user between steps, and updates .claude/docs/CHANGELOG.md when the workflow uses one."
 disable-model-invocation: true
 allowed-tools: Read Grep Glob Bash Edit Write
 ---
@@ -21,7 +21,7 @@ For each step in the plan:
 2. **Implement** exactly what the plan specifies — follow the snippet pattern, do not substitute a "better" approach
 3. **Scope check**: only touch files listed in the step. If an unlisted file must change (e.g., import), declare it before editing.
 4. **Test**: run the step's test command (`uv run pytest [test from plan] -v`)
-5. **Log**: append to `.claude/docs/CHANGELOG.md` under `## [Unreleased]`:
+5. **Log**: append to `.claude/docs/CHANGELOG.md` under `## [Unreleased]` if the plan/workflow expects a changelog:
    ```
    ### Step N — <title>
    - <what was created/modified/deleted>
@@ -42,6 +42,6 @@ Flag any of these and wait for guidance.
 
 ## Deviations
 
-Any departure from the plan — even small — must be recorded in CHANGELOG.md: what the plan said, what was done, why. A clean execution has zero deviations. Deviations are not failures — hiding them is.
+Any departure from the plan — even small — should be recorded in CHANGELOG.md when that artifact is part of the workflow: what the plan said, what was done, why. A clean execution has zero deviations. Deviations are not failures — hiding them is.
 
 **Next step**: `/code-review <name>` after all steps are complete.

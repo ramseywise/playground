@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.clients.llm import LLMClient
 from agents.librarian.generation.prompts import get_system_prompt
 from agents.librarian.schemas.chunks import RankedChunk
 from agents.librarian.schemas.retrieval import Intent
@@ -17,7 +18,7 @@ _CONTEXT_SEP = "\n---\n"
 _ROLE_MAP: dict[str, str] = {"human": "user", "ai": "assistant"}
 
 
-def _message_to_dict(msg: Any) -> dict[str, str]:
+def _message_to_dict(msg: object) -> dict[str, str]:
     """Convert a LangGraph BaseMessage to an anthropic API message dict.
 
     Handles both BaseMessage objects (from langgraph state) and plain dicts.
@@ -72,7 +73,7 @@ def build_prompt(
 
 
 async def call_llm(
-    llm: Any,
+    llm: LLMClient,
     system: str,
     messages: list[dict[str, str]],
 ) -> str:

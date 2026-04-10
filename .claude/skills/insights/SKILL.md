@@ -1,6 +1,6 @@
 ---
 name: insights
-description: "Parse Claude Code session JSONL files, surface workflow improvement signals, and suggest new skills. Delegates heavy lifting to the cartographer agent."
+description: "Parse Claude Code session JSONL files, surface workflow improvement signals, and suggest new skills. Project-agnostic across Claude repos; delegates heavy lifting to the cartographer agent."
 disable-model-invocation: true
 allowed-tools: Read Bash Write
 ---
@@ -8,6 +8,8 @@ allowed-tools: Read Bash Write
 Analyze workflow patterns and generate actionable improvements.
 
 If `$ARGUMENTS` is `skills-only`, skip to section 2.
+
+This skill is project-agnostic: use it in any Claude-managed repo that has session files and/or a friction log.
 
 ## 1. Session insights
 
@@ -25,10 +27,10 @@ Read `.claude/friction-log.jsonl` if it exists — surface repeated failure patt
 |--------|-----------|
 | High tool error rate (`edit_failed`, `file_not_found`) | Plan steps with wrong file paths |
 | Frequent user interruptions (<5s gap) | Plans ambiguous or steps too large |
-| Compact frequency 3+ per session | Documents too large |
+| Compact frequency 3+ per session | Documents too large or phase boundaries too big |
 | Bash dominates over Read/Edit | Over-reliance on shell |
 
-For each pattern: **Signal** (numbers) → **Interpretation** → **Recommendation** (one concrete change). Limit to 3-5 patterns.
+For each pattern: **Signal** (numbers) → **Interpretation** → **Recommendation** (one concrete change) → **Attribution** (what likely caused it) → **Session note** (what to capture in the session file). Limit to 3-5 patterns.
 
 ## 2. Skill suggestions
 
@@ -38,6 +40,8 @@ Review `## Skill candidates` in session files and friction log patterns.
 **Not worth a skill if**: one-off, already covered, too vague.
 
 For approved candidates: generate `.claude/skills/<name>/SKILL.md`, remove from session file. For rejected: explain and remove.
+
+If a session file exists, add a short `## Session insights` / `## Skill candidates` note so the next session can use the findings immediately.
 
 ## Output
 

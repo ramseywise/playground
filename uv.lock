@@ -65,7 +65,6 @@ replicate = [
 [package.dev-dependencies]
 dev = [
     { name = "duckdb" },
-    { name = "langchain-core" },
     { name = "langgraph" },
     { name = "numpy" },
     { name = "pyright" },
@@ -110,7 +109,6 @@ provides-extras = ["replicate", "librarian", "api", "playground", "lambda", "mcp
 [package.metadata.requires-dev]
 dev = [
     { name = "duckdb", specifier = ">=1.5.1" },
-    { name = "langchain-core", specifier = ">=1.2.28" },
     { name = "langgraph", specifier = ">=1.1.6" },
     { name = "numpy", specifier = ">=2.4.4" },
     { name = "pyright", specifier = ">=1.1.408" },

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from agents.librarian.retrieval.rrf import fuse_rankings
 from agents.librarian.retrieval.scoring import cosine_similarity, term_overlap
-from agents.librarian.schemas.chunks import Chunk
+from agents.librarian.schemas.chunks import Chunk, GradedChunk
 from agents.librarian.schemas.retrieval import RetrievalResult
 
 
 class InMemoryRetriever:
     """In-process retriever for unit tests — no Docker, no OpenSearch.
 
-    Hybrid score = bm25_weight * term_overlap + vector_weight * cosine_similarity.
+    Hybrid score uses Reciprocal Rank Fusion over keyword and vector rankings.
     Mirrors the OpenSearch hybrid search interface so tests transfer directly.
     """
 
@@ -47,17 +48,37 @@ class InMemoryRetriever:
                 )
             ]
 
-        scored: list[tuple[float, Chunk]] = []
-        for chunk in candidates:
-            vec_score = 0.0
-            if chunk.embedding and query_vector:
-                vec_score = max(0.0, cosine_similarity(query_vector, chunk.embedding))
-            kw_score = term_overlap(query_text, chunk.text)
-            score = self.bm25_weight * kw_score + self.vector_weight * vec_score
-            scored.append((score, chunk))
-
-        scored.sort(key=lambda x: x[0], reverse=True)
+        vector_rank = sorted(
+            (
+                GradedChunk(
+                    chunk=chunk,
+                    score=max(
+                        0.0,
+                        cosine_similarity(query_vector, chunk.embedding)
+                        if chunk.embedding and query_vector
+                        else 0.0,
+                    ),
+                    relevant=True,
+                )
+                for chunk in candidates
+            ),
+            key=lambda item: item.score,
+            reverse=True,
+        )
+        keyword_rank = sorted(
+            (
+                GradedChunk(
+                    chunk=chunk,
+                    score=term_overlap(query_text, chunk.text),
+                    relevant=True,
+                )
+                for chunk in candidates
+            ),
+            key=lambda item: item.score,
+            reverse=True,
+        )
+        fused = fuse_rankings([keyword_rank, vector_rank], top_k=k)
         return [
-            RetrievalResult(chunk=chunk, score=score, source="hybrid")
-            for score, chunk in scored[:k]
+            RetrievalResult(chunk=item.chunk, score=item.score, source="hybrid")
+            for item in fused
         ]

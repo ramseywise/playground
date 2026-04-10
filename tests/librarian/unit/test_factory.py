@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,8 +16,8 @@ from agents.librarian.utils.config import LibrarySettings
 # ---------------------------------------------------------------------------
 
 
-def _cfg(**kwargs: object) -> LibrarySettings:
-    base = dict(
+def _cfg(**kwargs: Any) -> LibrarySettings:
+    base: dict[str, Any] = dict(
         retrieval_strategy="inmemory",
         reranker_strategy="cross_encoder",
         confidence_threshold=0.3,
@@ -25,7 +26,7 @@ def _cfg(**kwargs: object) -> LibrarySettings:
         reranker_top_k=3,
         anthropic_api_key="test-key",
     )
-    base.update(kwargs)
+    cast(Any, base).update(kwargs)
     return LibrarySettings(**base)  # type: ignore[arg-type]
 
 
@@ -167,6 +168,9 @@ async def test_create_default_cfg_uses_module_settings() -> None:
             "agents.librarian.factory._build_llm", return_value=_mock_llm()
         ) as mock_llm_build,
         patch(
+            "agents.librarian.factory._build_history_llm", return_value=_mock_llm()
+        ) as mock_history_llm_build,
+        patch(
             "agents.librarian.factory._build_embedder",
             return_value=MockEmbedder(dim=64),
         ),
@@ -180,3 +184,4 @@ async def test_create_default_cfg_uses_module_settings() -> None:
     ):
         create_librarian()  # cfg=None
         mock_llm_build.assert_called_once()
+        mock_history_llm_build.assert_called_once()

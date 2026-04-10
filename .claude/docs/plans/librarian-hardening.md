@@ -3,7 +3,7 @@
 > Eliminate `Any` type erosion, drop unnecessary LangChain deps, add multi-turn conversation, and improve retrieval quality.
 
 Date: 2026-04-10
-Status: Draft — awaiting review before execution
+Status: Draft — reviewed against recent PR context
 
 ---
 
@@ -106,7 +106,7 @@ Currently calls `self._llm.ainvoke()` with LangChain message format. Switch to a
 - "langchain-anthropic>=0.3.0",
 ```
 
-**Risk:** Medium. LangGraph may have a hard dependency on `langchain-core`. Need to verify before committing to full removal.
+**Risk:** Medium. LangGraph may still require `langchain-core` transitively, so the practical goal is no direct imports and no unnecessary app-level dependency pinning.
 
 **Dependency check command:**
 ```bash
