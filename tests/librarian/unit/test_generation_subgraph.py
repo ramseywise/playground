@@ -3,7 +3,6 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from langchain_core.messages import AIMessage
 
 from agents.librarian.orchestration.subgraphs.generation import (
     DEFAULT_CONFIDENCE_GATE,
@@ -40,7 +39,7 @@ def _subgraph(
     response: str = "the answer", threshold: float = DEFAULT_CONFIDENCE_GATE
 ) -> GenerationSubgraph:
     llm = MagicMock()
-    llm.ainvoke = AsyncMock(return_value=AIMessage(content=response))
+    llm.generate = AsyncMock(return_value=response)
     return GenerationSubgraph(llm=llm, confidence_threshold=threshold)
 
 
@@ -102,24 +101,26 @@ async def test_run_deduplicates_citations() -> None:
 
 @pytest.mark.asyncio
 async def test_run_conversational_no_context_injected(mock_llm: MagicMock) -> None:
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="hi there"))
+    mock_llm.generate = AsyncMock(return_value="hi there")
     sg = GenerationSubgraph(llm=mock_llm)
     chunks = [_ranked("c1", "https://x.com", "T", "some text", 1)]
     await sg.run(_state(intent="conversational", reranked_chunks=chunks))
-    # Verify ainvoke was called — no context means no "Use the following sources" message
-    called_messages = mock_llm.ainvoke.call_args[0][0]
-    content_str = " ".join(m.content for m in called_messages if hasattr(m, "content"))
+    # Verify generate was called — check messages arg for no context injection
+    call_args = mock_llm.generate.call_args
+    messages = call_args[0][1]  # second positional arg
+    content_str = " ".join(m["content"] for m in messages)
     assert "Use the following sources" not in content_str
 
 
 @pytest.mark.asyncio
 async def test_run_lookup_injects_context(mock_llm: MagicMock) -> None:
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="answer"))
+    mock_llm.generate = AsyncMock(return_value="answer")
     sg = GenerationSubgraph(llm=mock_llm)
     chunks = [_ranked("c1", "https://docs.com", "Docs", "API keys expire after 24h", 1)]
     await sg.run(_state(intent="lookup", reranked_chunks=chunks))
-    called_messages = mock_llm.ainvoke.call_args[0][0]
-    content_str = " ".join(m.content for m in called_messages if hasattr(m, "content"))
+    call_args = mock_llm.generate.call_args
+    messages = call_args[0][1]  # second positional arg
+    content_str = " ".join(m["content"] for m in messages)
     assert "Use the following sources" in content_str
     assert "API keys expire after 24h" in content_str
 

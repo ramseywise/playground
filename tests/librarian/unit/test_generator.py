@@ -73,10 +73,7 @@ def test_build_prompt_conversational_no_context() -> None:
     system, messages = build_prompt(_state(intent="conversational"), chunks)
     assert system == SYSTEM_PROMPTS["conversational"]
     # No grounded message injected for conversational
-    assert not any(
-        "Use the following sources" in (m.content if hasattr(m, "content") else "")
-        for m in messages
-    )
+    assert not any("Use the following sources" in m["content"] for m in messages)
 
 
 def test_build_prompt_out_of_scope_no_context() -> None:
@@ -109,8 +106,8 @@ def test_build_prompt_lookup_injects_context() -> None:
     )
     assert system == SYSTEM_PROMPTS["lookup"]
     last = messages[-1]
-    assert "API keys expire after 24h" in last.content
-    assert "https://docs.example.com/auth" in last.content
+    assert "API keys expire after 24h" in last["content"]
+    assert "https://docs.example.com/auth" in last["content"]
 
 
 def test_build_prompt_uses_standalone_query_over_query() -> None:
@@ -118,7 +115,7 @@ def test_build_prompt_uses_standalone_query_over_query() -> None:
     _, messages = build_prompt(
         _state(query="original", standalone_query="rewritten standalone"), chunks
     )
-    assert "rewritten standalone" in messages[-1].content
+    assert "rewritten standalone" in messages[-1]["content"]
 
 
 def test_build_prompt_multiple_chunks_joined_with_separator() -> None:
@@ -127,9 +124,9 @@ def test_build_prompt_multiple_chunks_joined_with_separator() -> None:
         _ranked("https://b.com", "B", "chunk B text", 2),
     ]
     _, messages = build_prompt(_state(intent="lookup"), chunks)
-    assert "---" in messages[-1].content
-    assert "chunk A text" in messages[-1].content
-    assert "chunk B text" in messages[-1].content
+    assert "---" in messages[-1]["content"]
+    assert "chunk A text" in messages[-1]["content"]
+    assert "chunk B text" in messages[-1]["content"]
 
 
 def test_build_prompt_preserves_conversation_history() -> None:
@@ -137,10 +134,10 @@ def test_build_prompt_preserves_conversation_history() -> None:
     chunks = [_ranked("https://x.com", "T", "text", 1)]
     state = _state(intent="lookup", messages=history)
     _, messages = build_prompt(state, chunks)
-    # History preserved; last message is the grounded question
-    assert messages[0].content == "hi"
-    assert messages[1].content == "hello"
-    assert "Use the following sources" in messages[-1].content
+    # History preserved (converted to dicts); last message is the grounded question
+    assert messages[0]["content"] == "hi"
+    assert messages[1]["content"] == "hello"
+    assert "Use the following sources" in messages[-1]["content"]
 
 
 def test_build_prompt_replaces_trailing_human_message() -> None:
@@ -149,8 +146,8 @@ def test_build_prompt_replaces_trailing_human_message() -> None:
     state = _state(intent="lookup", messages=history)
     _, messages = build_prompt(state, chunks)
     # Original HumanMessage replaced by grounded version
-    assert "original question" not in messages[-1].content
-    assert "Use the following sources" in messages[-1].content
+    assert "original question" not in messages[-1]["content"]
+    assert "Use the following sources" in messages[-1]["content"]
 
 
 # ---------------------------------------------------------------------------
@@ -160,24 +157,25 @@ def test_build_prompt_replaces_trailing_human_message() -> None:
 
 @pytest.mark.asyncio
 async def test_call_llm_returns_content(mock_llm: MagicMock) -> None:
-    mock_llm.ainvoke = AsyncMock(return_value=AIMessage(content="42 is the answer"))
+    mock_llm.generate = AsyncMock(return_value="42 is the answer")
     result = await call_llm(
-        mock_llm, "you are helpful", [HumanMessage(content="what?")]
+        mock_llm, "you are helpful", [{"role": "user", "content": "what?"}]
     )
     assert result == "42 is the answer"
 
 
 @pytest.mark.asyncio
-async def test_call_llm_prepends_system_message(mock_llm: MagicMock) -> None:
-    captured: list = []
-
-    async def capture(msgs: list) -> AIMessage:
-        captured.extend(msgs)
-        return AIMessage(content="ok")
-
-    mock_llm.ainvoke = capture
-    await call_llm(mock_llm, "system instructions", [HumanMessage(content="hello")])
-    assert captured[0].content == "system instructions"
+async def test_call_llm_passes_system_and_messages(mock_llm: MagicMock) -> None:
+    mock_llm.generate = AsyncMock(return_value="ok")
+    await call_llm(
+        mock_llm,
+        "system instructions",
+        [{"role": "user", "content": "hello"}],
+    )
+    # Verify generate was called with system as first arg, messages as second
+    call_args = mock_llm.generate.call_args
+    assert call_args[0][0] == "system instructions"
+    assert call_args[0][1] == [{"role": "user", "content": "hello"}]
 
 
 # ---------------------------------------------------------------------------

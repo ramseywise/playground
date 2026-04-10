@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import pytest_asyncio
-from langchain_core.messages import AIMessage
 
 from agents.librarian.eval_harness.tasks.models import GoldenSample
 from agents.librarian.retrieval.inmemory import InMemoryRetriever
@@ -137,7 +136,7 @@ def eval_cfg() -> LibrarySettings:
 @pytest.fixture()
 def mock_llm_eval() -> MagicMock:
     llm = MagicMock()
-    llm.ainvoke = AsyncMock(return_value=AIMessage(content="eval answer"))
+    llm.generate = AsyncMock(return_value="eval answer")
     return llm
 
 

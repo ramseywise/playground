@@ -76,11 +76,11 @@ def _build_reranker(cfg: LibrarySettings, llm: Any) -> Any:
 
 
 def _build_llm(cfg: LibrarySettings) -> Any:
-    from langchain_anthropic import ChatAnthropic
+    from agents.librarian.utils.llm import AnthropicLLM
 
-    return ChatAnthropic(
+    return AnthropicLLM(
         model=cfg.anthropic_model_sonnet,
-        api_key=cfg.anthropic_api_key,  # type: ignore[arg-type]
+        api_key=cfg.anthropic_api_key,
     )
 
 
