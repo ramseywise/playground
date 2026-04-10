@@ -56,17 +56,29 @@ All standards below are enforced via `settings.json` hooks — do not run manual
 - `[use-structlog]` no stdlib `logging` — use structlog
 - `[use-polars]` no pandas — use polars
 - `[mutable-default]` no `def f(x=[])` — use `None` sentinel
+- `[sdk-factory]` no bare `anthropic.Anthropic()` or `genai.Client()` — use factory
+- `[sdk-model]` no hardcoded model strings — use settings
+- Token usage logging advisory on files with API calls
+- Test coverage warning on untested public functions
+- Import cycle detection on `src/` edits
+- Pyright type check (advisory)
 - File size warning at >400 lines
 - Phase artifact writes trigger compact reminder on next prompt
 
 **PostToolUse (Bash):**
 - Failed commands logged to `.claude/friction-log.jsonl`
+- Desktop notification on long test runs (>30s)
 
 **UserPromptSubmit:**
 - Auto-injects compact reminder when a phase/step just completed
 
+**PreToolUse (Write|Edit):**
+- Secrets scan — blocks API keys, tokens in source files
+
 **PreToolUse (Bash):**
 - `git commit` blocked if tests fail
+- `git commit` blocked if `uv.lock` out of sync
+- Cost guard — warns on agent commands without `--dry-run`
 - `pip install` blocked — use `uv add`
 - Destructive commands (`rm -rf /`, `DROP TABLE`) blocked
 
@@ -92,8 +104,8 @@ All phase artifacts live in `{project}/.claude/docs/` and are gitignored. Only `
 | 2. Plan | `/plan` | `.claude/docs/PLAN.md` |
 | 2.5. Plan Review | `/plan-review` | `.claude/docs/PLAN.md` (iterated) |
 | — | `/compact` | — ← **required before execute** |
-| 3. Execute | `/execute` | `.claude/docs/CHANGELOG.md` (append per step) |
-| 4. Review | `/review` | `.claude/docs/EVAL.md` + PR |
+| 3. Execute | `/execute-plan` | `.claude/docs/CHANGELOG.md` (append per step) |
+| 4. Review | `/code-review` | `.claude/docs/EVAL.md` + PR |
 
 Do NOT create `CHANGES.md`, `RESEARCH.md`, `PLAN.md`, or `EVAL.md` at the project root.
 
@@ -101,9 +113,9 @@ All commands run **directly in the current conversation** — do not spawn subag
 
 Ad-hoc (skip pipeline): `/debug`, `/refactor`.
 
-Utilities: `/insights`, `/rag-research`, `/insights-analysis`.
+Utilities: `/insights`.
 
-Planning: `/design-sprint`, `/initiative-scoping`.
+Planning: `/design-sprint`, `/scope-initiative`.
 
 Each phase command suggests the next step when complete. All commands are self-contained — no separate skills directory.
 
@@ -131,19 +143,15 @@ Linear ↔ GitHub integration is active. See `~/.claude/CLAUDE.md` for full conv
 - Between execute steps: `/compact keep current step N, test count, open gotchas, and next 2 actions`
 - **Do not spawn subagents or use Skill tool for research/plan/execute phases** — do the work directly in the main context so the user can follow and interject. Use Write/WebSearch/Read tools directly.
 
-### SESSION.md convention (all projects)
+### Session metadata convention
 
-Each project keeps `.claude/docs/SESSION.md`. Update it at the end of every session before `/clear`.
+Per-session files live in `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Run `/end` to write one at session close.
 
-Contents:
-- **Current position**: step, test count, last updated
-- **Token log**: start/end tokens from status bar, turn count, whether compacted
-- **Active gotchas**: non-obvious bugs and decisions that will bite the next session
-- **Open questions / blockers**
-- **Next session prompt**: copy-paste starter for the next cold session
+Contents: position, metadata (duration, tools, files), gotchas, open questions, skill candidates, next session prompt.
 
-Start each session with `/start` (reads `.claude/docs/SESSION.md` + `CLAUDE.md`), then paste the next session prompt.
-`.claude/` is gitignored — SESSION.md is local only.
+The cartographer agent reads these files for friction analysis (`uv run cartographer --cron`).
+
+`.claude/sessions/` is gitignored — local only.
 
 ## Path convention
 
@@ -159,7 +167,15 @@ settings.obsidian_vault    # ~/workspace/obsidian (default, overridable)
 
 Memory has two locations only — nothing else:
 
-- **Workspace-level** (`~/.claude/projects/-Users-wiseer-workspace/memory/`): feedback, global patterns, cross-project lessons
-- **Project-level** (`{project}/.claude/memory/`): project-specific state, decisions, session notes — version-controlled
+- **Workspace-level** (`~/.claude/projects/-repo/memory/`): cross-project lessons, global patterns
+- **Project-level** (`{project}/.claude/memory/`): project-specific state, decisions — version-controlled
 
 Never write memory to any Dropbox path or any other `~/.claude/projects/` bucket. The Dropbox-based projects no longer exist.
+
+### Feedback patterns go in enforcement, not memory
+
+Code quality patterns (test traps, review heuristics) → add as checklist items in `/code-review`.
+Workflow conventions → add to CLAUDE.md directly.
+Hook-enforceable rules → add to `settings.json` hooks.
+
+Only save a feedback memory when the guidance is cross-cutting behavioral advice that doesn't fit in a specific command, hook, or CLAUDE.md section.

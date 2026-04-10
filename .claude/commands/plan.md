@@ -191,4 +191,4 @@ If during planning you discover the task is bigger than expected (>3 steps, uncl
 
 Write `.claude/docs/plans/<name>.md`, update SESSION.md active docs, then stop. Do not implement.
 
-**Next step**: `/plan-review <name>` to verify, then `/execute` to implement.
+**Next step**: `/plan-review <name>` to verify, then `/execute-plan` to implement.

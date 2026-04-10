@@ -1,5 +1,5 @@
 ---
-name: branch
+name: quick-commit
 description: "Create a feature branch, stage changes, and commit — without opening a PR."
 tools: Read, Grep, Glob, Bash
 ---

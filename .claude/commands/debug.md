@@ -27,7 +27,7 @@ Generate hypotheses, then investigate in order of likelihood. One change at a ti
 
 ## When to escalate
 
-- Fix requires >3 files -> stop and suggest `/research` -> `/plan` -> `/execute`
+- Fix requires >3 files -> stop and suggest `/research` -> `/plan` -> `/execute-plan`
 - 3+ fixes did not work -> your mental model is wrong; restart with fresh hypotheses
 - You cannot reproduce -> say so and list next diagnostic steps
 - Fix works but you do not know why -> not fixed, that is luck; keep investigating

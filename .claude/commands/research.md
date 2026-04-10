@@ -22,6 +22,17 @@ After writing, update the `## Active docs` section in `.claude/docs/SESSION.md` 
 
 **Technology comparison** (APIs, models, libraries): Compare across quality (benchmarks), latency (p50/p99), cost (per-token/per-call, self-hosted vs. API), constraints (max sequence length, licensing), and ecosystem (package health, maintenance). Always include a simple/cheap baseline alongside complex options.
 
+**RAG system design**: When the topic involves retrieval-augmented generation, identify which layer the question touches:
+1. **Ingestion** — chunking strategy, metadata schema, completeness gates
+2. **Retrieval** — embedding model, vector store, hybrid search, BM25 configuration
+3. **Reranking** — cross-encoder vs LLM-listwise, n-candidates, confidence scoring
+4. **Planning / routing** — intent classification, query rewriting, multi-query expansion
+5. **Generation** — prompt design, response style, citation enforcement, confidence gate
+6. **Evaluation** — golden dataset construction, ragas vs deepeval, tracing/observability
+7. **Architecture** — single graph vs multi-agent supervisor, registry pattern, state design
+
+For each option, cover: mechanism, latency (quantified), quality impact (hit rate, precision@k, MRR, faithfulness), operational cost, data residency implications, and when it degrades. Do not recommend an approach without stating when it breaks down. Cite known benchmarks where available.
+
 ---
 
 ## Codebase mapping

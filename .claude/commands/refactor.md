@@ -151,7 +151,7 @@ After each change, ask: "did the user request this specific improvement?"
 
 Do NOT proceed to redesign ("while I am here, the whole module could use a different pattern"), cascade ("this fix revealed the caller should also change"), or gold-plate ("let me also add docstrings and rename everything").
 
-If the refactor would touch >10 files, stop and suggest the full `/research` -> `/plan` -> `/execute` pipeline.
+If the refactor would touch >10 files, stop and suggest the full `/research` -> `/plan` -> `/execute-plan` pipeline.
 
 ---
 
