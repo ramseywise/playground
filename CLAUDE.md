@@ -116,7 +116,7 @@ All phase artifacts live in `{project}/.claude/docs/` and are gitignored.
 | 1a. Iterate | `/research-review review\|refine\|argue` | (updates research file) |
 | 2. Plan | `/plan-review <name>` | `.claude/docs/plans/<name>.md` |
 | 2a. Iterate | `/plan-review review\|refine` | (updates plan file) |
-| — | `/compact` | — ← **recommended before execute** |
+| — | `/compact` | — ← **saves artifacts + checkpoint + commits before compacting** |
 | 3. Execute | `/execute-plan` | `.claude/docs/CHANGELOG.md` (append per step when used) |
 | 4. Review | `/code-review <name>` | `.claude/docs/reviews/<name>.md` + PR |
 
@@ -124,7 +124,7 @@ All phase artifacts live in `.claude/docs/` — do NOT create them at the projec
 
 All skills run **directly in the current conversation** — no subagents for pipeline phases.
 
-Ad-hoc: `/code-debug`, `/plan-refactor`. Utilities: `/insights`, `/end-session`. Planning: `/design-sprint`, `/scope-initiative`. Git: `/quick-commit`, `/quick-pr`.
+Ad-hoc: `/code-debug`, `/plan-refactor`. Utilities: `/claude-insights`, `/compact`. Planning: `/design-sprint`, `/scope-initiative`. Git: `/quick-commit`, `/quick-pr`.
 
 ## Issue Tracking
 
@@ -146,23 +146,22 @@ Linear ↔ GitHub integration is active. See `~/.claude/CLAUDE.md` for full conv
 ## Context Management
 
 - Run `/compact` when context is getting noisy (often around 40%) — do not rely on auto-compaction
-- Run `/clear` when switching to an unrelated task
-- Between execute steps: use a short `/compact` prompt with current step, test count, open gotchas, and next actions
+  - `/compact` is a custom skill: it saves active artifacts, writes a mid-session checkpoint note, commits + pushes, then calls the built-in compact with a seed prompt
+  - This means compaction is always safe — work is committed to git before context is discarded
+- Run `/clear` when switching to an unrelated task (no checkpoint needed — no work to save)
+- Between execute steps: `/compact` handles the seed prompt automatically from the checkpoint
 - **Do not spawn subagents or use Skill tool for research/plan/execute phases** — do the work directly in the main context so the user can follow and interject. Use Write/WebSearch/Read tools directly.
 
-<<<<<<< cord/finish-eval-refactoring-211c9c
 ### Session metadata convention
 
-Per-session files live in `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Run `/end` to write one at session close.
+Per-session files live in `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Run `/compact` to write one — at end of session it stops; mid-session it checkpoints and continues.
 
 Contents: position, metadata (duration, tools, files), gotchas, friction signals, attribution notes, open questions, skill candidates, session insights, next session prompt.
 
-The cartographer agent reads these files for friction analysis (`uv run cartographer --cron`), and `/insights` can summarize patterns for any Claude-managed repo.
+The cartographer agent reads these files for friction analysis (`uv run cartographer --cron`), and `/claude-insights` can summarize patterns for any Claude-managed repo.
 
 `.claude/sessions/` is gitignored — local only.
 
-=======
->>>>>>> main
 ## Path convention
 
 All configurable paths (Dropbox readings, Obsidian vault, PDF binaries) are defined in `src/agents/utils/config.py` via `pydantic-settings` and loaded from `.env`. Never hardcode user-specific paths in source files.

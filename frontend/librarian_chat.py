@@ -1,7 +1,7 @@
 """Streamlit playground for testing the Librarian RAG agent.
 
 Run:
-    streamlit run playground/librarian_chat.py
+    streamlit run frontend/librarian_chat.py
 
 Requires the FastAPI server running at LIBRARIAN_API_URL (default http://localhost:8000).
 """
