@@ -3,7 +3,7 @@
 > Eliminate `Any` type erosion, drop unnecessary LangChain deps, add multi-turn conversation, and improve retrieval quality.
 
 Date: 2026-04-10
-Status: Draft — reviewed against recent PR context
+Status: Complete — 2026-04-11
 
 ---
 
@@ -18,7 +18,7 @@ The librarian is architecturally sound but has four categories of debt that unde
 
 ---
 
-## Step 1: Replace `Any` types with concrete Protocols
+## Step 1: ✅ Replace `Any` types with concrete Protocols
 
 **Scope:** `factory.py`, `orchestration/graph.py`, `orchestration/subgraphs/*.py`, `generation/generator.py`
 
@@ -56,7 +56,7 @@ class ChatModel(Protocol):
 
 ---
 
-## Step 2: Drop `langchain-core` and `langchain-anthropic`
+## Step 2: ✅ Drop `langchain-core` and `langchain-anthropic`
 
 **Scope:** `generation/generator.py`, `factory.py`, `schemas/state.py`, `orchestration/subgraphs/generation.py`, `reranker/llm_listwise.py`, `eval_harness/`, `pyproject.toml`
 
@@ -119,7 +119,7 @@ uv pip show langgraph | grep Requires
 
 ---
 
-## Step 3: Add multi-turn conversation handling
+## Step 3: ✅ Add multi-turn conversation handling
 
 **Scope:** New `HistoryCondenser` node in the graph, between `START` and `analyze`
 
@@ -183,7 +183,7 @@ class LibrarianState(TypedDict, total=False):
 
 ---
 
-## Step 4: Retrieval quality improvements
+## Step 4: ✅ Retrieval quality improvements
 
 Three independent sub-steps. Can be done in any order.
 

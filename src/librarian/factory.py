@@ -50,7 +50,35 @@ def _build_storage(cfg: LibrarySettings) -> tuple["MetadataDB", "SnippetDB"]:
     return cast(tuple[MetadataDB, SnippetDB], (metadata_db, snippet_db))
 
 
+def _build_chunker(cfg: LibrarySettings) -> "Chunker":
+    from agents.librarian.pipeline.ingestion.chunking.strategies import (
+        AdjacencyChunker,
+        FixedChunker,
+        OverlappingChunker,
+        StructuredChunker,
+    )
+    from agents.librarian.pipeline.ingestion.chunking.html_aware import HtmlAwareChunker
+    from agents.librarian.pipeline.ingestion.chunking.parent_doc import ParentDocChunker
+
+    dispatch = {
+        "fixed": FixedChunker,
+        "overlapping": OverlappingChunker,
+        "structured": StructuredChunker,
+        "adjacency": AdjacencyChunker,
+        "parent_doc": ParentDocChunker,
+        "html_aware": HtmlAwareChunker,
+    }
+    cls = dispatch.get(cfg.ingestion_strategy, HtmlAwareChunker)
+    return cls()
+
+
 def _build_embedder(cfg: LibrarySettings) -> Embedder:
+    if cfg.embedding_provider == "minilm":
+        from agents.librarian.pipeline.ingestion.embeddings.embedders import MiniLMEmbedder
+
+        return MiniLMEmbedder(model_name=cfg.embedding_model)
+
+    # Default: multilingual (intfloat/multilingual-e5-large)
     from agents.librarian.pipeline.ingestion.embeddings.embedders import MultilingualEmbedder
 
     return MultilingualEmbedder(model_name=cfg.embedding_model)
@@ -65,12 +93,20 @@ def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
     if cfg.retrieval_strategy == "opensearch":
         from agents.librarian.tools.storage.vectordb.opensearch import OpenSearchRetriever
 
-        return OpenSearchRetriever(index=cfg.opensearch_index)
+        return OpenSearchRetriever(
+            index=cfg.opensearch_index,
+            bm25_weight=cfg.bm25_weight,
+            vector_weight=cfg.vector_weight,
+        )
 
     if cfg.retrieval_strategy == "duckdb":
         from agents.librarian.tools.storage.vectordb.duckdb import DuckDBRetriever
 
-        return DuckDBRetriever(db_path=cfg.duckdb_path)
+        return DuckDBRetriever(
+            db_path=cfg.duckdb_path,
+            bm25_weight=cfg.bm25_weight,
+            vector_weight=cfg.vector_weight,
+        )
 
     # Default: chroma (persistent, no Docker required)
     from agents.librarian.tools.storage.vectordb.chroma import ChromaRetriever
@@ -78,6 +114,8 @@ def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
     return ChromaRetriever(
         persist_dir=cfg.chroma_persist_dir,
         collection_name=cfg.chroma_collection,
+        bm25_weight=cfg.bm25_weight,
+        vector_weight=cfg.vector_weight,
     )
 
 
@@ -195,7 +233,6 @@ def create_ingestion_pipeline(
     Returns a pipeline that can be used independently of the librarian graph.
     """
     from agents.librarian.pipeline.ingestion.pipeline import IngestionPipeline
-    from agents.librarian.pipeline.ingestion.chunking.html_aware import HtmlAwareChunker
 
     cfg = cfg or _default_settings
 
@@ -207,7 +244,7 @@ def create_ingestion_pipeline(
 
     resolved_embedder = embedder or _build_embedder(cfg)
     resolved_retriever = retriever or _build_retriever(cfg, resolved_embedder)
-    resolved_chunker = chunker or HtmlAwareChunker()
+    resolved_chunker = chunker or _build_chunker(cfg)
     metadata_db: MetadataDB
     snippet_db: SnippetDB
     metadata_db, snippet_db = _build_storage(cfg)

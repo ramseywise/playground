@@ -454,7 +454,7 @@ Each step is independent.*
 
 ---
 
-### Step 8: Forward `bm25_weight`/`vector_weight` from settings to retriever constructors
+### Step 8: ✅ Forward `bm25_weight`/`vector_weight` from settings to retriever constructors
 **Files**: `src/librarian/factory.py` (lines 59–81)
 
 **What**: `LibrarySettings` exposes `bm25_weight = 0.3` and `vector_weight = 0.7` but
@@ -515,7 +515,7 @@ passes the custom weights to the underlying retriever instance.
 
 ---
 
-### Step 9: Add embedder strategy dispatch to `_build_embedder`
+### Step 9: ✅ Add embedder strategy dispatch to `_build_embedder`
 **Files**: `src/librarian/factory.py` (lines 53–56),
 `src/librarian/utils/config.py` (lines 39)
 
@@ -569,7 +569,7 @@ the plan is scoped to `local` only.
 
 ---
 
-### Step 10: Wire `ingestion_strategy` in `create_ingestion_pipeline`
+### Step 10: ✅ Wire `ingestion_strategy` in `create_ingestion_pipeline`
 **Files**: `src/librarian/factory.py` (lines 185–222)
 
 **What**: `LibrarySettings.ingestion_strategy` is documented as `"html_aware"` but
@@ -619,7 +619,7 @@ returns a pipeline wrapping `FixedChunker`; unknown strategy falls back to `Html
 
 ---
 
-### Step 11: Harden API CORS origins default
+### Step 11: ✅ Harden API CORS origins default
 **Files**: `src/librarian/utils/config.py` (line 64)
 
 **What**: `api_cors_origins: list[str] = ["*"]` allows any origin in production.

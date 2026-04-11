@@ -64,8 +64,11 @@ packages = ["src/agents"]
 
 [dependency-groups]
 dev = [
+    "boto3>=1.35.0",
     "duckdb>=1.5.1",
+    "fastapi>=0.115.0",
     "langgraph>=1.1.6",
+    "mcp>=1.0.0",
     "mypy>=1.10.0",
     "numpy>=2.4.4",
     "pyright>=1.1.408",
@@ -106,7 +109,7 @@ ignore_errors = true
 research-agent = "agents.researcher.__main__:main"
 presenter = "agents.presenter.__main__:main"
 cartographer = "agents.cartographer.__main__:main"
-librarian-api = "agents.librarian.infra.api.app:main"
-mcp-snowflake = "agents.librarian.infra.mcp.snowflake_server:main"
-mcp-s3 = "agents.librarian.infra.mcp.s3_server:main"
-mcp-librarian = "agents.librarian.infra.mcp.librarian_server:main"
+librarian-api = "agents.librarian.tools.api.app:main"
+mcp-snowflake = "agents.librarian.tools.mcp.snowflake_server:main"
+mcp-s3 = "agents.librarian.tools.mcp.s3_server:main"
+mcp-librarian = "agents.librarian.tools.mcp.librarian_server:main"
