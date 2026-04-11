@@ -31,6 +31,24 @@ services:
       librarian-api:
         condition: service_healthy
 
+  eval-dashboard:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.eval-dashboard
+    ports:
+      - "8502:8502"
+    environment:
+      LANGFUSE_ENABLED: "${LANGFUSE_ENABLED:-false}"
+      LANGFUSE_PUBLIC_KEY: "${LANGFUSE_PUBLIC_KEY:-}"
+      LANGFUSE_SECRET_KEY: "${LANGFUSE_SECRET_KEY:-}"
+      LANGFUSE_HOST: "${LANGFUSE_HOST:-https://cloud.langfuse.com}"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8502/_stcore/health').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
   jaeger:
     image: jaegertracing/all-in-one:1.57
     profiles:
