@@ -20,15 +20,20 @@ Usage:
     # Custom dataset path (overrides EVAL_DATASET_PATH)
     uv run python -m eval.experiment upload --path /path/to/golden.jsonl
     uv run python -m eval.experiment run --path /path/to/golden.jsonl
+
+    # Export results as JSON for the eval dashboard
+    uv run python -m eval.experiment run --export results.json
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -507,6 +512,64 @@ def print_comparison_table(results: dict[str, ExperimentResult]) -> None:
     print()  # noqa: T201
 
 
+def export_results(
+    results: dict[str, ExperimentResult],
+    output_path: str | Path,
+) -> Path:
+    """Export experiment results to JSON for the eval dashboard.
+
+    Args:
+        results: Dict mapping variant name to ExperimentResult.
+        output_path: File path for the JSON output.
+
+    Returns:
+        Resolved path of the written file.
+    """
+    path = Path(output_path)
+    timestamp = datetime.now().isoformat()
+
+    payload: dict[str, Any] = {
+        "exported_at": timestamp,
+        "variants": {},
+    }
+
+    for name, result in results.items():
+        query_data = [
+            {
+                "query_id": qr.query_id,
+                "query": qr.query,
+                "hit": qr.hit,
+                "reciprocal_rank": qr.reciprocal_rank,
+                "retrieved_urls": qr.retrieved_urls,
+                "expected_url": qr.expected_url,
+                "latency_ms": qr.latency_ms,
+                "trace_id": qr.trace_id,
+            }
+            for qr in result.query_results
+        ]
+
+        failure_data = [
+            {
+                "failure_type": c.failure_type,
+                "count": c.count,
+                "common_patterns": c.common_patterns,
+            }
+            for c in result.failure_clusters
+        ]
+
+        payload["variants"][name] = {
+            **result.summary_dict(),
+            "dataset_name": result.dataset_name,
+            "query_results": query_data,
+            "failure_clusters": failure_data,
+            "config_snapshot": result.config_snapshot,
+        }
+
+    path.write_text(json.dumps(payload, indent=2, default=str))
+    log.info("experiment.export.done", path=str(path), n_variants=len(results))
+    return path
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -594,6 +657,12 @@ def _cli_run(args: list[str]) -> None:
         "--variant", help="Single variant to run (default: all)", default=None
     )
     parser.add_argument("--dataset", help="LangFuse dataset name", default=None)
+    parser.add_argument(
+        "--export",
+        help="Export results to JSON file for the eval dashboard",
+        default=None,
+        metavar="FILE",
+    )
     parsed = parser.parse_args(args)
 
     samples = _load_samples(parsed.path)
@@ -614,16 +683,21 @@ def _cli_run(args: list[str]) -> None:
                 dataset_name=dataset_name,
             )
         )
-        print_comparison_table({parsed.variant: result})
+        all_results = {parsed.variant: result}
+        print_comparison_table(all_results)
     else:
-        results = asyncio.run(
+        all_results = asyncio.run(
             run_all_experiments(
                 samples,
                 corpus,
                 dataset_name=dataset_name,
             )
         )
-        print_comparison_table(results)
+        print_comparison_table(all_results)
+
+    if parsed.export:
+        out = export_results(all_results, parsed.export)
+        print(f"Results exported to {out}")  # noqa: T201
 
 
 def main() -> None:
@@ -639,6 +713,7 @@ def main() -> None:
         print("  python -m eval.experiment upload --path /data/golden.jsonl")  # noqa: T201
         print("  python -m eval.experiment run")  # noqa: T201
         print("  python -m eval.experiment run --variant librarian")  # noqa: T201
+        print("  python -m eval.experiment run --export results.json")  # noqa: T201
         sys.exit(0)
 
     command = sys.argv[1]
