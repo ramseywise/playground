@@ -3,14 +3,14 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agents.librarian.schemas.chunks import (
+from agents.librarian.rag_core.schemas.chunks import (
     Chunk,
     ChunkMetadata,
     GradedChunk,
     RankedChunk,
 )
-from agents.librarian.schemas.retrieval import Intent, QueryPlan, RetrievalResult
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.schemas.retrieval import Intent, QueryPlan, RetrievalResult
+from agents.librarian.rag_core.schemas.state import LibrarianState
 
 
 def _make_metadata(**kwargs: object) -> ChunkMetadata:

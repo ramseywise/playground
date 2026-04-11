@@ -51,6 +51,10 @@ logs/
 .AppleDouble
 .LSOverride
 
+# Claude Code local settings (machine-specific, not committed)
+.claude/settings.local.json
+.claude/sessions/
+
 # Docs (phase artifacts — except .claude/docs which is version-controlled)
 docs/
 !.claude/docs/

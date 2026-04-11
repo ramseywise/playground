@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.storage.metadata_db import MetadataDB
-from agents.librarian.storage.snippet_db import SnippetDB
+from agents.librarian.infra.storage.metadata_db import MetadataDB
+from agents.librarian.infra.storage.snippet_db import SnippetDB
 
 
 # ---------------------------------------------------------------------------

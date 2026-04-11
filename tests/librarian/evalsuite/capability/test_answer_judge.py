@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.librarian.eval_harness.graders.answer_eval import (
+from agents.librarian.rag_core.eval_harness.graders.answer_eval import (
     CONFIRM_EXPENSIVE_OPS,
     AnswerJudge,
     ClosedBookBaseline,
@@ -86,7 +86,7 @@ def test_answer_judge_returns_judge_result() -> None:
         }
     )
     with patch(
-        "agents.librarian.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
+        "agents.librarian.rag_core.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
     ):
         result = judge.evaluate(
             "q1", "what is auth?", ["auth uses API keys"], "auth uses API keys"
@@ -109,7 +109,7 @@ def test_answer_judge_all_score_fields_populated() -> None:
         }
     )
     with patch(
-        "agents.librarian.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
+        "agents.librarian.rag_core.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
     ):
         result = judge.evaluate("q2", "q", ["ctx"], "ans")
     assert result.faithfulness == pytest.approx(0.3)
@@ -128,7 +128,7 @@ def test_answer_judge_parse_error_returns_zero_score() -> None:
     judge._client = mock_client
 
     with patch(
-        "agents.librarian.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
+        "agents.librarian.rag_core.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
     ):
         result = judge.evaluate("q3", "q", ["ctx"], "ans")
     assert result.is_correct is False
@@ -149,7 +149,7 @@ def test_answer_judge_api_error_returns_zero_score() -> None:
     judge._client = mock_client
 
     with patch(
-        "agents.librarian.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
+        "agents.librarian.rag_core.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
     ):
         result = judge.evaluate("q4", "q", ["ctx"], "ans")
     assert result.is_correct is False
@@ -170,7 +170,7 @@ def test_answer_judge_truncates_long_context() -> None:
     judge._max_context_chars = 50
 
     with patch(
-        "agents.librarian.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
+        "agents.librarian.rag_core.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
     ):
         judge.evaluate("q5", "q", ["x" * 200], "ans")
 
@@ -205,7 +205,7 @@ def test_evaluate_batch_returns_all_results() -> None:
         for i in range(3)
     ]
     with patch(
-        "agents.librarian.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
+        "agents.librarian.rag_core.eval_harness.graders.answer_eval.CONFIRM_EXPENSIVE_OPS", True
     ):
         results = judge.evaluate_batch(samples)
     assert len(results) == 3

@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.eval_harness.tasks.models import GoldenSample
+from agents.librarian.rag_core.eval_harness.tasks.models import GoldenSample
 from agents.librarian.factory import create_librarian
-from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
+from agents.librarian.infra.storage.vectordb.inmemory import InMemoryRetriever
+from agents.librarian.testing.mock_embedder import MockEmbedder
 from agents.librarian.utils.config import LibrarySettings
 
 

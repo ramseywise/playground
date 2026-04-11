@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.librarian.ingestion.s3_loader import S3DocumentLoader
+from agents.librarian.rag_core.ingestion.s3_loader import S3DocumentLoader
 
 
 @pytest.fixture()

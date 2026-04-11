@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agents.librarian.mcp.s3_server import S3Client
+from agents.librarian.infra.mcp.s3_server import S3Client
 
 
 @pytest.fixture()

@@ -5,14 +5,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.generation.generator import (
+from agents.librarian.rag_core.generation.generator import (
     build_prompt,
     call_llm,
     extract_citations,
 )
-from agents.librarian.generation.prompts import SYSTEM_PROMPTS, get_system_prompt
-from agents.librarian.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.generation.prompts import SYSTEM_PROMPTS, get_system_prompt
+from agents.librarian.rag_core.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
+from agents.librarian.rag_core.schemas.state import LibrarianState
 
 
 # ---------------------------------------------------------------------------

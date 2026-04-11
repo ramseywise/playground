@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from agents.librarian.orchestration.history import HistoryCondenser
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.schemas.state import LibrarianState
 
 
 def _mock_llm(response: str = "standalone query") -> MagicMock:

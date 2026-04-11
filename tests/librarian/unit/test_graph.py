@@ -10,13 +10,13 @@ from agents.librarian.orchestration.graph import (
     _route_after_analyze,
     _route_after_gate,
 )
-from agents.librarian.schemas.chunks import (
+from agents.librarian.rag_core.schemas.chunks import (
     Chunk,
     ChunkMetadata,
     GradedChunk,
     RankedChunk,
 )
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.schemas.state import LibrarianState
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +208,7 @@ async def test_graph_out_of_scope_skips_retrieval() -> None:
 
 @pytest.mark.asyncio
 async def test_graph_returns_citations() -> None:
-    from agents.librarian.schemas.retrieval import RetrievalResult
+    from agents.librarian.rag_core.schemas.retrieval import RetrievalResult
 
     retrieval_result = RetrievalResult(
         chunk=_chunk("c1", "auth text"),

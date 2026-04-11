@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.reranker.passthrough import PassthroughReranker
-from agents.librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
+from agents.librarian.rag_core.reranker.passthrough import PassthroughReranker
+from agents.librarian.rag_core.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
 
 
 def _graded(id_: str, score: float, *, relevant: bool = True) -> GradedChunk:

@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents.librarian.reranker.base import Reranker
-from agents.librarian.reranker.cross_encoder import CrossEncoderReranker, _sigmoid
-from agents.librarian.reranker.llm_listwise import LLMListwiseReranker
-from agents.librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
+from agents.librarian.rag_core.reranker.base import Reranker
+from agents.librarian.rag_core.reranker.cross_encoder import CrossEncoderReranker, _sigmoid
+from agents.librarian.rag_core.reranker.llm_listwise import LLMListwiseReranker
+from agents.librarian.rag_core.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ def cross_encoder_reranker() -> CrossEncoderReranker:
     mock_model.predict.return_value = np.array([3.0, 1.0, 0.5, -1.0])
 
     with patch(
-        "agents.librarian.reranker.cross_encoder._load_cross_encoder",
+        "agents.librarian.rag_core.reranker.cross_encoder._load_cross_encoder",
         return_value=mock_model,
     ):
         reranker = CrossEncoderReranker.__new__(CrossEncoderReranker)

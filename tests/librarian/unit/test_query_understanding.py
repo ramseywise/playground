@@ -7,7 +7,7 @@ from agents.librarian.orchestration.query_understanding import (
     QueryAnalyzer,
     QueryRouter,
 )
-from agents.librarian.schemas.retrieval import Intent
+from agents.librarian.rag_core.schemas.retrieval import Intent
 
 
 @pytest.fixture()

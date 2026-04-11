@@ -8,8 +8,8 @@ from agents.librarian.orchestration.nodes.generation import (
     DEFAULT_CONFIDENCE_GATE,
     GenerationSubgraph,
 )
-from agents.librarian.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
+from agents.librarian.rag_core.schemas.state import LibrarianState
 
 
 # ---------------------------------------------------------------------------
