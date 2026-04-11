@@ -18,6 +18,7 @@ from eval.experiment import (
     upload_golden_dataset,
 )
 from eval.variants import VARIANTS
+from librarian.config import LibrarySettings
 from librarian.schemas.chunks import Chunk
 from librarian.tasks.models import GoldenSample
 from tests.librarian.evalsuite.conftest import CORPUS, GOLDEN
@@ -84,6 +85,10 @@ async def test_all_variants_produce_valid_results(variant_name: str) -> None:
     cfg = VARIANTS[variant_name]
     if cfg.retrieval_strategy == "bedrock" and not cfg.bedrock_knowledge_base_id:
         pytest.skip("BEDROCK_KNOWLEDGE_BASE_ID not set")
+    if cfg.retrieval_strategy == "google_adk" and not (
+        cfg.google_datastore_id or cfg.google_project_id
+    ):
+        pytest.skip("GOOGLE_DATASTORE_ID not set")
 
     result = await run_variant_experiment(
         variant_name,
@@ -107,11 +112,18 @@ async def test_run_all_returns_all_variants() -> None:
     """run_all_experiments returns results for every configured variant."""
     results = await run_all_experiments(GOLDEN, CORPUS)
 
-    # bedrock-live is skipped when BEDROCK_KNOWLEDGE_BASE_ID is not set
+    # Live variants are skipped when credentials are absent
+    def _variant_runnable(name: str, cfg: LibrarySettings) -> bool:
+        if cfg.retrieval_strategy == "bedrock" and not cfg.bedrock_knowledge_base_id:
+            return False
+        if cfg.retrieval_strategy == "google_adk" and not (
+            cfg.google_datastore_id or cfg.google_project_id
+        ):
+            return False
+        return True
+
     expected = {
-        name
-        for name, cfg in VARIANTS.items()
-        if cfg.retrieval_strategy != "bedrock" or cfg.bedrock_knowledge_base_id
+        name for name, cfg in VARIANTS.items() if _variant_runnable(name, cfg)
     }
     assert set(results.keys()) == expected
     for name, result in results.items():

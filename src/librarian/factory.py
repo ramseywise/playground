@@ -137,6 +137,11 @@ def _build_reranker(cfg: LibrarySettings, llm: LLMClient) -> Reranker:
 
 
 def _build_llm(cfg: LibrarySettings) -> LLMClient:
+    if cfg.llm_provider == "gemini":
+        from core.clients.llm import GeminiLLM
+
+        return GeminiLLM(model=cfg.model_gemini, api_key=cfg.gemini_api_key)
+
     from core.clients.llm import AnthropicLLM
 
     return AnthropicLLM(
@@ -146,6 +151,11 @@ def _build_llm(cfg: LibrarySettings) -> LLMClient:
 
 
 def _build_history_llm(cfg: LibrarySettings) -> LLMClient:
+    if cfg.llm_provider == "gemini":
+        from core.clients.llm import GeminiLLM
+
+        return GeminiLLM(model=cfg.model_gemini, api_key=cfg.gemini_api_key)
+
     from core.clients.llm import AnthropicLLM
 
     return AnthropicLLM(

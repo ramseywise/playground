@@ -96,6 +96,11 @@ class LibrarySettings(BaseSettings):
         ""  # path to golden samples JSONL (external, never committed)
     )
 
+    # Google RAG (Vertex AI Search / Gemini grounding — alternative RAG backend)
+    google_project_id: str = ""
+    google_location: str = "global"
+    google_datastore_id: str = ""  # Vertex AI Search datastore for grounding
+
     # Bedrock Knowledge Bases (alternative RAG backend for A/B comparison)
     bedrock_knowledge_base_id: str = ""
     bedrock_model_arn: str = ""  # full ARN, e.g. arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0

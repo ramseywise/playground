@@ -13,6 +13,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from interfaces.api.deps import (
     get_bedrock_client,
+    get_google_adk_client,
     get_graph,
     get_pipeline,
     get_settings,
@@ -55,6 +56,8 @@ async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
 
     if decision.route == "bedrock":
         return await _chat_bedrock(req)
+    if decision.route == "google_adk":
+        return await _chat_google_adk(req)
     if decision.route in ("escalation", "direct"):
         return ChatResponse(
             response=decision.response or "",
@@ -123,6 +126,34 @@ async def _chat_bedrock(req: ChatRequest) -> ChatResponse | JSONResponse:
         intent="bedrock_kb",
         trace_id=_trace_id(),
         backend="bedrock",
+    )
+
+
+async def _chat_google_adk(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Call Google Gemini with Vertex AI Search grounding."""
+    client = get_google_adk_client()
+    if client is None:
+        return _error_response(
+            503,
+            "Google RAG not configured",
+            detail="Set GOOGLE_DATASTORE_ID and GEMINI_API_KEY in .env",
+        )
+
+    log.info("api.chat.google_adk", query=req.query[:80], session_id=req.session_id)
+
+    try:
+        result = await client.aquery(req.query, session_id=req.session_id)
+    except Exception:
+        log.exception("api.chat.google_adk.error")
+        return _error_response(502, "Google RAG error")
+
+    return ChatResponse(
+        response=result.response,
+        citations=result.citations,
+        confidence_score=0.0,
+        intent="google_rag",
+        trace_id=_trace_id(),
+        backend="google_adk",
     )
 
 
@@ -204,6 +235,14 @@ async def chat_stream(req: ChatRequest) -> EventSourceResponse:
             })
 
         return EventSourceResponse(triage_events())
+
+    if decision.route in ("bedrock", "google_adk"):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": f"Streaming is not supported for the {decision.route} backend. Use /chat instead.",
+            },
+        )
 
     cfg = get_settings()
 

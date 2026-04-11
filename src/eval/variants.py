@@ -101,6 +101,29 @@ BEDROCK_LIVE = LibrarySettings(
 )
 
 # ---------------------------------------------------------------------------
+# Google ADK-live — real Google Gemini + Vertex AI Search grounding
+#   Requires GEMINI_API_KEY + GOOGLE_DATASTORE_ID env vars
+#   (or GOOGLE_PROJECT_ID for Vertex AI mode).
+#   Skipped automatically when not configured.
+#   retrieval_strategy="google_adk" is the dispatch signal in run_variant_experiment.
+# ---------------------------------------------------------------------------
+GOOGLE_ADK_LIVE = LibrarySettings(
+    embedding_provider="google",  # documentary — Google handles embeddings
+    embedding_model="",  # N/A — managed by Vertex AI Search
+    retrieval_strategy="google_adk",  # dispatch signal for experiment runner
+    reranker_strategy="passthrough",
+    retrieval_k=5,
+    reranker_top_k=5,
+    bm25_weight=0.0,
+    vector_weight=1.0,
+    confidence_threshold=0.0,
+    max_crag_retries=0,
+    anthropic_api_key="test",
+    # google_project_id, google_datastore_id, gemini_api_key
+    # auto-populate from env vars via pydantic-settings.
+)
+
+# ---------------------------------------------------------------------------
 # Registry — keyed by variant name used in pytest parametrize
 # ---------------------------------------------------------------------------
 VARIANTS: dict[str, LibrarySettings] = {
@@ -108,4 +131,5 @@ VARIANTS: dict[str, LibrarySettings] = {
     "raptor": RAPTOR,
     "bedrock": BEDROCK,
     "bedrock-live": BEDROCK_LIVE,
+    "google-adk": GOOGLE_ADK_LIVE,
 }
