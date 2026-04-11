@@ -42,7 +42,9 @@ def build_langfuse_handler(
     try:
         from langfuse.callback import CallbackHandler  # type: ignore[import-untyped]
     except ImportError:
-        log.error("tracing.langfuse.missing", msg="langfuse not installed; tracing disabled")
+        log.error(
+            "tracing.langfuse.missing", msg="langfuse not installed; tracing disabled"
+        )
         return None
 
     if not settings.langfuse_public_key or not settings.langfuse_secret_key:
@@ -57,10 +59,18 @@ def build_langfuse_handler(
         user_id=user_id,
         trace_name=trace_id or session_id,
     )
-    log.debug("tracing.langfuse.handler_created", session_id=session_id, trace_id=trace_id)
+    log.debug(
+        "tracing.langfuse.handler_created", session_id=session_id, trace_id=trace_id
+    )
     return handler
 
 
 def make_runnable_config(handler: Any | None) -> dict[str, Any]:
-    """Build a LangGraph-compatible RunnableConfig dict with the Langfuse callback."""
-    return {"callbacks": [handler] if handler else []}
+    """Build a LangGraph-compatible RunnableConfig dict with the Langfuse callback.
+
+    Returns a dict that satisfies ``langgraph.types.RunnableConfig`` at runtime.
+    Typed as ``dict[str, Any]`` to avoid hard dep on langchain-core typestubs.
+    Use ``cast(RunnableConfig, ...)`` at call sites if the type checker complains.
+    """
+    config: dict[str, Any] = {"callbacks": [handler] if handler else []}
+    return config

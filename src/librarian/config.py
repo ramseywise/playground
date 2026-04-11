@@ -89,6 +89,12 @@ class LibrarySettings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_dataset_name: str = "golden_eval"
+
+    # Eval
+    eval_dataset_path: str = (
+        ""  # path to golden samples JSONL (external, never committed)
+    )
 
     # Bedrock Knowledge Bases (alternative RAG backend for A/B comparison)
     bedrock_knowledge_base_id: str = ""

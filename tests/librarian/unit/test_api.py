@@ -33,7 +33,7 @@ def _mock_graph() -> Any:
 def _make_mock_astream(final_state: dict[str, Any]) -> Any:
     """Create a mock astream that yields node-by-node updates."""
 
-    async def astream(input_data: dict[str, Any]) -> Any:
+    async def astream(input_data: dict[str, Any], **kwargs: Any) -> Any:
         yield {"analyze": {"intent": "lookup"}}
         yield {"retrieve": {"retrieved_chunks": []}}
         yield {"rerank": {"reranked_chunks": [], "confidence_score": 0.85}}

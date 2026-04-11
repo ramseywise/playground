@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
-from interfaces.api.deps import get_bedrock_client, get_graph, get_pipeline, get_settings
+from interfaces.api.deps import (
+    get_bedrock_client,
+    get_graph,
+    get_pipeline,
+    get_settings,
+)
+from librarian.tracing import build_langfuse_handler, make_runnable_config
 from interfaces.api.models import (
     ChatRequest,
     ChatResponse,
@@ -52,11 +58,20 @@ async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
 async def _chat_librarian(req: ChatRequest) -> ChatResponse | JSONResponse:
     """Run the full librarian graph and return the result."""
     graph = get_graph()
+    trace_id = _trace_id()
 
     log.info("api.chat.librarian", query=req.query[:80], session_id=req.session_id)
 
+    handler = build_langfuse_handler(
+        session_id=req.session_id or "",
+        trace_id=trace_id,
+    )
+    config = make_runnable_config(handler)
+
     try:
-        result: dict[str, Any] = await graph.ainvoke({"query": req.query})
+        result: dict[str, Any] = await graph.ainvoke(
+            {"query": req.query}, config=cast(Any, config)
+        )
     except Exception:
         log.exception("api.chat.librarian.error")
         return _error_response(500, "Internal graph error")
@@ -108,13 +123,21 @@ async def _stream_chat(
 
     log.info("api.chat.stream", query=req.query[:80], session_id=req.session_id)
 
+    handler = build_langfuse_handler(
+        session_id=req.session_id or "",
+        trace_id=trace_id,
+    )
+    config = make_runnable_config(handler)
+
     # Only extract the four fields we need — avoids holding large state (e.g.
     # raw chunks or embeddings) in memory for the full stream duration.
     response = citations = confidence = intent = None
 
     try:
         async with asyncio.timeout(timeout):
-            async for event in graph.astream({"query": req.query}):
+            async for event in graph.astream(
+                {"query": req.query}, config=cast(Any, config)
+            ):
                 for node_name, update in event.items():
                     if isinstance(update, dict):
                         if "response" in update:
@@ -139,10 +162,16 @@ async def _stream_chat(
         }
     except asyncio.TimeoutError:
         log.warning("api.chat.stream.timeout")
-        yield {"event": "error", "data": {"detail": "Graph timed out", "trace_id": trace_id}}
+        yield {
+            "event": "error",
+            "data": {"detail": "Graph timed out", "trace_id": trace_id},
+        }
     except Exception:
         log.exception("api.chat.stream.error")
-        yield {"event": "error", "data": {"detail": "Internal graph error", "trace_id": trace_id}}
+        yield {
+            "event": "error",
+            "data": {"detail": "Internal graph error", "trace_id": trace_id},
+        }
 
 
 @router.post("/chat/stream")
@@ -175,29 +204,45 @@ async def ingest(req: IngestRequest) -> IngestResponse | JSONResponse:
     try:
         if req.s3_key:
             r = await pipeline.ingest_s3_object(
-                bucket=cfg.s3_bucket, key=req.s3_key, region=cfg.s3_region,
+                bucket=cfg.s3_bucket,
+                key=req.s3_key,
+                region=cfg.s3_region,
             )
-            results.append(IngestResultItem(
-                doc_id=r.doc_id, chunk_count=r.chunk_count,
-                snippet_count=r.snippet_count, skipped=r.skipped,
-            ))
+            results.append(
+                IngestResultItem(
+                    doc_id=r.doc_id,
+                    chunk_count=r.chunk_count,
+                    snippet_count=r.snippet_count,
+                    skipped=r.skipped,
+                )
+            )
 
         if req.s3_prefix:
             batch = await pipeline.ingest_s3_prefix(
-                bucket=cfg.s3_bucket, prefix=req.s3_prefix, region=cfg.s3_region,
+                bucket=cfg.s3_bucket,
+                prefix=req.s3_prefix,
+                region=cfg.s3_region,
             )
             for r in batch:
-                results.append(IngestResultItem(
-                    doc_id=r.doc_id, chunk_count=r.chunk_count,
-                    snippet_count=r.snippet_count, skipped=r.skipped,
-                ))
+                results.append(
+                    IngestResultItem(
+                        doc_id=r.doc_id,
+                        chunk_count=r.chunk_count,
+                        snippet_count=r.snippet_count,
+                        skipped=r.skipped,
+                    )
+                )
 
         if req.document:
             r = await pipeline.ingest_document(req.document)
-            results.append(IngestResultItem(
-                doc_id=r.doc_id, chunk_count=r.chunk_count,
-                snippet_count=r.snippet_count, skipped=r.skipped,
-            ))
+            results.append(
+                IngestResultItem(
+                    doc_id=r.doc_id,
+                    chunk_count=r.chunk_count,
+                    snippet_count=r.snippet_count,
+                    skipped=r.skipped,
+                )
+            )
     except Exception:
         log.exception("api.ingest.error")
         return _error_response(500, "Ingestion error")
