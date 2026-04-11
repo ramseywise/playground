@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.rag_core.retrieval.rrf import RRF_K, fuse_rankings, _chunk_hash
-from agents.librarian.rag_core.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
+from agents.librarian.pipeline.retrieval.rrf import RRF_K, fuse_rankings, _chunk_hash
+from agents.librarian.pipeline.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
 
 
 def _chunk(id_: str, text: str = "text") -> Chunk:

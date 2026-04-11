@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 
-from agents.librarian.rag_core.ingestion.base import Chunker, ChunkerConfig
-from agents.librarian.rag_core.ingestion.chunking.html_aware import HtmlAwareChunker, _make_doc_id
-from agents.librarian.rag_core.ingestion.chunking.parent_doc import ParentDocChunker
+from agents.librarian.pipeline.ingestion.base import Chunker, ChunkerConfig
+from agents.librarian.pipeline.ingestion.chunking.html_aware import HtmlAwareChunker, _make_doc_id
+from agents.librarian.pipeline.ingestion.chunking.parent_doc import ParentDocChunker
 
 
 # ---------------------------------------------------------------------------

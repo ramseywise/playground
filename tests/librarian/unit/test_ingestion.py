@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from agents.librarian.rag_core.ingestion.loaders import load_directory, load_markdown_file
-from agents.librarian.rag_core.ingestion.pipeline import IngestionPipeline, IngestionResult, _sha256
-from agents.librarian.infra.storage.vectordb.inmemory import InMemoryRetriever
-from agents.librarian.testing.mock_embedder import MockEmbedder
-from agents.librarian.infra.storage.metadata_db import MetadataDB
-from agents.librarian.infra.storage.snippet_db import SnippetDB
+from agents.librarian.pipeline.ingestion.loaders import load_directory, load_markdown_file
+from agents.librarian.pipeline.ingestion.pipeline import IngestionPipeline, IngestionResult, _sha256
+from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from tests.librarian.testing.mock_embedder import MockEmbedder
+from agents.librarian.tools.storage.metadata_db import MetadataDB
+from agents.librarian.tools.storage.snippet_db import SnippetDB
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ def pipeline(
     meta_db: MetadataDB,
     snippet_db: SnippetDB,
 ) -> IngestionPipeline:
-    from agents.librarian.rag_core.ingestion.chunking.strategies import FixedChunker
+    from agents.librarian.pipeline.ingestion.chunking.strategies import FixedChunker
 
     return IngestionPipeline(
         chunker=FixedChunker(),

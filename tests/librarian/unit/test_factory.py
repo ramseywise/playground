@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from agents.librarian.factory import create_librarian
-from agents.librarian.infra.storage.vectordb.inmemory import InMemoryRetriever
-from agents.librarian.testing.mock_embedder import MockEmbedder
+from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from tests.librarian.testing.mock_embedder import MockEmbedder
 from agents.librarian.utils.config import LibrarySettings
 
 
