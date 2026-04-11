@@ -62,6 +62,8 @@ class LibrarySettings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_cors_origins: list[str] = ["*"]
+    api_timeout_seconds: float = 30.0
+    api_stream_timeout_seconds: float = 120.0
 
     # S3 data lake
     s3_bucket: str = ""
@@ -85,6 +87,12 @@ class LibrarySettings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
+
+    # OpenTelemetry (optional — requires the otel extra)
+    otel_enabled: bool = False
+    otel_exporter: str = "otlp"  # otlp | phoenix
+    otel_endpoint: str = "http://localhost:4317"
+    otel_service_name: str = "librarian"
 
 
 settings = LibrarySettings()
