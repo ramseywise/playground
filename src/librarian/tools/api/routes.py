@@ -11,7 +11,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 
-from agents.librarian.tools.api.deps import get_graph, get_pipeline, get_settings
+from agents.librarian.tools.api.deps import get_bedrock_client, get_graph, get_pipeline, get_settings
 from agents.librarian.tools.api.models import (
     ChatRequest,
     ChatResponse,
@@ -43,15 +43,22 @@ async def health() -> dict[str, str]:
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
-    """Non-streaming chat: run the full graph and return the result."""
+    """Non-streaming chat: dispatches to librarian graph or Bedrock KB."""
+    if req.backend == "bedrock":
+        return await _chat_bedrock(req)
+    return await _chat_librarian(req)
+
+
+async def _chat_librarian(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Run the full librarian graph and return the result."""
     graph = get_graph()
 
-    log.info("api.chat", query=req.query[:80], session_id=req.session_id)
+    log.info("api.chat.librarian", query=req.query[:80], session_id=req.session_id)
 
     try:
         result: dict[str, Any] = await graph.ainvoke({"query": req.query})
     except Exception:
-        log.exception("api.chat.error")
+        log.exception("api.chat.librarian.error")
         return _error_response(500, "Internal graph error")
 
     return ChatResponse(
@@ -60,6 +67,35 @@ async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
         confidence_score=result.get("confidence_score", 0.0),
         intent=result.get("intent", ""),
         trace_id=_trace_id(),
+        backend="librarian",
+    )
+
+
+async def _chat_bedrock(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Call Bedrock Knowledge Bases RetrieveAndGenerate."""
+    client = get_bedrock_client()
+    if client is None:
+        return _error_response(
+            503,
+            "Bedrock KB not configured",
+            detail="Set BEDROCK_KNOWLEDGE_BASE_ID and BEDROCK_MODEL_ARN in .env",
+        )
+
+    log.info("api.chat.bedrock", query=req.query[:80], session_id=req.session_id)
+
+    try:
+        result = await client.aquery(req.query, session_id=req.session_id)
+    except Exception:
+        log.exception("api.chat.bedrock.error")
+        return _error_response(502, "Bedrock KB error")
+
+    return ChatResponse(
+        response=result.response,
+        citations=result.citations,
+        confidence_score=0.0,
+        intent="bedrock_kb",
+        trace_id=_trace_id(),
+        backend="bedrock",
     )
 
 
