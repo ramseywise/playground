@@ -3,12 +3,12 @@
 Extracted from the monolithic ``orchestration/query_understanding.py`` into
 focused modules.  Import the main entry point:
 
-    from agents.librarian.plan import QueryAnalyzer, QueryAnalysis
+    from agents.librarian.pipeline.plan import QueryAnalyzer, QueryAnalysis
 """
 
 from __future__ import annotations
 
-from agents.librarian.plan.analyzer import QueryAnalysis, QueryAnalyzer
-from agents.librarian.plan.routing import QueryRouter
+from agents.librarian.pipeline.plan.analyzer import QueryAnalysis, QueryAnalyzer
+from agents.librarian.pipeline.plan.routing import QueryRouter
 
 __all__ = ["QueryAnalysis", "QueryAnalyzer", "QueryRouter"]

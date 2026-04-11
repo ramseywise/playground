@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import math
 from typing import Any
 
@@ -46,7 +47,9 @@ class CrossEncoderReranker:
             return []
 
         pairs = [[query, gc.chunk.text] for gc in chunks]
-        raw_scores: list[float] = self._model.predict(pairs).tolist()
+        raw_scores: list[float] = (
+            await asyncio.to_thread(self._model.predict, pairs)
+        ).tolist()
 
         scored = [(gc, _sigmoid(raw)) for gc, raw in zip(chunks, raw_scores)]
         scored.sort(key=lambda x: x[1], reverse=True)

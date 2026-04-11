@@ -99,6 +99,7 @@ class RetrievalSubgraph:
                 result = aembed_query(variant)
                 if inspect.isawaitable(result):
                     return await result
+                return result  # sync aembed_query — use result directly
             return await asyncio.to_thread(self._embedder.embed_query, variant)
 
         all_results: list[RetrievalResult] = list(cached_results)

@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from agents.librarian.plan.decomposition import decompose_query
-from agents.librarian.plan.entities import extract_entities
-from agents.librarian.plan.expansion import expand_terms
-from agents.librarian.plan.intent import classify_intent
-from agents.librarian.plan.routing import select_retrieval_mode
+from agents.librarian.pipeline.plan.decomposition import decompose_query
+from agents.librarian.pipeline.plan.entities import extract_entities
+from agents.librarian.pipeline.plan.expansion import expand_terms
+from agents.librarian.pipeline.plan.intent import classify_intent
+from agents.librarian.pipeline.plan.routing import select_retrieval_mode
 from agents.librarian.pipeline.schemas.retrieval import Intent
 from agents.librarian.utils.logging import get_logger
 

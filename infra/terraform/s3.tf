@@ -4,7 +4,7 @@
 
 resource "aws_s3_bucket" "data_lake" {
   bucket        = "${local.name_prefix}-data-lake"
-  force_destroy = true # dev convenience — remove for prod
+  force_destroy = var.environment == "dev"
 
   tags = { Name = "${local.name_prefix}-data-lake" }
 }

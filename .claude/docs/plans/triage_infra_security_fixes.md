@@ -28,7 +28,7 @@ current SG scoping (ECS only reachable from ALB) is an acceptable control.
 
 ## Steps
 
-### Step 1: Guard `force_delete` / `force_destroy` with environment check
+### Step 1: ✅ Guard `force_delete` / `force_destroy` with environment check
 **Files**: `infra/terraform/ecr.tf` (line 8), `infra/terraform/s3.tf` (line 7)
 **What**: Both resources use destructive flags unconditionally. Gate them on
 `var.environment == "dev"` so staging/prod terraform destroys cannot silently wipe
@@ -58,7 +58,7 @@ force_destroy = var.environment == "dev"
 
 ---
 
-### Step 2: Fix ECS task memory and health-check `startPeriod`
+### Step 2: ✅ Fix ECS task memory and health-check `startPeriod`
 **Files**: `infra/terraform/variables.tf` (lines 29–33), `infra/terraform/ecs.tf` (line 116)
 
 **What**: The default task memory (1024 MiB) is insufficient for multilingual-e5-large
@@ -96,7 +96,7 @@ startPeriod = 60  # multilingual-e5-large loads ~45s on cold start
 
 ---
 
-### Step 3: Parameterize ECR image tag (replace `:latest`)
+### Step 3: ✅ Parameterize ECR image tag (replace `:latest`)
 **Files**: `infra/terraform/variables.tf` (after line 100), `infra/terraform/ecs.tf`
 (line 82), `infra/terraform/lambda.tf` (lines 51, 87)
 
@@ -144,7 +144,7 @@ image_uri = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
 
 ---
 
-### Step 4: Mark `lambda_function_url` output as sensitive
+### Step 4: ✅ Mark `lambda_function_url` output as sensitive
 **Files**: `infra/terraform/outputs.tf` (lines 21–24)
 
 **What**: The function URL is effectively a bearer credential when
@@ -173,7 +173,7 @@ prints `<sensitive>` rather than the URL.
 
 ---
 
-### Step 5: Add HTTPS listener + HTTP→HTTPS redirect + HTTPS security group rule
+### Step 5: ✅ Add HTTPS listener + HTTP→HTTPS redirect + HTTPS security group rule
 **Files**: `infra/terraform/variables.tf` (append), `infra/terraform/alb.tf` (append),
 `infra/terraform/security.tf` (lines 10–17)
 
@@ -265,7 +265,7 @@ resource "aws_lb_listener" "https" {
 
 ---
 
-### Step 6: Harden Lambda Function URL authorization
+### Step 6: ✅ Harden Lambda Function URL authorization
 **Files**: `infra/terraform/lambda.tf` (line 78), `infra/terraform/variables.tf` (append)
 
 **What**: `authorization_type = "NONE"` makes the Lambda URL publicly accessible with
@@ -310,7 +310,7 @@ Also: `terraform plan -var="lambda_auth_type=INVALID" -var="anthropic_api_key=te
 
 ---
 
-### Step 7: Create dedicated `Dockerfile.frontend` with pinned Streamlit
+### Step 7: ✅ Create dedicated `Dockerfile.frontend` with pinned Streamlit
 **Files**: `infra/docker/Dockerfile.frontend` (new file), `infra/docker/docker-compose.yml`
 (lines 17–27)
 
@@ -386,7 +386,7 @@ does not exist, add it before building.
 
 ---
 
-### Step 8: Fix Streamlit frontend — health check caching, session state order, URL sanitization
+### Step 8: ✅ Fix Streamlit frontend — health check caching, session state order, URL sanitization
 **Files**: `frontend/librarian_chat.py` (lines 137–180, 169–171)
 
 **What**: Three issues in the frontend Python:
