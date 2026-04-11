@@ -6,6 +6,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from agents.librarian.factory import create_librarian
 from agents.librarian.orchestration.nodes.generation import GenerationSubgraph
+from agents.librarian.pipeline.bedrock.client import BedrockKBClient
 from agents.librarian.pipeline.ingestion.pipeline import IngestionPipeline
 from agents.librarian.utils.config import LibrarySettings, settings as _default_settings
 from agents.librarian.utils.llm import AnthropicLLM
@@ -16,12 +17,13 @@ log = get_logger(__name__)
 _graph: CompiledStateGraph | None = None
 _generation_sg: GenerationSubgraph | None = None
 _pipeline: IngestionPipeline | None = None
+_bedrock_client: BedrockKBClient | None = None
 _settings: LibrarySettings = _default_settings
 
 
 def init_graph(cfg: LibrarySettings | None = None) -> None:
     """Initialise the graph singleton. Called once at app startup."""
-    global _graph, _generation_sg, _settings  # noqa: PLW0603
+    global _graph, _generation_sg, _bedrock_client, _settings  # noqa: PLW0603
     _settings = cfg or _default_settings
 
     log.info("api.deps.init_graph", retrieval=_settings.retrieval_strategy)
@@ -35,6 +37,17 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
         llm=llm,
         confidence_threshold=_settings.confidence_threshold,
     )
+
+    # Bedrock KB client — optional, only if configured
+    if _settings.bedrock_knowledge_base_id:
+        try:
+            _bedrock_client = BedrockKBClient(_settings)
+            log.info("api.deps.bedrock_kb.init", kb_id=_settings.bedrock_knowledge_base_id)
+        except Exception:
+            log.warning("api.deps.bedrock_kb.init_failed", exc_info=True)
+            _bedrock_client = None
+    else:
+        log.info("api.deps.bedrock_kb.skipped", reason="no knowledge_base_id configured")
 
 
 def get_graph() -> CompiledStateGraph:
@@ -68,6 +81,11 @@ def get_pipeline() -> IngestionPipeline:
         msg = "Pipeline not initialised — call init_pipeline() first"
         raise RuntimeError(msg)
     return _pipeline
+
+
+def get_bedrock_client() -> BedrockKBClient | None:
+    """Return the Bedrock KB client, or None if not configured."""
+    return _bedrock_client
 
 
 def get_settings() -> LibrarySettings:

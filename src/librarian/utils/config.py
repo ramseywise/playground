@@ -88,6 +88,11 @@ class LibrarySettings(BaseSettings):
     langfuse_secret_key: str = ""
     langfuse_host: str = "https://cloud.langfuse.com"
 
+    # Bedrock Knowledge Bases (alternative RAG backend for A/B comparison)
+    bedrock_knowledge_base_id: str = ""
+    bedrock_model_arn: str = ""  # full ARN, e.g. arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0
+    bedrock_region: str = ""  # falls back to s3_region / AWS_DEFAULT_REGION
+
     # OpenTelemetry (optional — requires the otel extra)
     otel_enabled: bool = False
     otel_exporter: str = "otlp"  # otlp | phoenix

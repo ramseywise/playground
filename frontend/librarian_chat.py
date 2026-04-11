@@ -29,13 +29,13 @@ st.set_page_config(
 # ---------------------------------------------------------------------------
 
 
-def _sync_response(query: str) -> str:
+def _sync_response(query: str, backend: str) -> str:
     """Non-streaming: POST to /chat and display the full response."""
     with st.spinner("Thinking..."):
         try:
             resp = httpx.post(
                 CHAT_ENDPOINT,
-                json={"query": query},
+                json={"query": query, "backend": backend},
                 timeout=60,
             )
             resp.raise_for_status()
@@ -53,12 +53,13 @@ def _sync_response(query: str) -> str:
             "confidence_score": data.get("confidence_score", 0),
             "intent": data.get("intent", ""),
             "citations": data.get("citations", []),
+            "backend": data.get("backend", backend),
         }
     )
     return response_text
 
 
-def _stream_response(query: str) -> str:
+def _stream_response(query: str, backend: str) -> str:
     """Streaming: consume SSE from /chat/stream and display tokens live."""
     placeholder = st.empty()
     status_placeholder = st.empty()
@@ -70,7 +71,7 @@ def _stream_response(query: str) -> str:
         with httpx.stream(
             "POST",
             STREAM_ENDPOINT,
-            json={"query": query},
+            json={"query": query, "backend": backend},
             timeout=60,
         ) as resp:
             resp.raise_for_status()
@@ -125,6 +126,7 @@ def _stream_response(query: str) -> str:
             "confidence_score": metadata.get("confidence_score", 0),
             "intent": metadata.get("intent", ""),
             "citations": metadata.get("citations", []),
+            "backend": metadata.get("backend", backend),
         }
     )
     return full_text
@@ -149,7 +151,22 @@ with st.sidebar:
         st.error(f"Cannot reach API at {API_URL}")
 
     st.caption(f"API: `{API_URL}`")
-    use_streaming = st.toggle("Stream response", value=False)
+
+    # Backend selector
+    backend = st.radio(
+        "Backend",
+        options=["librarian", "bedrock"],
+        format_func=lambda x: "Python RAG (Librarian)" if x == "librarian" else "AWS Bedrock KB",
+        index=0,
+        help="Switch between our custom RAG pipeline and AWS Bedrock Knowledge Bases.",
+    )
+
+    use_streaming = st.toggle(
+        "Stream response",
+        value=False,
+        disabled=backend == "bedrock",
+        help="Streaming is only available for the Librarian backend.",
+    )
 
     if st.button("Clear chat"):
         st.session_state.messages = []
@@ -160,6 +177,10 @@ with st.sidebar:
     st.subheader("Last response metadata")
     if st.session_state.get("metadata"):
         last = st.session_state.metadata[-1]
+        last_backend = last.get("backend", "librarian")
+        st.caption(
+            f"Backend: **{'Python RAG' if last_backend == 'librarian' else 'AWS Bedrock KB'}**"
+        )
         st.metric("Confidence", f"{last.get('confidence_score', 0):.2f}")
         st.text(f"Intent: {last.get('intent', '—')}")
         citations = last.get("citations", [])
@@ -194,7 +215,8 @@ if prompt := st.chat_input("Ask the librarian..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        if use_streaming:
-            _stream_response(prompt)
+        # Streaming only supported for librarian backend
+        if use_streaming and backend == "librarian":
+            _stream_response(prompt, backend)
         else:
-            _sync_response(prompt)
+            _sync_response(prompt, backend)

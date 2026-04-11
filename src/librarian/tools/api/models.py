@@ -11,6 +11,7 @@ class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4000)
     session_id: str | None = None
     conversation_id: str | None = None  # legacy alias — prefer session_id
+    backend: Literal["librarian", "bedrock"] = "librarian"
 
 
 class ChatResponse(BaseModel):
@@ -21,6 +22,7 @@ class ChatResponse(BaseModel):
     confidence_score: float
     intent: str
     trace_id: str = ""
+    backend: str = "librarian"
 
 
 class StreamEvent(BaseModel):
