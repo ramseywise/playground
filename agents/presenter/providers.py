@@ -10,7 +10,7 @@ from urllib.parse import quote
 import httpx
 import structlog
 
-from agents.librarian.tools.utils.config import settings
+from core.config.agent_settings import settings
 
 log = structlog.get_logger(__name__)
 

@@ -60,7 +60,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agents"]
+packages = [
+    "agents",
+    "src/core",
+    "src/librarian",
+    "src/storage",
+    "src/orchestration",
+    "src/interfaces",
+    "src/eval",
+]
 
 [dependency-groups]
 dev = [
@@ -109,7 +117,7 @@ ignore_errors = true
 research-agent = "agents.researcher.__main__:main"
 presenter = "agents.presenter.__main__:main"
 cartographer = "agents.cartographer.__main__:main"
-librarian-api = "agents.librarian.tools.api.app:main"
-mcp-snowflake = "agents.librarian.tools.mcp.snowflake_server:main"
-mcp-s3 = "agents.librarian.tools.mcp.s3_server:main"
-mcp-librarian = "agents.librarian.tools.mcp.librarian_server:main"
+librarian-api = "interfaces.api.app:main"
+mcp-snowflake = "interfaces.mcp.snowflake_server:main"
+mcp-s3 = "interfaces.mcp.s3_server:main"
+mcp-librarian = "interfaces.mcp.librarian_server:main"

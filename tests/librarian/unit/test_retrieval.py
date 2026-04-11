@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.pipeline.retrieval.base import Embedder, Retriever
-from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from librarian.retrieval.base import Embedder, Retriever
+from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
-from agents.librarian.pipeline.schemas.chunks import Chunk, ChunkMetadata
+from librarian.schemas.chunks import Chunk, ChunkMetadata
 
 
 # ---------------------------------------------------------------------------

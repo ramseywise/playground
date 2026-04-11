@@ -8,7 +8,7 @@ import structlog
 from rich.console import Console
 from rich.prompt import IntPrompt, Prompt
 
-from agents.librarian.tools.utils.config import settings
+from core.config.agent_settings import settings
 
 console = Console()
 log = structlog.get_logger(__name__)

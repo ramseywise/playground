@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.orchestration.nodes.generation import (
+from orchestration.nodes.generation import (
     DEFAULT_CONFIDENCE_GATE,
     GenerationSubgraph,
 )
-from agents.librarian.pipeline.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
-from agents.librarian.pipeline.schemas.state import LibrarianState
+from librarian.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
+from librarian.schemas.state import LibrarianState
 
 
 # ---------------------------------------------------------------------------

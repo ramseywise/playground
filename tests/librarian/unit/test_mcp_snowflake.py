@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.tools.mcp.snowflake_server import SnowflakeClient, _SQL_PREFIX_RE
+from interfaces.mcp.snowflake_server import SnowflakeClient, _SQL_PREFIX_RE
 
 
 class TestSqlValidation:
@@ -45,7 +45,7 @@ class TestSnowflakeClient:
     def test_execute_rejects_unsafe_sql(self) -> None:
         from unittest.mock import MagicMock
 
-        from agents.librarian.utils.config import LibrarySettings
+        from librarian.config import LibrarySettings
 
         cfg = MagicMock(spec=LibrarySettings)
         client = SnowflakeClient(cfg)
@@ -56,7 +56,7 @@ class TestSnowflakeClient:
     def test_describe_table_rejects_injection(self) -> None:
         from unittest.mock import MagicMock
 
-        from agents.librarian.utils.config import LibrarySettings
+        from librarian.config import LibrarySettings
 
         cfg = MagicMock(spec=LibrarySettings)
         client = SnowflakeClient(cfg)
@@ -68,7 +68,7 @@ class TestSnowflakeClient:
         """Valid table names should pass validation (execution mocked)."""
         from unittest.mock import MagicMock, patch
 
-        from agents.librarian.utils.config import LibrarySettings
+        from librarian.config import LibrarySettings
 
         cfg = MagicMock(spec=LibrarySettings)
         client = SnowflakeClient(cfg)
@@ -81,7 +81,7 @@ class TestSnowflakeClient:
         """Verify execute() converts cursor rows to dicts."""
         from unittest.mock import MagicMock
 
-        from agents.librarian.utils.config import LibrarySettings
+        from librarian.config import LibrarySettings
 
         cfg = MagicMock(spec=LibrarySettings)
         client = SnowflakeClient(cfg)

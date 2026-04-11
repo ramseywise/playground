@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.orchestration.history import HistoryCondenser
-from agents.librarian.pipeline.schemas.state import LibrarianState
+from orchestration.history import HistoryCondenser
+from librarian.schemas.state import LibrarianState
 
 
 def _mock_llm(response: str = "standalone query") -> MagicMock:

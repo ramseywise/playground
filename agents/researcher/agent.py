@@ -14,8 +14,8 @@ from agents.researcher.prompts import (
     build_merge_prompt,
     build_note_prompt,
 )
-from agents.librarian.tools.utils.client import create_client
-from agents.librarian.tools.utils.config import load_project_context, settings
+from core.client import create_client
+from core.config.agent_settings import load_project_context, settings
 
 load_dotenv()
 

@@ -4,15 +4,15 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.orchestration.nodes.retrieval import (
+from orchestration.nodes.retrieval import (
     RetrievalSubgraph,
     _grade_chunks,
 )
-from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
-from agents.librarian.pipeline.schemas.chunks import Chunk, ChunkMetadata
-from agents.librarian.pipeline.schemas.retrieval import Intent, QueryPlan, RetrievalResult
-from agents.librarian.pipeline.schemas.state import LibrarianState
+from librarian.schemas.chunks import Chunk, ChunkMetadata
+from librarian.schemas.retrieval import Intent, QueryPlan, RetrievalResult
+from librarian.schemas.state import LibrarianState
 
 
 # ---------------------------------------------------------------------------

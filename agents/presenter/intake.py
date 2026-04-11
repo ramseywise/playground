@@ -5,7 +5,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
-from agents.librarian.tools.utils.config import settings
+from core.config.agent_settings import settings
 from agents.presenter.models import DeckIntake, ImageIntake
 
 console = Console()

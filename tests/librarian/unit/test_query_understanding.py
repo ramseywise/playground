@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.orchestration.query_understanding import (
+from orchestration.query_understanding import (
     TERM_EXPANSIONS,
     QueryAnalyzer,
     QueryRouter,
 )
-from agents.librarian.pipeline.schemas.retrieval import Intent
+from librarian.schemas.retrieval import Intent
 
 
 @pytest.fixture()
@@ -238,7 +238,7 @@ def test_router_direct_for_out_of_scope(
 
 
 def test_router_clarify_for_low_confidence(router: QueryRouter) -> None:
-    from agents.librarian.orchestration.query_understanding import QueryAnalysis
+    from orchestration.query_understanding import QueryAnalysis
 
     low_confidence = QueryAnalysis(
         intent=Intent.LOOKUP,
@@ -252,7 +252,7 @@ def test_router_clarify_for_low_confidence(router: QueryRouter) -> None:
 
 
 def test_router_retrieve_at_threshold(router: QueryRouter) -> None:
-    from agents.librarian.orchestration.query_understanding import QueryAnalysis
+    from orchestration.query_understanding import QueryAnalysis
 
     at_threshold = QueryAnalysis(
         intent=Intent.LOOKUP,
@@ -280,7 +280,7 @@ def test_router_retrieve_for_compare(
 
 
 def test_router_custom_threshold() -> None:
-    from agents.librarian.orchestration.query_understanding import QueryAnalysis
+    from orchestration.query_understanding import QueryAnalysis
 
     strict_router = QueryRouter(clarify_confidence_threshold=0.8)
     analysis = QueryAnalysis(

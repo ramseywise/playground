@@ -7,7 +7,7 @@ from pathlib import Path
 
 import structlog
 
-from agents.librarian.tools.utils.config import settings
+from core.config.agent_settings import settings
 from agents.presenter.models import VizPrompt
 from agents.presenter.providers import get_provider
 

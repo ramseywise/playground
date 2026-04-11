@@ -11,7 +11,7 @@ from pathlib import Path
 import structlog
 from dotenv import load_dotenv
 
-from agents.librarian.tools.utils.config import settings
+from core.config.agent_settings import settings
 
 load_dotenv()
 

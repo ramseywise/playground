@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents.librarian.tools.mcp import librarian_server
+from interfaces.mcp import librarian_server
 
 
 @pytest.fixture(autouse=True)
@@ -27,7 +27,7 @@ class TestGetGraph:
         cfg = MagicMock()
 
         with patch(
-            "agents.librarian.factory.create_librarian",
+            "librarian.factory.create_librarian",
             return_value=mock_graph,
         ) as mock_create:
             result = librarian_server._get_graph(cfg)
@@ -50,7 +50,7 @@ class TestGetPipeline:
         cfg = MagicMock()
 
         with patch(
-            "agents.librarian.factory.create_ingestion_pipeline",
+            "librarian.factory.create_ingestion_pipeline",
             return_value=mock_pipeline,
         ) as mock_create:
             result = librarian_server._get_pipeline(cfg)

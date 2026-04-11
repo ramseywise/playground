@@ -4,14 +4,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.orchestration.nodes.reranker import RerankerSubgraph
-from agents.librarian.pipeline.schemas.chunks import (
+from orchestration.nodes.reranker import RerankerSubgraph
+from librarian.schemas.chunks import (
     Chunk,
     ChunkMetadata,
     GradedChunk,
     RankedChunk,
 )
-from agents.librarian.pipeline.schemas.state import LibrarianState
+from librarian.schemas.state import LibrarianState
 
 
 # ---------------------------------------------------------------------------

@@ -11,20 +11,20 @@ from typing import TYPE_CHECKING, cast
 
 from langgraph.graph.state import CompiledStateGraph
 
-from agents.librarian.orchestration.graph import build_graph
-from agents.librarian.orchestration.history import HistoryCondenser
-from agents.librarian.pipeline.ingestion.base import Chunker
-from agents.librarian.pipeline.retrieval.base import Embedder, Retriever
-from agents.librarian.pipeline.reranker.base import Reranker
-from agents.librarian.pipeline.retrieval.cache import RetrievalCache
-from agents.librarian.tools.storage.metadata_db import MetadataDB
-from agents.librarian.tools.storage.snippet_db import SnippetDB
-from agents.librarian.utils.config import LibrarySettings, settings as _default_settings
-from agents.librarian.utils.logging import get_logger
+from orchestration.graph import build_graph
+from orchestration.history import HistoryCondenser
+from librarian.ingestion.base import Chunker
+from librarian.retrieval.base import Embedder, Retriever
+from librarian.reranker.base import Reranker
+from librarian.retrieval.cache import RetrievalCache
+from storage.metadata_db import MetadataDB
+from storage.snippet_db import SnippetDB
+from librarian.config import LibrarySettings, settings as _default_settings
+from core.logging import get_logger
 
 if TYPE_CHECKING:
-    from agents.librarian.tools.core.clients.llm import LLMClient
-    from agents.librarian.pipeline.ingestion.pipeline import IngestionPipeline
+    from core.clients.llm import LLMClient
+    from librarian.ingestion.pipeline import IngestionPipeline
 
 log = get_logger(__name__)
 
@@ -38,8 +38,8 @@ def _build_storage(cfg: LibrarySettings) -> tuple["MetadataDB", "SnippetDB"]:
     """Build (MetadataDB, SnippetDB) backed by cfg.duckdb_path."""
     from pathlib import Path
 
-    from agents.librarian.tools.storage.metadata_db import MetadataDB
-    from agents.librarian.tools.storage.snippet_db import SnippetDB
+    from storage.metadata_db import MetadataDB
+    from storage.snippet_db import SnippetDB
 
     db_path = cfg.duckdb_path
     if db_path != ":memory:":
@@ -51,14 +51,14 @@ def _build_storage(cfg: LibrarySettings) -> tuple["MetadataDB", "SnippetDB"]:
 
 
 def _build_chunker(cfg: LibrarySettings) -> "Chunker":
-    from agents.librarian.pipeline.ingestion.chunking.strategies import (
+    from librarian.ingestion.chunking.strategies import (
         AdjacencyChunker,
         FixedChunker,
         OverlappingChunker,
         StructuredChunker,
     )
-    from agents.librarian.pipeline.ingestion.chunking.html_aware import HtmlAwareChunker
-    from agents.librarian.pipeline.ingestion.chunking.parent_doc import ParentDocChunker
+    from librarian.ingestion.chunking.html_aware import HtmlAwareChunker
+    from librarian.ingestion.chunking.parent_doc import ParentDocChunker
 
     dispatch = {
         "fixed": FixedChunker,
@@ -74,24 +74,24 @@ def _build_chunker(cfg: LibrarySettings) -> "Chunker":
 
 def _build_embedder(cfg: LibrarySettings) -> Embedder:
     if cfg.embedding_provider == "minilm":
-        from agents.librarian.pipeline.ingestion.embeddings.embedders import MiniLMEmbedder
+        from librarian.ingestion.embeddings.embedders import MiniLMEmbedder
 
         return MiniLMEmbedder(model_name=cfg.embedding_model)
 
     # Default: multilingual (intfloat/multilingual-e5-large)
-    from agents.librarian.pipeline.ingestion.embeddings.embedders import MultilingualEmbedder
+    from librarian.ingestion.embeddings.embedders import MultilingualEmbedder
 
     return MultilingualEmbedder(model_name=cfg.embedding_model)
 
 
 def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
     if cfg.retrieval_strategy == "inmemory":
-        from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+        from storage.vectordb.inmemory import InMemoryRetriever
 
         return InMemoryRetriever()
 
     if cfg.retrieval_strategy == "opensearch":
-        from agents.librarian.tools.storage.vectordb.opensearch import OpenSearchRetriever
+        from storage.vectordb.opensearch import OpenSearchRetriever
 
         return OpenSearchRetriever(
             index=cfg.opensearch_index,
@@ -100,7 +100,7 @@ def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
         )
 
     if cfg.retrieval_strategy == "duckdb":
-        from agents.librarian.tools.storage.vectordb.duckdb import DuckDBRetriever
+        from storage.vectordb.duckdb import DuckDBRetriever
 
         return DuckDBRetriever(
             db_path=cfg.duckdb_path,
@@ -109,7 +109,7 @@ def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
         )
 
     # Default: chroma (persistent, no Docker required)
-    from agents.librarian.tools.storage.vectordb.chroma import ChromaRetriever
+    from storage.vectordb.chroma import ChromaRetriever
 
     return ChromaRetriever(
         persist_dir=cfg.chroma_persist_dir,
@@ -121,23 +121,23 @@ def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
 
 def _build_reranker(cfg: LibrarySettings, llm: LLMClient) -> Reranker:
     if cfg.reranker_strategy == "llm_listwise":
-        from agents.librarian.pipeline.reranker.llm_listwise import LLMListwiseReranker
+        from librarian.reranker.llm_listwise import LLMListwiseReranker
 
         return LLMListwiseReranker(llm=llm)
 
     if cfg.reranker_strategy == "passthrough":
-        from agents.librarian.pipeline.reranker.passthrough import PassthroughReranker
+        from librarian.reranker.passthrough import PassthroughReranker
 
         return PassthroughReranker()
 
     # Default: cross_encoder
-    from agents.librarian.pipeline.reranker.cross_encoder import CrossEncoderReranker
+    from librarian.reranker.cross_encoder import CrossEncoderReranker
 
     return CrossEncoderReranker()
 
 
 def _build_llm(cfg: LibrarySettings) -> LLMClient:
-    from agents.librarian.tools.core.clients.llm import AnthropicLLM
+    from core.clients.llm import AnthropicLLM
 
     return AnthropicLLM(
         model=cfg.anthropic_model_sonnet,
@@ -146,7 +146,7 @@ def _build_llm(cfg: LibrarySettings) -> LLMClient:
 
 
 def _build_history_llm(cfg: LibrarySettings) -> LLMClient:
-    from agents.librarian.tools.core.clients.llm import AnthropicLLM
+    from core.clients.llm import AnthropicLLM
 
     return AnthropicLLM(
         model=cfg.anthropic_model_haiku,
@@ -178,7 +178,7 @@ def create_librarian(
     """
     cfg = cfg or _default_settings
 
-    from agents.librarian.utils.otel import setup_otel
+    from librarian.otel import setup_otel
     setup_otel()
 
     log.info(
@@ -232,7 +232,7 @@ def create_ingestion_pipeline(
 
     Returns a pipeline that can be used independently of the librarian graph.
     """
-    from agents.librarian.pipeline.ingestion.pipeline import IngestionPipeline
+    from librarian.ingestion.pipeline import IngestionPipeline
 
     cfg = cfg or _default_settings
 

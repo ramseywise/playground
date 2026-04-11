@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents.librarian.factory import create_librarian
-from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from librarian.factory import create_librarian
+from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
-from agents.librarian.utils.config import LibrarySettings
+from librarian.config import LibrarySettings
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ def test_create_returns_compiled_graph() -> None:
 
 def test_create_injected_components_not_rebuilt() -> None:
     """Injected components bypass _build_* — _build_llm must not be called."""
-    with patch("agents.librarian.factory._build_llm") as mock_build_llm:
+    with patch("librarian.factory._build_llm") as mock_build_llm:
         create_librarian(
             cfg=_cfg(),
             llm=_mock_llm(),
@@ -73,7 +73,7 @@ def test_create_injected_components_not_rebuilt() -> None:
 
 
 def test_create_embedder_not_rebuilt_when_injected() -> None:
-    with patch("agents.librarian.factory._build_embedder") as mock_build:
+    with patch("librarian.factory._build_embedder") as mock_build:
         create_librarian(
             cfg=_cfg(),
             llm=_mock_llm(),
@@ -85,7 +85,7 @@ def test_create_embedder_not_rebuilt_when_injected() -> None:
 
 
 def test_create_retriever_not_rebuilt_when_injected() -> None:
-    with patch("agents.librarian.factory._build_retriever") as mock_build:
+    with patch("librarian.factory._build_retriever") as mock_build:
         create_librarian(
             cfg=_cfg(),
             llm=_mock_llm(),
@@ -103,7 +103,7 @@ def test_create_retriever_not_rebuilt_when_injected() -> None:
 
 def test_create_inmemory_strategy_used() -> None:
     with patch(
-        "agents.librarian.factory._build_retriever",
+        "librarian.factory._build_retriever",
         wraps=lambda cfg, emb: InMemoryRetriever(),
     ) as mock_build:
         create_librarian(
@@ -116,7 +116,7 @@ def test_create_inmemory_strategy_used() -> None:
 
 
 def test_create_llm_listwise_reranker_strategy() -> None:
-    with patch("agents.librarian.factory._build_reranker") as mock_build:
+    with patch("librarian.factory._build_reranker") as mock_build:
         mock_build.return_value = _mock_reranker()
         create_librarian(
             cfg=_cfg(reranker_strategy="llm_listwise"),
@@ -165,21 +165,21 @@ async def test_create_default_cfg_uses_module_settings() -> None:
     """Passing cfg=None uses the module-level settings singleton."""
     with (
         patch(
-            "agents.librarian.factory._build_llm", return_value=_mock_llm()
+            "librarian.factory._build_llm", return_value=_mock_llm()
         ) as mock_llm_build,
         patch(
-            "agents.librarian.factory._build_history_llm", return_value=_mock_llm()
+            "librarian.factory._build_history_llm", return_value=_mock_llm()
         ) as mock_history_llm_build,
         patch(
-            "agents.librarian.factory._build_embedder",
+            "librarian.factory._build_embedder",
             return_value=MockEmbedder(dim=64),
         ),
         patch(
-            "agents.librarian.factory._build_retriever",
+            "librarian.factory._build_retriever",
             return_value=InMemoryRetriever(),
         ),
         patch(
-            "agents.librarian.factory._build_reranker", return_value=_mock_reranker()
+            "librarian.factory._build_reranker", return_value=_mock_reranker()
         ),
     ):
         create_librarian()  # cfg=None

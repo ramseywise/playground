@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from agents.librarian.pipeline.bedrock.client import (
+from librarian.bedrock.client import (
     BedrockKBClient,
     BedrockKBResponse,
     _extract_citations,
 )
-from agents.librarian.tools.api import deps
-from agents.librarian.tools.api.app import app
-from agents.librarian.utils.config import LibrarySettings
+from interfaces.api import deps
+from interfaces.api.app import app
+from librarian.config import LibrarySettings
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ class TestBedrockKBClient:
         with pytest.raises(ValueError, match="not configured"):
             BedrockKBClient(cfg)
 
-    @patch("agents.librarian.pipeline.bedrock.client.boto3")
+    @patch("librarian.bedrock.client.boto3")
     def test_query_returns_response(self, mock_boto3: MagicMock) -> None:
         mock_client = MagicMock()
         mock_boto3.client.return_value = mock_client
@@ -144,7 +144,7 @@ class TestBedrockKBClient:
         kb_config = call_kwargs["retrieveAndGenerateConfiguration"]["knowledgeBaseConfiguration"]
         assert kb_config["knowledgeBaseId"] == "KB123"
 
-    @patch("agents.librarian.pipeline.bedrock.client.boto3")
+    @patch("librarian.bedrock.client.boto3")
     def test_query_passes_session_id(self, mock_boto3: MagicMock) -> None:
         mock_client = MagicMock()
         mock_boto3.client.return_value = mock_client

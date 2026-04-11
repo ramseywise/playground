@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from agents.librarian.tools.utils.client import create_client, parse_json_response
+from core.client import create_client, parse_json_response
 from agents.presenter.models import ImageConcept, SlideContent, VizPrompt
 
 LIBRARY_PATH = Path(__file__).resolve().parent / "viz_prompt_library.yaml"

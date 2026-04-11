@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 
-from agents.librarian.tools.utils.client import create_client, parse_json_response
+from core.client import create_client, parse_json_response
 from agents.presenter.models import DeckIntake, DeckOutline
 
 console = Console()

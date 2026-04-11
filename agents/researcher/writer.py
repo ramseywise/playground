@@ -6,7 +6,7 @@ from pathlib import Path
 import structlog
 
 from agents.researcher.models import Note
-from agents.librarian.tools.utils.config import settings
+from core.config.agent_settings import settings
 
 log = structlog.get_logger(__name__)
 

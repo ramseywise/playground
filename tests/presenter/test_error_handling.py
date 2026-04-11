@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, call, patch
 import httpx
 import pytest
 
-from agents.utils.client import parse_json_response
+from core.client import parse_json_response
 from agents.presenter.providers import MAX_RETRIES, RETRY_DELAYS, PollinationsProvider
 
 

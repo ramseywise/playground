@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
 
 # ---------------------------------------------------------------------------

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from agents.librarian.pipeline.generation.context import (
+from librarian.generation.context import (
     deduplicate_by_source,
     format_as_xml_context,
 )
-from agents.librarian.pipeline.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
+from librarian.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
 
 
 def _ranked(

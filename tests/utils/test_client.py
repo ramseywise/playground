@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from agents.utils.client import strip_json_fences, create_client
+from core.client import strip_json_fences, create_client
 from unittest.mock import patch
 
 
@@ -33,7 +33,7 @@ def test_strip_json_fences_no_fences() -> None:
 
 def test_create_client_raises_without_key() -> None:
     """create_client raises RuntimeError when API key is empty."""
-    with patch("agents.utils.client.settings") as mock_settings:
+    with patch("core.client.settings") as mock_settings:
         mock_settings.anthropic_api_key = ""
         with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
             create_client()

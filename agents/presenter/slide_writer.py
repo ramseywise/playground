@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agents.librarian.tools.utils.client import create_client, parse_json_response
+from core.client import create_client, parse_json_response
 from agents.presenter.models import DeckIntake, DeckOutline, SlideContent, SlideOutline
 
 SLIDE_SYSTEM = """You are a slide content writer for technical presentations.

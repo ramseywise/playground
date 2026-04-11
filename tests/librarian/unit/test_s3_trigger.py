@@ -33,10 +33,10 @@ class TestS3TriggerHandler:
         mock_pipeline.ingest_s3_object = AsyncMock(return_value=_FakeResult())
 
         with patch(
-            "agents.librarian.tools.api.s3_trigger._get_pipeline",
+            "interfaces.api.s3_trigger._get_pipeline",
             return_value=mock_pipeline,
         ):
-            from agents.librarian.tools.api.s3_trigger import handler
+            from interfaces.api.s3_trigger import handler
 
             result = handler(_make_s3_event("raw/doc.md"), context=None)
 
@@ -50,10 +50,10 @@ class TestS3TriggerHandler:
         mock_pipeline.ingest_s3_object = AsyncMock(return_value=_FakeResult())
 
         with patch(
-            "agents.librarian.tools.api.s3_trigger._get_pipeline",
+            "interfaces.api.s3_trigger._get_pipeline",
             return_value=mock_pipeline,
         ):
-            from agents.librarian.tools.api.s3_trigger import handler
+            from interfaces.api.s3_trigger import handler
 
             result = handler(
                 _make_s3_event("raw/a.md", "raw/b.md", "raw/c.md"), context=None
@@ -66,10 +66,10 @@ class TestS3TriggerHandler:
         mock_pipeline = MagicMock()
 
         with patch(
-            "agents.librarian.tools.api.s3_trigger._get_pipeline",
+            "interfaces.api.s3_trigger._get_pipeline",
             return_value=mock_pipeline,
         ):
-            from agents.librarian.tools.api.s3_trigger import handler
+            from interfaces.api.s3_trigger import handler
 
             result = handler({"Records": []}, context=None)
 
@@ -83,10 +83,10 @@ class TestS3TriggerHandler:
         )
 
         with patch(
-            "agents.librarian.tools.api.s3_trigger._get_pipeline",
+            "interfaces.api.s3_trigger._get_pipeline",
             return_value=mock_pipeline,
         ):
-            from agents.librarian.tools.api.s3_trigger import handler
+            from interfaces.api.s3_trigger import handler
 
             result = handler(_make_s3_event("raw/dup.md"), context=None)
 

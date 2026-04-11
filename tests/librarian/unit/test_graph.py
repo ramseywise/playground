@@ -5,18 +5,18 @@ from typing import Any
 
 import pytest
 
-from agents.librarian.orchestration.graph import (
+from orchestration.graph import (
     build_graph,
     _route_after_analyze,
     _route_after_gate,
 )
-from agents.librarian.pipeline.schemas.chunks import (
+from librarian.schemas.chunks import (
     Chunk,
     ChunkMetadata,
     GradedChunk,
     RankedChunk,
 )
-from agents.librarian.pipeline.schemas.state import LibrarianState
+from librarian.schemas.state import LibrarianState
 
 
 # ---------------------------------------------------------------------------
@@ -208,7 +208,7 @@ async def test_graph_out_of_scope_skips_retrieval() -> None:
 
 @pytest.mark.asyncio
 async def test_graph_returns_citations() -> None:
-    from agents.librarian.pipeline.schemas.retrieval import RetrievalResult
+    from librarian.schemas.retrieval import RetrievalResult
 
     retrieval_result = RetrievalResult(
         chunk=_chunk("c1", "auth text"),
@@ -300,7 +300,7 @@ async def test_graph_multi_turn_sets_standalone_query() -> None:
     mock_history_llm = MagicMock()
     mock_history_llm.generate = AsyncMock(return_value="the auth flow in Python?")
 
-    from agents.librarian.orchestration.history import HistoryCondenser
+    from orchestration.history import HistoryCondenser
 
     graph = build_graph(
         retriever=mock_retriever,

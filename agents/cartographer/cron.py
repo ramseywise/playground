@@ -18,8 +18,8 @@ from pathlib import Path
 
 import structlog
 
-from agents.librarian.tools.core.clients.llm import AnthropicLLM
-from agents.librarian.tools.core.config.settings import BaseSettings
+from core.clients.llm import AnthropicLLM
+from core.config.settings import BaseSettings
 
 log = structlog.get_logger(__name__)
 

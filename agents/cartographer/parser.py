@@ -615,7 +615,7 @@ Make the analysis specific — use actual numbers, first prompts, and patterns. 
 
 def call_claude(api_key: str, prompt: str, model: str = "claude-sonnet-4-6") -> str:
     """Call the Anthropic API to generate an HTML report via shared LLM client."""
-    from agents.librarian.tools.core.clients.llm import AnthropicLLM
+    from core.clients.llm import AnthropicLLM
 
     llm = AnthropicLLM(model=model, api_key=api_key)
     return llm.generate_sync(
@@ -735,7 +735,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    from agents.librarian.tools.core.config.settings import BaseSettings
+    from core.config.settings import BaseSettings
 
     _cfg = BaseSettings()
     api_key = args.key or _cfg.anthropic_api_key

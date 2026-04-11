@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agents.utils.config import Settings
+from core.config.agent_settings import Settings
 
 
 def test_visualizer_settings_defaults() -> None:

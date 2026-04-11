@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from agents.librarian.tools.utils.config import settings
+from core.config.agent_settings import settings
 
 
 def get_page_count(pdf_path: Path) -> int:
