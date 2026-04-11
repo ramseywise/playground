@@ -54,7 +54,7 @@ def _build_conversational_reply(query_lower: str) -> str:
 # Decision model
 # ---------------------------------------------------------------------------
 
-Route = Literal["librarian", "bedrock", "escalation", "direct"]
+Route = Literal["librarian", "bedrock", "google_adk", "escalation", "direct"]
 
 
 class TriageDecision(BaseModel):
@@ -75,18 +75,21 @@ _ESCALATION_INTENTS: frozenset[Intent] = frozenset({Intent.OUT_OF_SCOPE})
 
 
 class TriageService:
-    """Keyword triage with optional bedrock fallback for cold starts.
+    """Keyword triage with optional backend fallback for cold starts.
 
     Parameters
     ----------
     graph_ready:
         Callable that returns ``True`` when the librarian graph is
         initialised and ready to serve.  When the graph is **not** ready
-        and a bedrock client is available, librarian-bound queries are
-        transparently rerouted to bedrock so the user still gets an
-        answer during cold start.
+        and a fallback backend is available, librarian-bound queries are
+        transparently rerouted so the user still gets an answer during
+        cold start.
     bedrock_available:
         Callable that returns ``True`` when a bedrock KB client is
+        configured and can serve as a fallback.
+    google_adk_available:
+        Callable that returns ``True`` when a Google RAG client is
         configured and can serve as a fallback.
     """
 
@@ -95,19 +98,25 @@ class TriageService:
         *,
         graph_ready: Callable[[], bool] | None = None,
         bedrock_available: Callable[[], bool] | None = None,
+        google_adk_available: Callable[[], bool] | None = None,
     ) -> None:
         self._graph_ready = graph_ready or (lambda: True)
         self._bedrock_available = bedrock_available or (lambda: False)
+        self._google_adk_available = google_adk_available or (lambda: False)
 
     def decide(self, query: str, backend: str = "librarian") -> TriageDecision:
         """Classify *query* and return a routing decision.
 
-        If *backend* is ``"bedrock"``, classification is skipped and the
-        request is forwarded directly to Bedrock KB.
+        If *backend* is ``"bedrock"`` or ``"google_adk"``, classification
+        is skipped and the request is forwarded directly.
         """
         if backend == "bedrock":
             return TriageDecision(
                 route="bedrock", intent="", confidence=1.0,
+            )
+        if backend == "google_adk":
+            return TriageDecision(
+                route="google_adk", intent="", confidence=1.0,
             )
 
         intent, confidence = classify_intent(query.lower())
@@ -128,13 +137,21 @@ class TriageService:
             )
         else:
             route: Route = "librarian"
-            if not self._graph_ready() and self._bedrock_available():
-                log.warning(
-                    "triage.fallback.bedrock",
-                    reason="graph_not_ready",
-                    intent=intent.value,
-                )
-                route = "bedrock"
+            if not self._graph_ready():
+                if self._bedrock_available():
+                    log.warning(
+                        "triage.fallback.bedrock",
+                        reason="graph_not_ready",
+                        intent=intent.value,
+                    )
+                    route = "bedrock"
+                elif self._google_adk_available():
+                    log.warning(
+                        "triage.fallback.google_adk",
+                        reason="graph_not_ready",
+                        intent=intent.value,
+                    )
+                    route = "google_adk"
             decision = TriageDecision(
                 route=route,
                 intent=intent.value,

@@ -53,6 +53,10 @@ class TestTriageRouting:
         d = self.svc.decide("hello", backend="bedrock")
         assert d.route == "bedrock"
 
+    def test_google_adk_bypasses_classification(self) -> None:
+        d = self.svc.decide("hello", backend="google_adk")
+        assert d.route == "google_adk"
+
     def test_thanks_routes_direct(self) -> None:
         d = self.svc.decide("thank you for your help")
         assert d.route == "direct"
@@ -81,6 +85,10 @@ class TestTriageDecisionContent:
 
     def test_bedrock_response_is_none(self) -> None:
         d = self.svc.decide("anything", backend="bedrock")
+        assert d.response is None
+
+    def test_google_adk_response_is_none(self) -> None:
+        d = self.svc.decide("anything", backend="google_adk")
         assert d.response is None
 
     def test_confidence_in_valid_range(self) -> None:
@@ -150,6 +158,25 @@ class TestTriageFallback:
         d = svc.decide("compare JWT vs sessions")
         assert d.route == "bedrock"
         assert d.intent == "compare"
+
+    def test_fallback_to_google_adk_when_bedrock_unavailable(self) -> None:
+        svc = TriageService(
+            graph_ready=lambda: False,
+            bedrock_available=lambda: False,
+            google_adk_available=lambda: True,
+        )
+        d = svc.decide("find auth docs")
+        assert d.route == "google_adk"
+        assert d.intent == "lookup"
+
+    def test_bedrock_preferred_over_google_adk_for_fallback(self) -> None:
+        svc = TriageService(
+            graph_ready=lambda: False,
+            bedrock_available=lambda: True,
+            google_adk_available=lambda: True,
+        )
+        d = svc.decide("find auth docs")
+        assert d.route == "bedrock"
 
 
 class TestTriageConversationalReplies:

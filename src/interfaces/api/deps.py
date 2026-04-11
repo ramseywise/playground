@@ -7,6 +7,7 @@ from langgraph.graph.state import CompiledStateGraph
 from librarian.factory import create_librarian
 from orchestration.nodes.generation import GenerationSubgraph
 from librarian.bedrock.client import BedrockKBClient
+from librarian.google_adk.client import GoogleRAGClient
 from librarian.ingestion.pipeline import IngestionPipeline
 from librarian.config import LibrarySettings, settings as _default_settings
 from interfaces.api.triage import TriageService
@@ -19,13 +20,14 @@ _graph: CompiledStateGraph | None = None
 _generation_sg: GenerationSubgraph | None = None
 _pipeline: IngestionPipeline | None = None
 _bedrock_client: BedrockKBClient | None = None
+_google_adk_client: GoogleRAGClient | None = None
 _triage: TriageService | None = None
 _settings: LibrarySettings = _default_settings
 
 
 def init_graph(cfg: LibrarySettings | None = None) -> None:
     """Initialise the graph singleton. Called once at app startup."""
-    global _graph, _generation_sg, _bedrock_client, _settings  # noqa: PLW0603
+    global _graph, _generation_sg, _bedrock_client, _google_adk_client, _settings  # noqa: PLW0603
     _settings = cfg or _default_settings
 
     log.info("api.deps.init_graph", retrieval=_settings.retrieval_strategy)
@@ -50,6 +52,21 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
             _bedrock_client = None
     else:
         log.info("api.deps.bedrock_kb.skipped", reason="no knowledge_base_id configured")
+
+    # Google RAG client — optional, only if configured
+    if _settings.google_datastore_id or _settings.google_project_id:
+        try:
+            _google_adk_client = GoogleRAGClient(_settings)
+            log.info(
+                "api.deps.google_adk.init",
+                datastore_id=_settings.google_datastore_id,
+                project_id=_settings.google_project_id,
+            )
+        except Exception:
+            log.warning("api.deps.google_adk.init_failed", exc_info=True)
+            _google_adk_client = None
+    else:
+        log.info("api.deps.google_adk.skipped", reason="no google config set")
 
 
 def get_graph() -> CompiledStateGraph:
@@ -90,6 +107,11 @@ def get_bedrock_client() -> BedrockKBClient | None:
     return _bedrock_client
 
 
+def get_google_adk_client() -> GoogleRAGClient | None:
+    """Return the Google RAG client, or None if not configured."""
+    return _google_adk_client
+
+
 def is_graph_ready() -> bool:
     """Return True when the librarian graph singleton is initialised."""
     return _graph is not None
@@ -100,12 +122,18 @@ def is_bedrock_available() -> bool:
     return _bedrock_client is not None
 
 
+def is_google_adk_available() -> bool:
+    """Return True when a Google RAG client is configured."""
+    return _google_adk_client is not None
+
+
 def init_triage() -> None:
     """Initialise the triage singleton. Called once at app startup."""
     global _triage  # noqa: PLW0603
     _triage = TriageService(
         graph_ready=is_graph_ready,
         bedrock_available=is_bedrock_available,
+        google_adk_available=is_google_adk_available,
     )
     log.info("api.deps.init_triage")
 

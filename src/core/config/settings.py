@@ -13,9 +13,14 @@ class BaseSettings(_PydanticBaseSettings):
     """Cross-agent configuration.  Every field is overridable via .env or env vars."""
 
     # LLM
+    llm_provider: str = "anthropic"  # anthropic | gemini
     anthropic_api_key: str = ""  # validated at call time, not import time
     model_sonnet: str = "claude-sonnet-4-6"
     model_haiku: str = "claude-haiku-4-5-20251001"
+
+    # Google Gemini
+    gemini_api_key: str = ""
+    model_gemini: str = "gemini-2.0-flash"
 
     # Logging
     log_level: str = "INFO"

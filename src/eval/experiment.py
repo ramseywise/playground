@@ -66,6 +66,7 @@ class QueryResult:
     expected_url: str
     latency_ms: float
     trace_id: str = ""
+    answer: str = ""  # populated by bedrock-live; empty for mock variants
 
 
 @dataclass
@@ -268,6 +269,271 @@ def upload_golden_dataset(
 # ---------------------------------------------------------------------------
 
 
+async def _run_bedrock_experiment(
+    variant_name: str,
+    golden_samples: list[GoldenSample],
+    *,
+    cfg: LibrarySettings,
+    run_name: str,
+    ds_name: str,
+    lf: Any | None,
+) -> ExperimentResult:
+    """Run experiment via real Bedrock KB API (RetrieveAndGenerate)."""
+    from librarian.bedrock.client import BedrockKBClient
+
+    client = BedrockKBClient(cfg)
+    clusterer = FailureClusterer()
+    query_results: list[QueryResult] = []
+
+    for sample in golden_samples:
+        try:
+            t0 = time.perf_counter()
+            resp = await client.aquery(sample.query)
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            urls = [c["url"] for c in resp.citations]
+            hit = sample.expected_doc_url in urls
+            rr = next(
+                (1.0 / (i + 1) for i, u in enumerate(urls) if u == sample.expected_doc_url),
+                0.0,
+            )
+
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=hit,
+                reciprocal_rank=rr,
+                retrieved_urls=urls[:5],
+                expected_url=sample.expected_doc_url,
+                latency_ms=latency_ms,
+                answer=resp.response,
+            )
+        except Exception as exc:
+            log.warning(
+                "experiment.bedrock.query_failed",
+                query_id=sample.query_id,
+                error=str(exc),
+            )
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=False,
+                reciprocal_rank=0.0,
+                retrieved_urls=[],
+                expected_url=sample.expected_doc_url,
+                latency_ms=0.0,
+            )
+
+        if lf is not None:
+            qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
+
+        query_results.append(qr)
+
+    # Aggregate
+    n = len(query_results)
+    hits = sum(1 for qr in query_results if qr.hit)
+    hit_rate = hits / n if n else 0.0
+    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
+    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
+
+    # Cluster failures
+    from librarian.tasks.tracing import PipelineTracer
+
+    tracer = PipelineTracer()
+    for qr in query_results:
+        trace = tracer.create_trace(qr.query_id, qr.query)
+        trace.status = "success" if qr.hit else "failure"
+        trace.confidence = qr.reciprocal_rank
+        if not qr.hit:
+            trace.failure_reason = "expected_doc_not_in_top_k"
+    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
+
+    if lf is not None:
+        try:
+            summary_trace = lf.trace(
+                name=f"experiment_summary_{variant_name}",
+                metadata={
+                    "variant": variant_name,
+                    "run_name": run_name,
+                    "kb_id": cfg.bedrock_knowledge_base_id,
+                    "model_arn": cfg.bedrock_model_arn,
+                },
+            )
+            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
+            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
+            lf.score(trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency)
+        except Exception as exc:
+            log.warning("experiment.langfuse.summary_failed", error=str(exc))
+        _langfuse_flush(lf)
+
+    result = ExperimentResult(
+        variant_name=variant_name,
+        dataset_name=ds_name,
+        run_name=run_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n_queries=n,
+        n_hits=hits,
+        avg_latency_ms=avg_latency,
+        query_results=query_results,
+        failure_clusters=clusters,
+        config_snapshot={
+            "retrieval_strategy": "bedrock",
+            "kb_id": cfg.bedrock_knowledge_base_id,
+            "model_arn": cfg.bedrock_model_arn,
+            "region": cfg.bedrock_region or cfg.s3_region or "default",
+            "retrieval_k": cfg.retrieval_k,
+            "embedding_provider": "aws_titan",
+            "reranker_strategy": "n/a",
+            "bm25_weight": "n/a",
+            "vector_weight": "n/a",
+        },
+    )
+
+    log.info(
+        "experiment.bedrock.done",
+        variant=variant_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n=n,
+        avg_latency_ms=round(avg_latency, 1),
+    )
+    return result
+
+
+async def _run_google_adk_experiment(
+    variant_name: str,
+    golden_samples: list[GoldenSample],
+    *,
+    cfg: LibrarySettings,
+    run_name: str,
+    ds_name: str,
+    lf: Any | None,
+) -> ExperimentResult:
+    """Run experiment via real Google Gemini + Vertex AI Search grounding."""
+    from librarian.google_adk.client import GoogleRAGClient
+
+    client = GoogleRAGClient(cfg)
+    clusterer = FailureClusterer()
+    query_results: list[QueryResult] = []
+
+    for sample in golden_samples:
+        try:
+            t0 = time.perf_counter()
+            resp = await client.aquery(sample.query)
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            urls = [c["url"] for c in resp.citations]
+            hit = sample.expected_doc_url in urls
+            rr = next(
+                (1.0 / (i + 1) for i, u in enumerate(urls) if u == sample.expected_doc_url),
+                0.0,
+            )
+
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=hit,
+                reciprocal_rank=rr,
+                retrieved_urls=urls[:5],
+                expected_url=sample.expected_doc_url,
+                latency_ms=latency_ms,
+                answer=resp.response,
+            )
+        except Exception as exc:
+            log.warning(
+                "experiment.google_adk.query_failed",
+                query_id=sample.query_id,
+                error=str(exc),
+            )
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=False,
+                reciprocal_rank=0.0,
+                retrieved_urls=[],
+                expected_url=sample.expected_doc_url,
+                latency_ms=0.0,
+            )
+
+        if lf is not None:
+            qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
+
+        query_results.append(qr)
+
+    # Aggregate
+    n = len(query_results)
+    hits = sum(1 for qr in query_results if qr.hit)
+    hit_rate = hits / n if n else 0.0
+    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
+    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
+
+    # Cluster failures
+    from librarian.tasks.tracing import PipelineTracer
+
+    tracer = PipelineTracer()
+    for qr in query_results:
+        trace = tracer.create_trace(qr.query_id, qr.query)
+        trace.status = "success" if qr.hit else "failure"
+        trace.confidence = qr.reciprocal_rank
+        if not qr.hit:
+            trace.failure_reason = "expected_doc_not_in_top_k"
+    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
+
+    if lf is not None:
+        try:
+            summary_trace = lf.trace(
+                name=f"experiment_summary_{variant_name}",
+                metadata={
+                    "variant": variant_name,
+                    "run_name": run_name,
+                    "google_project_id": cfg.google_project_id,
+                    "google_datastore_id": cfg.google_datastore_id,
+                    "model_gemini": cfg.model_gemini,
+                },
+            )
+            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
+            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
+            lf.score(trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency)
+        except Exception as exc:
+            log.warning("experiment.langfuse.summary_failed", error=str(exc))
+        _langfuse_flush(lf)
+
+    result = ExperimentResult(
+        variant_name=variant_name,
+        dataset_name=ds_name,
+        run_name=run_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n_queries=n,
+        n_hits=hits,
+        avg_latency_ms=avg_latency,
+        query_results=query_results,
+        failure_clusters=clusters,
+        config_snapshot={
+            "retrieval_strategy": "google_adk",
+            "google_project_id": cfg.google_project_id,
+            "google_datastore_id": cfg.google_datastore_id,
+            "model_gemini": cfg.model_gemini,
+            "retrieval_k": cfg.retrieval_k,
+            "embedding_provider": "google",
+            "reranker_strategy": "n/a",
+            "bm25_weight": "n/a",
+            "vector_weight": "n/a",
+        },
+    )
+
+    log.info(
+        "experiment.google_adk.done",
+        variant=variant_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n=n,
+        avg_latency_ms=round(avg_latency, 1),
+    )
+    return result
+
+
 async def run_variant_experiment(
     variant_name: str,
     golden_samples: list[GoldenSample],
@@ -279,13 +545,14 @@ async def run_variant_experiment(
 ) -> ExperimentResult:
     """Run a single retrieval variant against golden samples and score results.
 
-    Uses InMemoryRetriever populated with *corpus* for evaluation.
-    Logs traces + scores to LangFuse when available.
+    Uses InMemoryRetriever populated with *corpus* for mock variants, or
+    a real managed-RAG API when ``retrieval_strategy`` is ``"bedrock"`` or
+    ``"google_adk"``.  Logs traces + scores to LangFuse when available.
 
     Args:
-        variant_name: Key from VARIANTS (librarian, raptor, bedrock).
+        variant_name: Key from VARIANTS (librarian, raptor, bedrock, bedrock-live, google-adk).
         golden_samples: Golden queries with expected doc URLs.
-        corpus: Chunks to populate InMemoryRetriever.
+        corpus: Chunks to populate InMemoryRetriever (ignored for live variants).
         cfg: Variant config override (defaults to VARIANTS[variant_name]).
         dataset_name: LangFuse dataset name for linking.
         langfuse_client: Optional LangFuse client override.
@@ -293,14 +560,34 @@ async def run_variant_experiment(
     Returns:
         ExperimentResult with per-query and aggregate metrics.
     """
-    from tests.librarian.testing.mock_embedder import MockEmbedder
-    from storage.vectordb.inmemory import InMemoryRetriever
-
     cfg = cfg or VARIANTS[variant_name]
     ds_name = dataset_name or settings.langfuse_dataset_name
     timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     run_name = f"{variant_name}_{timestamp}"
     lf = langfuse_client or _get_langfuse_client()
+
+    # Dispatch to real managed RAG APIs when configured
+    if cfg.retrieval_strategy == "bedrock":
+        return await _run_bedrock_experiment(
+            variant_name,
+            golden_samples,
+            cfg=cfg,
+            run_name=run_name,
+            ds_name=ds_name,
+            lf=lf,
+        )
+    if cfg.retrieval_strategy == "google_adk":
+        return await _run_google_adk_experiment(
+            variant_name,
+            golden_samples,
+            cfg=cfg,
+            run_name=run_name,
+            ds_name=ds_name,
+            lf=lf,
+        )
+
+    from tests.librarian.testing.mock_embedder import MockEmbedder
+    from storage.vectordb.inmemory import InMemoryRetriever
 
     # Build retriever with variant config
     embedder = MockEmbedder(dim=64, seed=42)
@@ -449,6 +736,24 @@ async def run_all_experiments(
     results: dict[str, ExperimentResult] = {}
 
     for name, cfg in variant_configs.items():
+        # Skip live variants when credentials are absent
+        if cfg.retrieval_strategy == "bedrock" and not cfg.bedrock_knowledge_base_id:
+            log.info(
+                "experiment.variant.skipped",
+                variant=name,
+                reason="BEDROCK_KNOWLEDGE_BASE_ID not set",
+            )
+            continue
+        if cfg.retrieval_strategy == "google_adk" and not (
+            cfg.google_datastore_id or cfg.google_project_id
+        ):
+            log.info(
+                "experiment.variant.skipped",
+                variant=name,
+                reason="GOOGLE_DATASTORE_ID not set",
+            )
+            continue
+
         results[name] = await run_variant_experiment(
             name,
             golden_samples,
@@ -495,12 +800,30 @@ def print_comparison_table(results: dict[str, ExperimentResult]) -> None:
     print("\n  Configuration:")  # noqa: T201
     for name, r in results.items():
         cs = r.config_snapshot
-        print(  # noqa: T201
-            f"    {name}: {cs.get('embedding_provider', '?')} "
-            f"k={cs.get('retrieval_k', '?')} "
-            f"reranker={cs.get('reranker_strategy', '?')} "
-            f"bm25={cs.get('bm25_weight', '?')}/{cs.get('vector_weight', '?')}"
-        )
+        if cs.get("retrieval_strategy") == "bedrock":
+            kb_id = cs.get("kb_id", "?")
+            kb_display = f"{kb_id[:12]}..." if len(kb_id) > 12 else kb_id
+            print(  # noqa: T201
+                f"    {name}: bedrock-kb "
+                f"kb={kb_display} "
+                f"k={cs.get('retrieval_k', '?')}"
+            )
+        elif cs.get("retrieval_strategy") == "google_adk":
+            ds_id = cs.get("google_datastore_id", "?")
+            ds_display = f"{ds_id[:12]}..." if len(ds_id) > 12 else ds_id
+            print(  # noqa: T201
+                f"    {name}: gemini+vertex "
+                f"ds={ds_display} "
+                f"model={cs.get('model_gemini', '?')} "
+                f"k={cs.get('retrieval_k', '?')}"
+            )
+        else:
+            print(  # noqa: T201
+                f"    {name}: {cs.get('embedding_provider', '?')} "
+                f"k={cs.get('retrieval_k', '?')} "
+                f"reranker={cs.get('reranker_strategy', '?')} "
+                f"bm25={cs.get('bm25_weight', '?')}/{cs.get('vector_weight', '?')}"
+            )
 
     # LangFuse status
     if settings.langfuse_enabled:
