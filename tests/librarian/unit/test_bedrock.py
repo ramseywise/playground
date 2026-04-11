@@ -15,6 +15,7 @@ from librarian.bedrock.client import (
 )
 from interfaces.api import deps
 from interfaces.api.app import app
+from interfaces.api.triage import TriageService
 from librarian.config import LibrarySettings
 
 
@@ -204,16 +205,18 @@ def client(_mock_graph: Any) -> TestClient:
     deps._generation_sg = AsyncMock()
     deps._pipeline = AsyncMock()
     deps._bedrock_client = _make_mock_bedrock_client()
+    deps._triage = TriageService()
     yield TestClient(app, raise_server_exceptions=True)
     deps._graph = None
     deps._generation_sg = None
     deps._pipeline = None
     deps._bedrock_client = None
+    deps._triage = None
 
 
 class TestChatBackendRouting:
     def test_default_backend_is_librarian(self, client: TestClient) -> None:
-        resp = client.post("/api/v1/chat", json={"query": "hello"})
+        resp = client.post("/api/v1/chat", json={"query": "find auth docs"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["backend"] == "librarian"
@@ -221,14 +224,14 @@ class TestChatBackendRouting:
 
     def test_explicit_librarian_backend(self, client: TestClient) -> None:
         resp = client.post(
-            "/api/v1/chat", json={"query": "hello", "backend": "librarian"}
+            "/api/v1/chat", json={"query": "find auth docs", "backend": "librarian"}
         )
         assert resp.status_code == 200
         assert resp.json()["backend"] == "librarian"
 
     def test_bedrock_backend(self, client: TestClient) -> None:
         resp = client.post(
-            "/api/v1/chat", json={"query": "hello", "backend": "bedrock"}
+            "/api/v1/chat", json={"query": "find auth docs", "backend": "bedrock"}
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -239,7 +242,7 @@ class TestChatBackendRouting:
     def test_bedrock_not_configured(self, client: TestClient) -> None:
         deps._bedrock_client = None
         resp = client.post(
-            "/api/v1/chat", json={"query": "hello", "backend": "bedrock"}
+            "/api/v1/chat", json={"query": "find auth docs", "backend": "bedrock"}
         )
         assert resp.status_code == 503
         assert "not configured" in resp.json()["error"]

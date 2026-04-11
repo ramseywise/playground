@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from interfaces.api.deps import get_settings, init_graph, init_pipeline
+from interfaces.api.deps import get_settings, init_graph, init_pipeline, init_triage
 from interfaces.api.middleware import (
     RequestIDMiddleware,
     RequestLoggingMiddleware,
@@ -31,6 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     log.info("api.startup")
     init_graph()
     init_pipeline()
+    init_triage()
     yield
     log.info("api.shutdown")
 

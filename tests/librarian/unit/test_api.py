@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from interfaces.api import deps
 from interfaces.api.app import app
+from interfaces.api.triage import TriageService
 
 
 @pytest.fixture()
@@ -33,7 +34,7 @@ def _mock_graph() -> Any:
 def _make_mock_astream(final_state: dict[str, Any]) -> Any:
     """Create a mock astream that yields node-by-node updates."""
 
-    async def astream(input_data: dict[str, Any]) -> Any:
+    async def astream(input_data: dict[str, Any], **kwargs: Any) -> Any:
         yield {"analyze": {"intent": "lookup"}}
         yield {"retrieve": {"retrieved_chunks": []}}
         yield {"rerank": {"reranked_chunks": [], "confidence_score": 0.85}}
@@ -70,14 +71,16 @@ def _mock_pipeline() -> Any:
 
 @pytest.fixture()
 def client(_mock_graph: Any, _mock_pipeline: Any) -> TestClient:
-    """TestClient with graph and pipeline mocks injected."""
+    """TestClient with graph, pipeline, and triage mocks injected."""
     deps._graph = _mock_graph
     deps._generation_sg = AsyncMock()
     deps._pipeline = _mock_pipeline
+    deps._triage = TriageService()
     yield TestClient(app, raise_server_exceptions=True)
     deps._graph = None
     deps._generation_sg = None
     deps._pipeline = None
+    deps._triage = None
 
 
 class TestHealthEndpoint:
@@ -157,3 +160,26 @@ class TestIngestEndpoint:
             json={"document": {"text": "fail"}},
         )
         assert resp.status_code == 500
+
+
+class TestLangfuseConfig:
+    """Verify Langfuse config is passed to graph invocations."""
+
+    def test_chat_passes_config_to_ainvoke(
+        self, client: TestClient, _mock_graph: Any,
+    ) -> None:
+        resp = client.post("/api/v1/chat", json={"query": "What is 42?"})
+        assert resp.status_code == 200
+        _mock_graph.ainvoke.assert_called_once()
+        _, kwargs = _mock_graph.ainvoke.call_args
+        assert "config" in kwargs
+        assert "callbacks" in kwargs["config"]
+
+    def test_langfuse_disabled_passes_empty_callbacks(
+        self, client: TestClient, _mock_graph: Any,
+    ) -> None:
+        """When LANGFUSE_ENABLED=false (default), callbacks list is empty."""
+        resp = client.post("/api/v1/chat", json={"query": "What is 42?"})
+        assert resp.status_code == 200
+        _, kwargs = _mock_graph.ainvoke.call_args
+        assert kwargs["config"]["callbacks"] == []

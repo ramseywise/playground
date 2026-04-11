@@ -7,11 +7,12 @@ export async function queryLibrarian(
   query: string,
   sessionId?: string,
 ): Promise<Omit<RagResponse, "latency_ms" | "backend">> {
+  const requestId = crypto.randomUUID();
   const resp = await fetch(`${LIBRARIAN_URL}/api/v1/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Request-ID": crypto.randomUUID(),
+      "X-Request-ID": requestId,
     },
     body: JSON.stringify({ query, session_id: sessionId }),
     signal: AbortSignal.timeout(60_000),

@@ -94,51 +94,33 @@ async def test_all_golden_queries_complete(
 
 
 @pytest.mark.asyncio
-async def test_conversational_skips_retrieval_end_to_end(
-    eval_cfg: LibrarySettings,
-    populated_retriever: InMemoryRetriever,
-    eval_embedder: MockEmbedder,
-    mock_llm_eval,
-    mock_reranker_passthrough,
-) -> None:
-    from unittest.mock import AsyncMock, MagicMock
+async def test_conversational_handled_by_triage() -> None:
+    """Conversational queries are intercepted by triage before the graph.
 
-    spy_retriever = MagicMock(wraps=populated_retriever)
-    spy_retriever.search = AsyncMock(return_value=[])
+    This test verifies the triage module routes conversational intents to a
+    direct response, so they never reach the librarian graph.
+    """
+    from interfaces.api.triage import TriageService
 
-    graph = create_librarian(
-        cfg=eval_cfg,
-        llm=mock_llm_eval,
-        embedder=eval_embedder,
-        retriever=spy_retriever,
-        reranker=mock_reranker_passthrough,
-    )
-    await graph.ainvoke({"query": "hello there", "intent": "conversational"})
-    spy_retriever.search.assert_not_called()
+    decision = TriageService().decide("hello there")
+    assert decision.route == "direct"
+    assert decision.intent == "conversational"
+    assert decision.response is not None
 
 
 @pytest.mark.asyncio
-async def test_out_of_scope_skips_retrieval_end_to_end(
-    eval_cfg: LibrarySettings,
-    populated_retriever: InMemoryRetriever,
-    eval_embedder: MockEmbedder,
-    mock_llm_eval,
-    mock_reranker_passthrough,
-) -> None:
-    from unittest.mock import AsyncMock, MagicMock
+async def test_out_of_scope_handled_by_triage() -> None:
+    """Out-of-scope queries are intercepted by triage before the graph.
 
-    spy_retriever = MagicMock(wraps=populated_retriever)
-    spy_retriever.search = AsyncMock(return_value=[])
+    This test verifies the triage module routes out_of_scope intents to an
+    escalation response, so they never reach the librarian graph.
+    """
+    from interfaces.api.triage import TriageService
 
-    graph = create_librarian(
-        cfg=eval_cfg,
-        llm=mock_llm_eval,
-        embedder=eval_embedder,
-        retriever=spy_retriever,
-        reranker=mock_reranker_passthrough,
-    )
-    await graph.ainvoke({"query": "what is the weather?", "intent": "out_of_scope"})
-    spy_retriever.search.assert_not_called()
+    decision = TriageService().decide("what is the weather?")
+    assert decision.route == "escalation"
+    assert decision.intent == "out_of_scope"
+    assert decision.response is not None
 
 
 # ---------------------------------------------------------------------------

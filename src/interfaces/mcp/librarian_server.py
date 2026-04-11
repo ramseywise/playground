@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from typing import Any
 
 from mcp.server import Server
@@ -10,6 +11,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from librarian.config import LibrarySettings, settings as _default_settings
+from librarian.tracing import build_langfuse_handler, make_runnable_config
 from core.logging import get_logger
 
 log = get_logger(__name__)
@@ -88,17 +90,23 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
             ),
         ]
 
+    def _langfuse_config() -> dict[str, Any]:
+        """Build a per-call Langfuse config with a fresh trace_id."""
+        trace_id = str(uuid.uuid4())
+        handler = build_langfuse_handler(session_id="mcp", trace_id=trace_id)
+        return make_runnable_config(handler)
+
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         if name == "search":
             graph = _get_graph(settings)
-            result = await graph.ainvoke({"query": arguments["query"]})
+            result = await graph.ainvoke({"query": arguments["query"]}, config=_langfuse_config())
             chunks = result.get("reranked_chunks") or result.get("retrieved_chunks") or []
             return [TextContent(type="text", text=json.dumps(chunks, default=str))]
 
         if name == "chat":
             graph = _get_graph(settings)
-            result = await graph.ainvoke({"query": arguments["query"]})
+            result = await graph.ainvoke({"query": arguments["query"]}, config=_langfuse_config())
             return [TextContent(
                 type="text",
                 text=json.dumps({

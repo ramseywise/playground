@@ -89,16 +89,6 @@ def test_route_analyze_explore_goes_retrieve() -> None:
     assert _route_after_analyze(state, has_snippet_retriever=False) == "retrieve"
 
 
-def test_route_analyze_conversational_goes_generate() -> None:
-    state: LibrarianState = {"query": "hi", "intent": "conversational"}
-    assert _route_after_analyze(state, has_snippet_retriever=False) == "generate"
-
-
-def test_route_analyze_out_of_scope_goes_generate() -> None:
-    state: LibrarianState = {"query": "weather?", "intent": "out_of_scope"}
-    assert _route_after_analyze(state, has_snippet_retriever=False) == "generate"
-
-
 def test_route_analyze_missing_intent_defaults_retrieve() -> None:
     state: LibrarianState = {"query": "q"}
     assert _route_after_analyze(state, has_snippet_retriever=False) == "retrieve"
@@ -163,7 +153,12 @@ async def test_graph_lookup_sets_intent() -> None:
 
 
 @pytest.mark.asyncio
-async def test_graph_conversational_skips_retrieval() -> None:
+async def test_graph_conversational_goes_through_retrieval() -> None:
+    """Post-triage: conversational queries reaching the graph go through retrieval.
+
+    In production, triage intercepts conversational queries before the graph.
+    This test verifies the graph handles them gracefully if they arrive.
+    """
     mock_retriever = MagicMock()
     mock_retriever.search = AsyncMock(return_value=[])
     mock_embedder = MagicMock()
@@ -180,12 +175,17 @@ async def test_graph_conversational_skips_retrieval() -> None:
         llm=mock_llm,
     )
     result = await graph.ainvoke({"query": "hello", "intent": "conversational"})
-    mock_retriever.search.assert_not_called()
+    mock_retriever.search.assert_called()
     assert result["response"] == "hello!"
 
 
 @pytest.mark.asyncio
-async def test_graph_out_of_scope_skips_retrieval() -> None:
+async def test_graph_out_of_scope_goes_through_retrieval() -> None:
+    """Post-triage: out_of_scope queries reaching the graph go through retrieval.
+
+    In production, triage intercepts out_of_scope queries before the graph.
+    This test verifies the graph handles them gracefully if they arrive.
+    """
     mock_retriever = MagicMock()
     mock_retriever.search = AsyncMock(return_value=[])
     mock_embedder = MagicMock()
@@ -202,7 +202,7 @@ async def test_graph_out_of_scope_skips_retrieval() -> None:
         llm=mock_llm,
     )
     result = await graph.ainvoke({"query": "stock price?", "intent": "out_of_scope"})
-    mock_retriever.search.assert_not_called()
+    mock_retriever.search.assert_called()
     assert result["response"] == "out of scope"
 
 

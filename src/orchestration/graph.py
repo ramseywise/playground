@@ -9,7 +9,6 @@ from langgraph.graph.state import CompiledStateGraph
 from core.clients.llm import LLMClient
 from orchestration.query_understanding import (
     QueryAnalyzer,
-    QueryRouter,
 )
 from orchestration.history import HistoryCondenser
 from orchestration.nodes.generation import GenerationSubgraph
@@ -141,19 +140,14 @@ def _make_gate_node(subgraph: GenerationSubgraph) -> _SyncNode:
 def _route_after_analyze(
     state: LibrarianState,
     has_snippet_retriever: bool,
-) -> Literal["retrieve", "snippet_retrieve", "generate"]:
-    """3-way routing after query analysis.
+) -> Literal["retrieve", "snippet_retrieve"]:
+    """2-way routing after query analysis.
 
-    - Direct intents (conversational, out_of_scope) → generate (no retrieval)
-    - retrieval_mode == "snippet" and a snippet retriever is wired → snippet_retrieve
-    - everything else → retrieve (dense/hybrid via vector store)
+    Triage handles conversational and out_of_scope before the graph is
+    invoked.  This function decides between retrieval modes only.
     """
-    intent = state.get("intent", "lookup")
-    if intent in ("conversational", "out_of_scope"):
-        log.info("graph.route.direct", intent=intent)
-        return "generate"
     if has_snippet_retriever and state.get("retrieval_mode") == "snippet":
-        log.info("graph.route.snippet", intent=intent)
+        log.info("graph.route.snippet", intent=state.get("intent", ""))
         return "snippet_retrieve"
     return "retrieve"
 
@@ -204,7 +198,6 @@ def build_graph(
     Returns a compiled LangGraph runnable (``CompiledGraph``).
     """
     analyzer = QueryAnalyzer()
-    router = QueryRouter()  # noqa: F841 — kept for future LLM routing integration
     condenser = history_condenser or HistoryCondenser(llm=history_llm or llm)
 
     retrieval_sg = RetrievalSubgraph(
@@ -244,10 +237,9 @@ def build_graph(
     graph.add_edge(START, _CONDENSE)
     graph.add_edge(_CONDENSE, _ANALYZE)
 
-    # After analyze: 3-way routing
+    # After analyze: 2-way routing (triage handles scope gating)
     edge_map: dict[Hashable, str] = {
         "retrieve": _RETRIEVE,
-        "generate": _GENERATE,
     }
     if has_snippet_retriever:
         edge_map["snippet_retrieve"] = _SNIPPET_RETRIEVE
