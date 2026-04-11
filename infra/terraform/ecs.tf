@@ -79,7 +79,7 @@ resource "aws_ecs_task_definition" "api" {
 
   container_definitions = jsonencode([{
     name  = "api"
-    image = "${aws_ecr_repository.api.repository_url}:latest"
+    image = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
 
     portMappings = [{
       containerPort = var.container_port
@@ -113,7 +113,7 @@ resource "aws_ecs_task_definition" "api" {
       interval    = 30
       timeout     = 5
       retries     = 3
-      startPeriod = 15
+      startPeriod = 60  # multilingual-e5-large loads ~45s on cold start
     }
   }])
 }

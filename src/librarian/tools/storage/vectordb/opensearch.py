@@ -28,10 +28,12 @@ class OpenSearchRetriever:
         index: str | None = None,
         bm25_weight: float = 0.3,
         vector_weight: float = 0.7,
+        verify_certs: bool = True,
     ) -> None:
         self.index = index or settings.opensearch_index
         self.bm25_weight = bm25_weight
         self.vector_weight = vector_weight
+        self.verify_certs = verify_certs
         self._client: Any | None = None
 
     def _get_client(self) -> Any:
@@ -42,7 +44,7 @@ class OpenSearchRetriever:
                 hosts=[settings.opensearch_url],
                 http_auth=(settings.opensearch_user, settings.opensearch_password),
                 use_ssl=settings.opensearch_url.startswith("https"),
-                verify_certs=False,
+                verify_certs=self.verify_certs,
             )
         return self._client
 
@@ -50,6 +52,9 @@ class OpenSearchRetriever:
         client = self._get_client()
         actions: list[dict] = []
         for chunk in chunks:
+            if chunk.embedding is None:
+                log.warning("opensearch.upsert.missing_embedding", chunk_id=chunk.id)
+                continue
             actions.append({"index": {"_index": self.index, "_id": chunk.id}})
             actions.append(
                 {
@@ -96,7 +101,8 @@ class OpenSearchRetriever:
         query: dict = {"bool": {"should": [knn_query, bm25_query]}}
         if metadata_filter:
             query["bool"]["filter"] = [
-                {"term": {f"metadata.{k}": v}} for k, v in metadata_filter.items()
+                {"term": {f"metadata.{field}": val}}
+                for field, val in metadata_filter.items()
             ]
 
         resp = await client.search(

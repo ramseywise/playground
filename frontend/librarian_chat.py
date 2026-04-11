@@ -23,6 +23,22 @@ st.set_page_config(
     page_title="Librarian RAG Playground", page_icon="📚", layout="wide"
 )
 
+# Initialise session state before any widget reads it
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "metadata" not in st.session_state:
+    st.session_state.metadata = []
+
+
+@st.cache_data(ttl=30)
+def _check_api_health() -> tuple[bool, int | None]:
+    """Returns (ok, status_code). Cached for 30 s to avoid blocking on every render."""
+    try:
+        resp = httpx.get(HEALTH_ENDPOINT, timeout=3)
+        return resp.status_code == 200, resp.status_code
+    except httpx.ConnectError:
+        return False, None
+
 
 # ---------------------------------------------------------------------------
 # Response helpers (must be defined before use)
@@ -140,14 +156,13 @@ with st.sidebar:
     st.title("Librarian RAG Playground")
     st.divider()
 
-    # Connection status
-    try:
-        resp = httpx.get(HEALTH_ENDPOINT, timeout=3)
-        if resp.status_code == 200:
-            st.success("API connected")
-        else:
-            st.error(f"API returned {resp.status_code}")
-    except httpx.ConnectError:
+    # Connection status (cached 30 s — avoids blocking on every render)
+    _api_ok, _api_status = _check_api_health()
+    if _api_ok:
+        st.success("API connected")
+    elif _api_status is not None:
+        st.error(f"API returned {_api_status}")
+    else:
         st.error(f"Cannot reach API at {API_URL}")
 
     st.caption(f"API: `{API_URL}`")
@@ -187,18 +202,14 @@ with st.sidebar:
         if citations:
             st.subheader("Citations")
             for c in citations:
-                st.markdown(
-                    f"- [{c.get('title', 'source')}]({c.get('url', '#')})"
-                )
+                _url = c.get("url", "#")
+                if not isinstance(_url, str) or not _url.startswith(("http://", "https://")):
+                    _url = "#"
+                st.markdown(f"- [{c.get('title', 'source')}]({_url})")
 
 # ---------------------------------------------------------------------------
-# Chat state
+# Chat history
 # ---------------------------------------------------------------------------
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "metadata" not in st.session_state:
-    st.session_state.metadata = []
 
 # Display chat history
 for msg in st.session_state.messages:

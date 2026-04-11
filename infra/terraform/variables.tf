@@ -27,9 +27,9 @@ variable "cpu" {
 }
 
 variable "memory" {
-  description = "Fargate task memory in MiB"
+  description = "Fargate task memory in MiB (min 4096 for multilingual-e5-large)"
   type        = number
-  default     = 1024
+  default     = 4096
 }
 
 variable "desired_count" {
@@ -79,6 +79,35 @@ variable "lambda_timeout" {
 # ---------------------------------------------------------------------------
 # Snowflake (optional, for MCP server)
 # ---------------------------------------------------------------------------
+
+variable "lambda_auth_type" {
+  description = "Lambda Function URL authorization type. Use AWS_IAM for non-dev environments."
+  type        = string
+  default     = "NONE"
+
+  validation {
+    condition     = contains(["NONE", "AWS_IAM"], var.lambda_auth_type)
+    error_message = "lambda_auth_type must be NONE or AWS_IAM."
+  }
+}
+
+variable "enable_https" {
+  description = "Enable HTTPS listener and HTTP->HTTPS redirect. Requires acm_cert_arn."
+  type        = bool
+  default     = false
+}
+
+variable "acm_cert_arn" {
+  description = "ACM certificate ARN for the HTTPS listener. Required when enable_https = true."
+  type        = string
+  default     = ""
+}
+
+variable "image_tag" {
+  description = "Container image tag to deploy (e.g. git SHA). Defaults to 'latest' for local dev only."
+  type        = string
+  default     = "latest"
+}
 
 variable "snowflake_account" {
   description = "Snowflake account identifier"

@@ -29,7 +29,7 @@ and can be executed in parallel.*
 
 ---
 
-### Step 1: Fix broken import paths in `analyzer.py` and `routing.py`
+### Step 1: ✅ Fix broken import paths in `analyzer.py` and `routing.py`
 **Files**: `src/librarian/pipeline/plan/analyzer.py` (lines 8–12),
 `src/librarian/pipeline/plan/routing.py` (line 10)
 
@@ -71,7 +71,7 @@ from agents.librarian.pipeline.plan.routing import select_retrieval_mode
 
 ---
 
-### Step 2: Fix `_embed_variant` sync result discard in `RetrievalSubgraph`
+### Step 2: ✅ Fix `_embed_variant` sync result discard in `RetrievalSubgraph`
 **Files**: `src/librarian/orchestration/nodes/retrieval.py` (lines 96–102)
 
 **What**: When `aembed_query` is a sync method (not a coroutine), the function calls it,
@@ -108,7 +108,7 @@ longer causes a second `embed_query` call.
 
 ---
 
-### Step 3: Fix OpenSearch — variable shadowing, null embedding guard, verify_certs
+### Step 3: ✅ Fix OpenSearch — variable shadowing, null embedding guard, verify_certs
 **Files**: `src/librarian/tools/storage/vectordb/opensearch.py`
 (lines 44–46, 49–66, 96–104)
 
@@ -214,7 +214,7 @@ skips; `search` with a `metadata_filter` passes the correct integer `k` as `"siz
 
 ---
 
-### Step 4: Fix DuckDB — dead `params` variable and SQL injection
+### Step 4: ✅ Fix DuckDB — dead `params` variable and SQL injection
 **Files**: `src/librarian/tools/storage/vectordb/duckdb.py` (lines 164–183)
 
 **What**: Two issues in `search`:
@@ -293,7 +293,7 @@ Also add inline assertion: `pytest -k "duckdb and filter"` with a fixture that p
 
 ---
 
-### Step 5: Wrap blocking Chroma I/O in `asyncio.to_thread`
+### Step 5: ✅ Wrap blocking Chroma I/O in `asyncio.to_thread`
 **Files**: `src/librarian/tools/storage/vectordb/chroma.py` (lines 70–95, 97–145)
 
 **What**: Both `upsert` and `search` are `async def` but call blocking Chroma APIs
@@ -352,7 +352,7 @@ Add `import asyncio` at the top if not already present.
 
 ---
 
-### Step 6: Wrap blocking DuckDB I/O in `asyncio.to_thread`
+### Step 6: ✅ Wrap blocking DuckDB I/O in `asyncio.to_thread`
 **Files**: `src/librarian/tools/storage/vectordb/duckdb.py` (lines 91–137, 139–234),
 `src/librarian/pipeline/retrieval/snippet.py` (line 36)
 
@@ -422,7 +422,7 @@ Add `import asyncio` if not already present.
 
 ---
 
-### Step 7: Wrap blocking cross-encoder in `asyncio.to_thread`
+### Step 7: ✅ Wrap blocking cross-encoder in `asyncio.to_thread`
 **Files**: `src/librarian/pipeline/reranker/cross_encoder.py` (line 49)
 
 **What**: `self._model.predict(pairs)` is a CPU-bound call on a sentence-transformers

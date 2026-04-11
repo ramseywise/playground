@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -89,8 +90,12 @@ class ChromaRetriever:
             metadatas.append({k: v for k, v in meta.items() if v is not None})
 
         if ids:
-            collection.upsert(
-                ids=ids, embeddings=embeddings, documents=documents, metadatas=metadatas
+            await asyncio.to_thread(
+                collection.upsert,
+                ids=ids,
+                embeddings=embeddings,
+                documents=documents,
+                metadatas=metadatas,
             )
             log.info("chroma.upsert.done", n=len(ids), collection=self._collection_name)
 
@@ -109,10 +114,11 @@ class ChromaRetriever:
             conditions = [{key: {"$eq": val}} for key, val in metadata_filter.items()]
             where = {"$and": conditions} if len(conditions) > 1 else conditions[0]
 
-        candidate_count = max(1, collection.count())
-        resp = collection.query(
+        candidate_count = max(1, await asyncio.to_thread(collection.count))
+        resp = await asyncio.to_thread(
+            collection.query,
             query_embeddings=[query_vector],
-            n_results=min(max(k * 3, k), candidate_count),
+            n_results=min(k * 3, candidate_count),
             where=where,
             include=["documents", "metadatas", "distances"],
         )

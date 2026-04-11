@@ -20,6 +20,7 @@ replacement for InMemoryRetriever, ChromaRetriever, or OpenSearchRetriever.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -96,7 +97,9 @@ class DuckDBRetriever:
         """
         if not chunks:
             return
+        await asyncio.to_thread(self._upsert_sync, chunks)
 
+    def _upsert_sync(self, chunks: list[Chunk]) -> None:
         conn = self._connect()
         try:
             self._ensure_table(conn)
@@ -157,17 +160,32 @@ class DuckDBRetriever:
         Returns:
             List of RetrievalResult sorted by hybrid score descending.
         """
+        return await asyncio.to_thread(self._search_sync, query_text, query_vector, k, metadata_filter)
+
+    def _search_sync(
+        self,
+        query_text: str,
+        query_vector: list[float],
+        k: int = 10,
+        metadata_filter: dict | None = None,
+    ) -> list[RetrievalResult]:
         conn = self._connect()
         try:
             self._ensure_table(conn)
 
+            _ALLOWED_FILTER_COLS = frozenset(
+                {"url", "title", "section", "doc_id", "language", "namespace", "topic", "parent_id"}
+            )
             where_clause = ""
-            params: list[Any] = [query_vector, k * 3]
+            filter_values: list[Any] = []
 
             if metadata_filter:
+                bad = set(metadata_filter) - _ALLOWED_FILTER_COLS
+                if bad:
+                    raise ValueError(f"Invalid metadata filter keys: {bad}")
                 conditions = [f"{col} = ?" for col in metadata_filter]
                 where_clause = " AND " + " AND ".join(conditions)
-                params.extend(metadata_filter.values())
+                filter_values = list(metadata_filter.values())
 
             rows = conn.execute(
                 f"""
@@ -180,7 +198,7 @@ class DuckDBRetriever:
                 ORDER BY vec_score DESC
                 LIMIT ?
                 """,
-                [query_vector] + list((metadata_filter or {}).values()) + [k * 3],
+                [query_vector] + filter_values + [k * 3],
             ).fetchall()
 
             vector_rank: list[GradedChunk] = []

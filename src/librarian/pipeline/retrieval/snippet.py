@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING
 
 from agents.librarian.pipeline.schemas.chunks import Chunk, ChunkMetadata
@@ -33,7 +34,7 @@ class SnippetRetriever:
         metadata_filter: dict | None = None,
     ) -> list[RetrievalResult]:
         """Search the snippet store and return up to *k* results."""
-        rows = self._db.search_snippets(query_text, k=k)
+        rows = await asyncio.to_thread(self._db.search_snippets, query_text, k=k)
 
         results: list[RetrievalResult] = []
         for row in rows:

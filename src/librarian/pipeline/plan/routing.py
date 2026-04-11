@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal
 from agents.librarian.pipeline.schemas.retrieval import Intent
 
 if TYPE_CHECKING:
-    from agents.librarian.plan.analyzer import QueryAnalysis
+    from agents.librarian.pipeline.plan.analyzer import QueryAnalysis
 
 
 class QueryRouter:

@@ -48,7 +48,7 @@ resource "aws_lambda_function" "api" {
 
   function_name = "${local.name_prefix}-api"
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.api.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
   role          = aws_iam_role.lambda_exec[0].arn
   memory_size   = var.lambda_memory
   timeout       = var.lambda_timeout
@@ -75,7 +75,8 @@ resource "aws_lambda_function_url" "api" {
   count = var.enable_lambda ? 1 : 0
 
   function_name      = aws_lambda_function.api[0].function_name
-  authorization_type = "NONE"
+  authorization_type = var.lambda_auth_type
+  # SECURITY: default is NONE (dev). Set to AWS_IAM for staging/prod.
 }
 
 # Ingestion Lambda — triggered by S3 events on raw/ prefix
@@ -84,7 +85,7 @@ resource "aws_lambda_function" "ingestion" {
 
   function_name = "${local.name_prefix}-ingestion"
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.api.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
   role          = aws_iam_role.lambda_exec[0].arn
   memory_size   = var.lambda_memory
   timeout       = var.lambda_timeout
