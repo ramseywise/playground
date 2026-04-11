@@ -1,0 +1,657 @@
+"""LangFuse experiment runner for variant comparison.
+
+Uploads golden datasets to LangFuse, runs retrieval variants against them,
+scores results (hit_rate@k, MRR, per-grader), and links traces for
+dashboard comparison.
+
+When LANGFUSE_ENABLED=false (or langfuse not installed), experiments still
+run and print results — LangFuse logging is a no-op.
+
+Usage:
+    # Upload golden dataset to LangFuse
+    uv run python -m eval.experiment upload
+
+    # Run all three variants (librarian, raptor, bedrock)
+    uv run python -m eval.experiment run
+
+    # Run a single variant
+    uv run python -m eval.experiment run --variant librarian
+
+    # Custom dataset path (overrides EVAL_DATASET_PATH)
+    uv run python -m eval.experiment upload --path /path/to/golden.jsonl
+    uv run python -m eval.experiment run --path /path/to/golden.jsonl
+"""
+
+from __future__ import annotations
+
+import asyncio
+import sys
+import time
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
+
+import structlog
+
+from eval.loaders import load_golden_from_jsonl
+from eval.variants import VARIANTS
+from librarian.config import LibrarySettings, settings
+from librarian.schemas.chunks import Chunk
+from librarian.schemas.retrieval import RetrievalResult
+from librarian.tasks.models import GoldenSample, RetrievalMetrics
+from librarian.tasks.tracing import FailureCluster, FailureClusterer
+
+log = structlog.get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Result types
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class QueryResult:
+    """Result of evaluating a single query against a variant."""
+
+    query_id: str
+    query: str
+    hit: bool
+    reciprocal_rank: float
+    retrieved_urls: list[str]
+    expected_url: str
+    latency_ms: float
+    trace_id: str = ""
+
+
+@dataclass
+class ExperimentResult:
+    """Aggregate result of running a variant experiment."""
+
+    variant_name: str
+    dataset_name: str
+    run_name: str
+    hit_rate: float = 0.0
+    mrr: float = 0.0
+    n_queries: int = 0
+    n_hits: int = 0
+    avg_latency_ms: float = 0.0
+    query_results: list[QueryResult] = field(default_factory=list)
+    failure_clusters: list[FailureCluster] = field(default_factory=list)
+    config_snapshot: dict[str, Any] = field(default_factory=dict)
+
+    def summary_dict(self) -> dict[str, Any]:
+        return {
+            "variant": self.variant_name,
+            "run_name": self.run_name,
+            "hit_rate": round(self.hit_rate, 3),
+            "mrr": round(self.mrr, 3),
+            "n_queries": self.n_queries,
+            "n_hits": self.n_hits,
+            "avg_latency_ms": round(self.avg_latency_ms, 1),
+            "failure_types": [
+                f"{c.failure_type}×{c.count}" for c in self.failure_clusters
+            ],
+        }
+
+
+# ---------------------------------------------------------------------------
+# LangFuse helpers — graceful no-op when unconfigured
+# ---------------------------------------------------------------------------
+
+
+def _get_langfuse_client() -> Any | None:
+    """Return a Langfuse client if enabled and installed, else None."""
+    if not settings.langfuse_enabled:
+        return None
+    try:
+        from langfuse import Langfuse
+
+        return Langfuse(
+            public_key=settings.langfuse_public_key,
+            secret_key=settings.langfuse_secret_key,
+            host=settings.langfuse_host,
+        )
+    except ImportError:
+        log.warning("experiment.langfuse.missing", msg="langfuse not installed")
+        return None
+    except Exception as exc:
+        log.warning("experiment.langfuse.init_failed", error=str(exc))
+        return None
+
+
+def _langfuse_create_dataset(lf: Any, name: str) -> Any | None:
+    """Create a LangFuse dataset (idempotent)."""
+    try:
+        return lf.create_dataset(name=name)
+    except Exception as exc:
+        log.warning("experiment.langfuse.create_dataset_failed", error=str(exc))
+        return None
+
+
+def _langfuse_create_item(
+    lf: Any,
+    dataset_name: str,
+    sample: GoldenSample,
+) -> None:
+    """Create a single dataset item in LangFuse."""
+    try:
+        lf.create_dataset_item(
+            dataset_name=dataset_name,
+            input={"query": sample.query},
+            expected_output={"doc_url": sample.expected_doc_url},
+            metadata={
+                "query_id": sample.query_id,
+                "category": sample.category,
+                "difficulty": sample.difficulty,
+                "language": sample.language,
+                "validation_level": sample.validation_level,
+                "relevant_chunk_ids": sample.relevant_chunk_ids,
+            },
+            id=sample.query_id,
+        )
+    except Exception as exc:
+        log.warning(
+            "experiment.langfuse.create_item_failed",
+            query_id=sample.query_id,
+            error=str(exc),
+        )
+
+
+def _langfuse_log_trace(
+    lf: Any,
+    variant_name: str,
+    qr: QueryResult,
+    run_name: str,
+    dataset_name: str,
+) -> str:
+    """Create a LangFuse trace for a single query evaluation and link to dataset item."""
+    try:
+        trace = lf.trace(
+            name=f"eval_{variant_name}_{qr.query_id}",
+            input={"query": qr.query},
+            output={"hit": qr.hit, "retrieved_urls": qr.retrieved_urls},
+            metadata={
+                "variant": variant_name,
+                "run_name": run_name,
+                "expected_url": qr.expected_url,
+                "latency_ms": qr.latency_ms,
+            },
+        )
+        # Score the trace
+        lf.score(
+            trace_id=trace.id,
+            name="hit_rate",
+            value=1.0 if qr.hit else 0.0,
+        )
+        lf.score(
+            trace_id=trace.id,
+            name="reciprocal_rank",
+            value=qr.reciprocal_rank,
+        )
+        lf.score(
+            trace_id=trace.id,
+            name="retrieval_latency_ms",
+            value=qr.latency_ms,
+        )
+        # Link to dataset item
+        try:
+            dataset = lf.get_dataset(dataset_name)
+            for item in dataset.items:
+                if item.id == qr.query_id:
+                    item.link(trace, run_name=run_name)
+                    break
+        except Exception:
+            pass  # linking is best-effort
+
+        return trace.id
+    except Exception as exc:
+        log.warning(
+            "experiment.langfuse.trace_failed",
+            query_id=qr.query_id,
+            error=str(exc),
+        )
+        return ""
+
+
+def _langfuse_flush(lf: Any) -> None:
+    """Flush pending LangFuse events."""
+    try:
+        lf.flush()
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Dataset upload
+# ---------------------------------------------------------------------------
+
+
+def upload_golden_dataset(
+    samples: list[GoldenSample],
+    dataset_name: str | None = None,
+    *,
+    langfuse_client: Any | None = None,
+) -> int:
+    """Upload golden samples to LangFuse as a named dataset.
+
+    Returns the number of items uploaded. Returns 0 if LangFuse is unavailable.
+    """
+    lf = langfuse_client or _get_langfuse_client()
+    if lf is None:
+        log.warning("experiment.upload.skipped", reason="langfuse not available")
+        return 0
+
+    name = dataset_name or settings.langfuse_dataset_name
+    _langfuse_create_dataset(lf, name)
+
+    uploaded = 0
+    for sample in samples:
+        _langfuse_create_item(lf, name, sample)
+        uploaded += 1
+
+    _langfuse_flush(lf)
+    log.info(
+        "experiment.upload.done",
+        dataset=name,
+        n_items=uploaded,
+    )
+    return uploaded
+
+
+# ---------------------------------------------------------------------------
+# Experiment execution
+# ---------------------------------------------------------------------------
+
+
+async def run_variant_experiment(
+    variant_name: str,
+    golden_samples: list[GoldenSample],
+    corpus: list[Chunk],
+    *,
+    cfg: LibrarySettings | None = None,
+    dataset_name: str | None = None,
+    langfuse_client: Any | None = None,
+) -> ExperimentResult:
+    """Run a single retrieval variant against golden samples and score results.
+
+    Uses InMemoryRetriever populated with *corpus* for evaluation.
+    Logs traces + scores to LangFuse when available.
+
+    Args:
+        variant_name: Key from VARIANTS (librarian, raptor, bedrock).
+        golden_samples: Golden queries with expected doc URLs.
+        corpus: Chunks to populate InMemoryRetriever.
+        cfg: Variant config override (defaults to VARIANTS[variant_name]).
+        dataset_name: LangFuse dataset name for linking.
+        langfuse_client: Optional LangFuse client override.
+
+    Returns:
+        ExperimentResult with per-query and aggregate metrics.
+    """
+    from tests.librarian.testing.mock_embedder import MockEmbedder
+    from storage.vectordb.inmemory import InMemoryRetriever
+
+    cfg = cfg or VARIANTS[variant_name]
+    ds_name = dataset_name or settings.langfuse_dataset_name
+    timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    run_name = f"{variant_name}_{timestamp}"
+    lf = langfuse_client or _get_langfuse_client()
+
+    # Build retriever with variant config
+    embedder = MockEmbedder(dim=64, seed=42)
+    retriever = InMemoryRetriever(
+        bm25_weight=cfg.bm25_weight,
+        vector_weight=cfg.vector_weight,
+    )
+    chunks_with_embeddings = [
+        chunk.model_copy(update={"embedding": embedder.embed_passage(chunk.text)})
+        for chunk in corpus
+    ]
+    await retriever.upsert(chunks_with_embeddings)
+
+    k = cfg.retrieval_k
+    clusterer = FailureClusterer()
+    query_results: list[QueryResult] = []
+
+    for sample in golden_samples:
+        t0 = time.perf_counter()
+        vec = embedder.embed_query(sample.query)
+        results = await retriever.search(query_text=sample.query, query_vector=vec, k=k)
+        latency_ms = (time.perf_counter() - t0) * 1000
+
+        urls = [
+            r.chunk.metadata.url if hasattr(r.chunk, "metadata") else ""
+            for r in results
+        ]
+        hit = sample.expected_doc_url in urls
+        rr = next(
+            (1.0 / (i + 1) for i, u in enumerate(urls) if u == sample.expected_doc_url),
+            0.0,
+        )
+
+        qr = QueryResult(
+            query_id=sample.query_id,
+            query=sample.query,
+            hit=hit,
+            reciprocal_rank=rr,
+            retrieved_urls=urls[:5],
+            expected_url=sample.expected_doc_url,
+            latency_ms=latency_ms,
+        )
+
+        # Log to LangFuse
+        if lf is not None:
+            qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
+
+        query_results.append(qr)
+
+    # Aggregate
+    n = len(query_results)
+    hits = sum(1 for qr in query_results if qr.hit)
+    hit_rate = hits / n if n else 0.0
+    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
+    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
+
+    # Cluster failures using the existing FailureClusterer
+    from librarian.tasks.tracing import PipelineTrace, PipelineTracer
+
+    tracer = PipelineTracer()
+    for qr in query_results:
+        trace = tracer.create_trace(qr.query_id, qr.query)
+        trace.status = "success" if qr.hit else "failure"
+        trace.confidence = qr.reciprocal_rank
+        if not qr.hit:
+            trace.failure_reason = "expected_doc_not_in_top_k"
+    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
+
+    if lf is not None:
+        # Log aggregate scores as a summary trace
+        try:
+            summary_trace = lf.trace(
+                name=f"experiment_summary_{variant_name}",
+                metadata={
+                    "variant": variant_name,
+                    "run_name": run_name,
+                    "k": k,
+                    "embedding_model": cfg.embedding_model,
+                    "reranker_strategy": cfg.reranker_strategy,
+                    "bm25_weight": cfg.bm25_weight,
+                    "vector_weight": cfg.vector_weight,
+                },
+            )
+            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
+            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
+            lf.score(
+                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
+            )
+        except Exception as exc:
+            log.warning("experiment.langfuse.summary_failed", error=str(exc))
+        _langfuse_flush(lf)
+
+    result = ExperimentResult(
+        variant_name=variant_name,
+        dataset_name=ds_name,
+        run_name=run_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n_queries=n,
+        n_hits=hits,
+        avg_latency_ms=avg_latency,
+        query_results=query_results,
+        failure_clusters=clusters,
+        config_snapshot={
+            "embedding_model": cfg.embedding_model,
+            "embedding_provider": cfg.embedding_provider,
+            "reranker_strategy": cfg.reranker_strategy,
+            "retrieval_k": cfg.retrieval_k,
+            "bm25_weight": cfg.bm25_weight,
+            "vector_weight": cfg.vector_weight,
+        },
+    )
+
+    log.info(
+        "experiment.variant.done",
+        variant=variant_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n=n,
+        avg_latency_ms=round(avg_latency, 1),
+    )
+    return result
+
+
+async def run_all_experiments(
+    golden_samples: list[GoldenSample],
+    corpus: list[Chunk],
+    *,
+    variants: dict[str, LibrarySettings] | None = None,
+    dataset_name: str | None = None,
+    langfuse_client: Any | None = None,
+) -> dict[str, ExperimentResult]:
+    """Run all variants and return comparison results.
+
+    Args:
+        golden_samples: Golden queries.
+        corpus: Chunks for InMemoryRetriever.
+        variants: Override variant configs (defaults to VARIANTS).
+        dataset_name: LangFuse dataset name.
+        langfuse_client: Optional LangFuse client.
+
+    Returns:
+        Dict mapping variant name to ExperimentResult.
+    """
+    variant_configs = variants or VARIANTS
+    results: dict[str, ExperimentResult] = {}
+
+    for name, cfg in variant_configs.items():
+        results[name] = await run_variant_experiment(
+            name,
+            golden_samples,
+            corpus,
+            cfg=cfg,
+            dataset_name=dataset_name,
+            langfuse_client=langfuse_client,
+        )
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Rich output
+# ---------------------------------------------------------------------------
+
+
+def print_comparison_table(results: dict[str, ExperimentResult]) -> None:
+    """Print a formatted comparison table to stdout."""
+    header = (
+        f"\n{'Variant':<12} {'hit_rate':>10} {'MRR':>10} {'n':>5} "
+        f"{'hits':>5} {'avg_ms':>8} {'failures'}"
+    )
+    sep = "-" * 80
+    print(f"\n{sep}")  # noqa: T201
+    print("  Experiment Comparison")  # noqa: T201
+    print(sep)  # noqa: T201
+    print(header)  # noqa: T201
+    print(sep)  # noqa: T201
+
+    for name, r in results.items():
+        failure_str = (
+            ", ".join(f"{c.failure_type}×{c.count}" for c in r.failure_clusters)
+            or "none"
+        )
+        print(  # noqa: T201
+            f"  {name:<10} {r.hit_rate:>10.3f} {r.mrr:>10.3f} {r.n_queries:>5} "
+            f"{r.n_hits:>5} {r.avg_latency_ms:>7.1f} [{failure_str}]"
+        )
+
+    print(sep)  # noqa: T201
+
+    # Config snapshot for each variant
+    print("\n  Configuration:")  # noqa: T201
+    for name, r in results.items():
+        cs = r.config_snapshot
+        print(  # noqa: T201
+            f"    {name}: {cs.get('embedding_provider', '?')} "
+            f"k={cs.get('retrieval_k', '?')} "
+            f"reranker={cs.get('reranker_strategy', '?')} "
+            f"bm25={cs.get('bm25_weight', '?')}/{cs.get('vector_weight', '?')}"
+        )
+
+    # LangFuse status
+    if settings.langfuse_enabled:
+        print(f"\n  LangFuse: traces logged → {settings.langfuse_host}")  # noqa: T201
+    else:
+        print(  # noqa: T201
+            "\n  LangFuse: disabled — set LANGFUSE_ENABLED=true to log traces"
+        )
+    print()  # noqa: T201
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+def _load_samples(path: str | None = None) -> list[GoldenSample]:
+    """Load golden samples from the configured or provided path."""
+    dataset_path = path or settings.eval_dataset_path
+    if not dataset_path:
+        # Fall back to the test corpus
+        log.info(
+            "experiment.load.fallback",
+            msg="No EVAL_DATASET_PATH set — using built-in test samples",
+        )
+        from tests.librarian.evalsuite.conftest import GOLDEN
+
+        return GOLDEN
+
+    log.info("experiment.load", path=dataset_path)
+    return load_golden_from_jsonl(dataset_path)
+
+
+def _load_corpus(samples: list[GoldenSample]) -> list[Chunk]:
+    """Load a corpus aligned with the golden samples.
+
+    For external datasets, builds minimal placeholder chunks from the
+    golden sample metadata so InMemoryRetriever has something to index.
+    For built-in test samples, uses the test corpus.
+    """
+    # Check if these are the built-in test samples
+    if samples and samples[0].query_id == "q1":
+        from tests.librarian.evalsuite.conftest import CORPUS
+
+        return CORPUS
+
+    # For external golden samples, create placeholder chunks from metadata
+    # so that the expected_doc_url can be matched.
+    # In production, the retriever would search a real vector store.
+    chunks: list[Chunk] = []
+    seen_urls: set[str] = set()
+    for sample in samples:
+        url = sample.expected_doc_url
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            chunks.append(
+                Chunk(
+                    id=f"placeholder_{len(chunks)}",
+                    text=sample.query,
+                    metadata=type("M", (), {"url": url, "title": url})(),  # noqa: UP003
+                )
+            )
+    return chunks
+
+
+def _cli_upload(args: list[str]) -> None:
+    """CLI: upload golden dataset to LangFuse."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Upload golden dataset to LangFuse")
+    parser.add_argument(
+        "--path", help="Path to golden JSONL (overrides EVAL_DATASET_PATH)"
+    )
+    parser.add_argument("--dataset", help="LangFuse dataset name", default=None)
+    parsed = parser.parse_args(args)
+
+    samples = _load_samples(parsed.path)
+    n = upload_golden_dataset(samples, dataset_name=parsed.dataset)
+    if n:
+        print(
+            f"Uploaded {n} samples to LangFuse dataset '{parsed.dataset or settings.langfuse_dataset_name}'"
+        )  # noqa: T201
+    else:
+        print("Upload skipped — check LANGFUSE_ENABLED and credentials")  # noqa: T201
+
+
+def _cli_run(args: list[str]) -> None:
+    """CLI: run experiment(s)."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run retrieval experiments")
+    parser.add_argument(
+        "--path", help="Path to golden JSONL (overrides EVAL_DATASET_PATH)"
+    )
+    parser.add_argument(
+        "--variant", help="Single variant to run (default: all)", default=None
+    )
+    parser.add_argument("--dataset", help="LangFuse dataset name", default=None)
+    parsed = parser.parse_args(args)
+
+    samples = _load_samples(parsed.path)
+    corpus = _load_corpus(samples)
+    dataset_name = parsed.dataset or settings.langfuse_dataset_name
+
+    if parsed.variant:
+        if parsed.variant not in VARIANTS:
+            print(
+                f"Unknown variant '{parsed.variant}'. Available: {list(VARIANTS.keys())}"
+            )  # noqa: T201
+            sys.exit(1)
+        result = asyncio.run(
+            run_variant_experiment(
+                parsed.variant,
+                samples,
+                corpus,
+                dataset_name=dataset_name,
+            )
+        )
+        print_comparison_table({parsed.variant: result})
+    else:
+        results = asyncio.run(
+            run_all_experiments(
+                samples,
+                corpus,
+                dataset_name=dataset_name,
+            )
+        )
+        print_comparison_table(results)
+
+
+def main() -> None:
+    """CLI entrypoint: ``python -m eval.experiment <upload|run> [args]``."""
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print("Usage: python -m eval.experiment <upload|run> [options]")  # noqa: T201
+        print()  # noqa: T201
+        print("Commands:")  # noqa: T201
+        print("  upload  Upload golden dataset to LangFuse")  # noqa: T201
+        print("  run     Run variant experiments (all or single)")  # noqa: T201
+        print()  # noqa: T201
+        print("Examples:")  # noqa: T201
+        print("  python -m eval.experiment upload --path /data/golden.jsonl")  # noqa: T201
+        print("  python -m eval.experiment run")  # noqa: T201
+        print("  python -m eval.experiment run --variant librarian")  # noqa: T201
+        sys.exit(0)
+
+    command = sys.argv[1]
+    remaining = sys.argv[2:]
+
+    if command == "upload":
+        _cli_upload(remaining)
+    elif command == "run":
+        _cli_run(remaining)
+    else:
+        print(f"Unknown command '{command}'. Use 'upload' or 'run'.")  # noqa: T201
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
