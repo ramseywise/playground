@@ -16,8 +16,8 @@ This directory holds the command-style workflows used in this repo.
 | `scope-initiative` | An initiative is already named and agreed on | Produces a Linear-ready backlog and hierarchy | No |
 | `quick-commit` | You want a branch + commit only | Creates a feature branch and commits safely | Partial |
 | `quick-pr` | You want commit + push + PR flow | Handles staging, commit, push, PR creation, optional merge | Partial |
-| `insights` | You want workflow signals from session logs | Summarizes friction patterns, attribution, and skill candidates | No |
-| `end-session` | You are wrapping up a session | Writes session metadata, friction, attribution, memory decisions, and cleanup notes | No |
+| `claude-insights` | You want workflow signals from session logs | Summarizes friction patterns, attribution, and skill candidates | No |
+| `compact` | Mid-session or end of session | Saves artifacts, writes session note, commits + pushes + PR; mid-session also compacts context | No |
 
 ## Stale assumptions to watch
 

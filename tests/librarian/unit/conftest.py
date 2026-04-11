@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
+from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from tests.librarian.testing.mock_embedder import MockEmbedder
 
 # ---------------------------------------------------------------------------
 # Shared fixtures

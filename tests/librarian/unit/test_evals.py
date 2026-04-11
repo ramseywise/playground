@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.librarian.eval_harness.tasks.extract_golden import (
+from agents.librarian.eval.tasks.extract_golden import (
     _make_query_id,
     extract_samples,
     filter_by_tier,
@@ -19,11 +19,11 @@ from agents.librarian.eval_harness.tasks.extract_golden import (
     load_samples,
     save_samples,
 )
-from agents.librarian.eval_harness.tasks.generate_synthetic import (
+from agents.librarian.eval.tasks.generate_synthetic import (
     CONFIRM_EXPENSIVE_OPS,
     generate_from_chunks,
 )
-from agents.librarian.eval_harness.tasks.models import GoldenSample
+from agents.librarian.eval.tasks.models import GoldenSample
 
 
 # ---------------------------------------------------------------------------
@@ -364,11 +364,11 @@ def test_generate_from_chunks_returns_golden_samples() -> None:
 
     with (
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
+            "agents.librarian.eval.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
             True,
         ),
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.anthropic.Anthropic",
+            "agents.librarian.eval.tasks.generate_synthetic.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -391,11 +391,11 @@ def test_generate_from_chunks_n_limits_output() -> None:
 
     with (
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
+            "agents.librarian.eval.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
             True,
         ),
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.anthropic.Anthropic",
+            "agents.librarian.eval.tasks.generate_synthetic.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -413,11 +413,11 @@ def test_generate_from_chunks_skips_missing_text() -> None:
 
     with (
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
+            "agents.librarian.eval.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
             True,
         ),
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.anthropic.Anthropic",
+            "agents.librarian.eval.tasks.generate_synthetic.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -436,11 +436,11 @@ def test_generate_from_chunks_handles_parse_error() -> None:
 
     with (
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
+            "agents.librarian.eval.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
             True,
         ),
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.anthropic.Anthropic",
+            "agents.librarian.eval.tasks.generate_synthetic.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -460,11 +460,11 @@ def test_generate_from_chunks_handles_api_error() -> None:
 
     with (
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
+            "agents.librarian.eval.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
             True,
         ),
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.anthropic.Anthropic",
+            "agents.librarian.eval.tasks.generate_synthetic.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -482,11 +482,11 @@ def test_generate_from_chunks_query_id_is_deterministic() -> None:
 
     with (
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
+            "agents.librarian.eval.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
             True,
         ),
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.anthropic.Anthropic",
+            "agents.librarian.eval.tasks.generate_synthetic.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -505,11 +505,11 @@ def test_generate_from_chunks_difficulty_propagated() -> None:
 
     with (
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
+            "agents.librarian.eval.tasks.generate_synthetic.CONFIRM_EXPENSIVE_OPS",
             True,
         ),
         patch(
-            "agents.librarian.eval_harness.tasks.generate_synthetic.anthropic.Anthropic",
+            "agents.librarian.eval.tasks.generate_synthetic.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.mcp.snowflake_server import SnowflakeClient, _SQL_PREFIX_RE
+from agents.librarian.tools.mcp.snowflake_server import SnowflakeClient, _SQL_PREFIX_RE
 
 
 class TestSqlValidation:

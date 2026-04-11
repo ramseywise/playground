@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents.librarian.mcp import librarian_server
+from agents.librarian.tools.mcp import librarian_server
 
 
 @pytest.fixture(autouse=True)

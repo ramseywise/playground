@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 
-from agents.librarian.eval_harness.tasks.models import GoldenSample
-from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
-from agents.librarian.schemas.chunks import Chunk, ChunkMetadata
+from agents.librarian.eval.tasks.models import GoldenSample
+from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from tests.librarian.testing.mock_embedder import MockEmbedder
+from agents.librarian.pipeline.schemas.chunks import Chunk, ChunkMetadata
 from agents.librarian.utils.config import LibrarySettings
 
 
@@ -143,7 +143,7 @@ def mock_llm_eval() -> MagicMock:
 @pytest.fixture()
 def mock_reranker_passthrough() -> MagicMock:
     """Reranker that returns all chunks at score 0.8 — preserves retrieval rank."""
-    from agents.librarian.schemas.chunks import RankedChunk
+    from agents.librarian.pipeline.schemas.chunks import RankedChunk
 
     async def passthrough(query: str, chunks, top_k: int = 3):
         return [

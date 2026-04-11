@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import pytest
 
-from agents.librarian.eval_harness.metrics.retrieval_eval import evaluate_retrieval
-from agents.librarian.eval_harness.tasks.models import GoldenSample, RetrievalMetrics
-from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
-from agents.librarian.retrieval.testing.mock_embedder import MockEmbedder
-from agents.librarian.schemas.retrieval import RetrievalResult
+from agents.librarian.eval.metrics.retrieval_eval import evaluate_retrieval
+from agents.librarian.eval.tasks.models import GoldenSample, RetrievalMetrics
+from agents.librarian.tools.storage.vectordb.inmemory import InMemoryRetriever
+from tests.librarian.testing.mock_embedder import MockEmbedder
+from agents.librarian.pipeline.schemas.retrieval import RetrievalResult
 
 # Metric floors — update these (never lower them) when quality improves
 HIT_RATE_FLOOR = 0.6

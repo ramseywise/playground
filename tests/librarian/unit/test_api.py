@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from agents.librarian.api import deps
-from agents.librarian.api.app import app
+from agents.librarian.tools.api import deps
+from agents.librarian.tools.api.app import app
 
 
 @pytest.fixture()
