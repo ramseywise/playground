@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Hashable
+from collections.abc import Callable, Coroutine, Hashable
 from typing import Any, Literal, cast
 
 from langgraph.graph import END, START, StateGraph
@@ -42,7 +42,11 @@ _GATE = "gate"
 # ---------------------------------------------------------------------------
 
 
-def _make_analyze_node(analyzer: QueryAnalyzer, *, max_variants: int = 3) -> Any:
+_SyncNode = Callable[[LibrarianState], dict[str, Any]]
+_AsyncNode = Callable[[LibrarianState], Coroutine[Any, Any, dict[str, Any]]]
+
+
+def _make_analyze_node(analyzer: QueryAnalyzer, *, max_variants: int = 3) -> _SyncNode:
     def analyze(state: LibrarianState) -> dict[str, Any]:
         query = state.get("standalone_query") or state.get("query", "")
         analysis = analyzer.analyze(query)
@@ -57,17 +61,15 @@ def _make_analyze_node(analyzer: QueryAnalyzer, *, max_variants: int = 3) -> Any
     return analyze
 
 
-def _make_condense_node(condenser: HistoryCondenser) -> Any:
-    async def condense(state: LibrarianState) -> Any:
+def _make_condense_node(condenser: HistoryCondenser) -> _AsyncNode:
+    async def condense(state: LibrarianState) -> dict[str, Any]:
         return await condenser.condense(state)
 
     return condense
 
 
-def _make_snippet_retrieve_node(
-    snippet_retriever: Retriever,
-) -> Any:
-    async def snippet_retrieve(state: LibrarianState) -> Any:
+def _make_snippet_retrieve_node(snippet_retriever: Retriever) -> _AsyncNode:
+    async def snippet_retrieve(state: LibrarianState) -> dict[str, Any]:
         """Keyword-based retrieval from the snippet DB, bypassing embedding + reranker."""
         query = state.get("standalone_query") or state.get("query", "")
         results = await snippet_retriever.search(
@@ -97,10 +99,8 @@ def _make_snippet_retrieve_node(
     return snippet_retrieve
 
 
-def _make_retrieve_node(
-    subgraph: RetrievalSubgraph,
-) -> Any:
-    async def retrieve(state: LibrarianState) -> Any:
+def _make_retrieve_node(subgraph: RetrievalSubgraph) -> _AsyncNode:
+    async def retrieve(state: LibrarianState) -> dict[str, Any]:
         result = await subgraph.run(state)
         retry_count = int(state.get("retry_count") or 0)
         return {**result, "retry_count": retry_count}
@@ -108,28 +108,22 @@ def _make_retrieve_node(
     return retrieve
 
 
-def _make_rerank_node(
-    subgraph: RerankerSubgraph,
-) -> Any:
-    async def rerank(state: LibrarianState) -> Any:
+def _make_rerank_node(subgraph: RerankerSubgraph) -> _AsyncNode:
+    async def rerank(state: LibrarianState) -> dict[str, Any]:
         return await subgraph.run(state)
 
     return rerank
 
 
-def _make_generate_node(
-    subgraph: GenerationSubgraph,
-) -> Any:
-    async def generate(state: LibrarianState) -> Any:
+def _make_generate_node(subgraph: GenerationSubgraph) -> _AsyncNode:
+    async def generate(state: LibrarianState) -> dict[str, Any]:
         return await subgraph.run(state)
 
     return generate
 
 
-def _make_gate_node(
-    subgraph: GenerationSubgraph,
-) -> Any:
-    def gate(state: LibrarianState) -> Any:
+def _make_gate_node(subgraph: GenerationSubgraph) -> _SyncNode:
+    def gate(state: LibrarianState) -> dict[str, Any]:
         result = subgraph.confidence_gate(state)
         # Increment retry_count here so the state update is persisted by LangGraph
         if result.get("fallback_requested"):

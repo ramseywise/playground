@@ -34,6 +34,7 @@ class LibrarySettings(BaseSettings):
 
     # Embedding
     embedding_model: str = "intfloat/multilingual-e5-large"
+    embedding_provider: str = "multilingual"  # multilingual | minilm
 
     # Strategies
     ingestion_strategy: str = "html_aware"
@@ -61,7 +62,8 @@ class LibrarySettings(BaseSettings):
     # API settings
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    api_cors_origins: list[str] = ["*"]
+    api_cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8501"]
+    # Override via API_CORS_ORIGINS env var for staging/prod (comma-separated or JSON list)
     api_timeout_seconds: float = 30.0
     api_stream_timeout_seconds: float = 120.0
 

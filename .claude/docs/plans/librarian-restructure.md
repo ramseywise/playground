@@ -5,7 +5,10 @@
 > ingestion pipeline, and the online query path.
 >
 > Date: 2026-04-11
-> Status: Draft
+> Status: Superseded — codebase was built with a different (cleaner) structure than this plan assumed.
+> The assumed directories (`protocols/`, `preprocessing/`, `analysis/`, `retrieval/infra/`, `retrieval/testing/`)
+> were never created. Protocols live inline in each `base.py`; pipeline modules are under `pipeline/`;
+> infra lives under `tools/`. No action needed.
 
 ---
 
