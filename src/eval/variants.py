@@ -79,10 +79,33 @@ BEDROCK = LibrarySettings(
 )
 
 # ---------------------------------------------------------------------------
+# Bedrock-live — real AWS Bedrock KB API (RetrieveAndGenerate)
+#   Requires BEDROCK_KNOWLEDGE_BASE_ID + BEDROCK_MODEL_ARN env vars.
+#   Skipped automatically when not configured.
+#   retrieval_strategy="bedrock" is the dispatch signal in run_variant_experiment.
+# ---------------------------------------------------------------------------
+BEDROCK_LIVE = LibrarySettings(
+    embedding_provider="aws_titan",  # documentary — Bedrock handles embeddings
+    embedding_model="",  # N/A — managed by Bedrock
+    retrieval_strategy="bedrock",  # dispatch signal for experiment runner
+    reranker_strategy="passthrough",
+    retrieval_k=5,
+    reranker_top_k=5,
+    bm25_weight=0.0,
+    vector_weight=1.0,
+    confidence_threshold=0.0,
+    max_crag_retries=0,
+    anthropic_api_key="test",
+    # bedrock_knowledge_base_id, bedrock_model_arn, bedrock_region
+    # auto-populate from env vars via pydantic-settings.
+)
+
+# ---------------------------------------------------------------------------
 # Registry — keyed by variant name used in pytest parametrize
 # ---------------------------------------------------------------------------
 VARIANTS: dict[str, LibrarySettings] = {
     "librarian": LIBRARIAN,
     "raptor": RAPTOR,
     "bedrock": BEDROCK,
+    "bedrock-live": BEDROCK_LIVE,
 }
