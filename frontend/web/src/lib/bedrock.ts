@@ -75,7 +75,7 @@ function extractCitations(raw: BedrockCitation[]): Citation[] {
 export async function retrieveAndGenerate(
   query: string,
   sessionId?: string,
-): Promise<Omit<RagResponse, "latency_ms" | "backend">> {
+): Promise<Omit<RagResponse, "latency_ms" | "backend" | "trace_id">> {
   const knowledgeBaseId = process.env.BEDROCK_KNOWLEDGE_BASE_ID;
   if (!knowledgeBaseId) {
     throw new Error("BEDROCK_KNOWLEDGE_BASE_ID is not configured");
@@ -111,7 +111,6 @@ export async function retrieveAndGenerate(
     citations,
     confidence_score: null,
     intent: null,
-    trace_id: "",
     session_id: result.sessionId,
   };
 }

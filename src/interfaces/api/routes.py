@@ -16,8 +16,8 @@ from interfaces.api.deps import (
     get_graph,
     get_pipeline,
     get_settings,
+    get_triage,
 )
-from librarian.tracing import build_langfuse_handler, make_runnable_config
 from interfaces.api.models import (
     ChatRequest,
     ChatResponse,
@@ -27,6 +27,7 @@ from interfaces.api.models import (
     IngestResultItem,
 )
 from interfaces.api.streaming import format_sse
+from librarian.tracing import build_langfuse_handler, make_runnable_config
 from core.logging import get_logger
 
 log = get_logger(__name__)
@@ -49,9 +50,20 @@ async def health() -> dict[str, str]:
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
-    """Non-streaming chat: dispatches to librarian graph or Bedrock KB."""
-    if req.backend == "bedrock":
+    """Non-streaming chat: triage → librarian graph, Bedrock KB, or direct response."""
+    decision = get_triage().decide(req.query, req.backend)
+
+    if decision.route == "bedrock":
         return await _chat_bedrock(req)
+    if decision.route in ("escalation", "direct"):
+        return ChatResponse(
+            response=decision.response or "",
+            citations=[],
+            confidence_score=decision.confidence,
+            intent=decision.intent,
+            trace_id=_trace_id(),
+            backend="triage",
+        )
     return await _chat_librarian(req)
 
 
@@ -176,7 +188,23 @@ async def _stream_chat(
 
 @router.post("/chat/stream")
 async def chat_stream(req: ChatRequest) -> EventSourceResponse:
-    """Streaming chat: emit SSE events as the graph progresses."""
+    """Streaming chat: triage first, then emit SSE events."""
+    decision = get_triage().decide(req.query, req.backend)
+
+    if decision.route in ("escalation", "direct"):
+
+        async def triage_events() -> AsyncGenerator[str, None]:
+            yield format_sse("status", {"stage": "triage"})
+            yield format_sse("done", {
+                "response": decision.response or "",
+                "citations": [],
+                "confidence_score": decision.confidence,
+                "intent": decision.intent,
+                "trace_id": _trace_id(),
+            })
+
+        return EventSourceResponse(triage_events())
+
     cfg = get_settings()
 
     async def event_generator() -> AsyncGenerator[str, None]:

@@ -9,6 +9,7 @@ from orchestration.nodes.generation import GenerationSubgraph
 from librarian.bedrock.client import BedrockKBClient
 from librarian.ingestion.pipeline import IngestionPipeline
 from librarian.config import LibrarySettings, settings as _default_settings
+from interfaces.api.triage import TriageService
 from core.llm import AnthropicLLM
 from core.logging import get_logger
 
@@ -18,6 +19,7 @@ _graph: CompiledStateGraph | None = None
 _generation_sg: GenerationSubgraph | None = None
 _pipeline: IngestionPipeline | None = None
 _bedrock_client: BedrockKBClient | None = None
+_triage: TriageService | None = None
 _settings: LibrarySettings = _default_settings
 
 
@@ -86,6 +88,34 @@ def get_pipeline() -> IngestionPipeline:
 def get_bedrock_client() -> BedrockKBClient | None:
     """Return the Bedrock KB client, or None if not configured."""
     return _bedrock_client
+
+
+def is_graph_ready() -> bool:
+    """Return True when the librarian graph singleton is initialised."""
+    return _graph is not None
+
+
+def is_bedrock_available() -> bool:
+    """Return True when a Bedrock KB client is configured."""
+    return _bedrock_client is not None
+
+
+def init_triage() -> None:
+    """Initialise the triage singleton. Called once at app startup."""
+    global _triage  # noqa: PLW0603
+    _triage = TriageService(
+        graph_ready=is_graph_ready,
+        bedrock_available=is_bedrock_available,
+    )
+    log.info("api.deps.init_triage")
+
+
+def get_triage() -> TriageService:
+    """Return the triage service."""
+    if _triage is None:
+        msg = "Triage not initialised — call init_triage() first"
+        raise RuntimeError(msg)
+    return _triage
 
 
 def get_settings() -> LibrarySettings:

@@ -11,7 +11,7 @@ export interface RagResponse {
   intent: string | null;
   trace_id: string;
   latency_ms: number;
-  backend: "librarian" | "bedrock";
+  backend: Backend;
   session_id?: string;
 }
 
@@ -20,7 +20,7 @@ export interface RagRequest {
   session_id?: string;
 }
 
-export type Backend = "librarian" | "bedrock" | "both";
+export type Backend = "librarian" | "bedrock" | "triage" | "both";
 
 export interface ChatMessage {
   id: string;

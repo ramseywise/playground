@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     const result = await retrieveAndGenerate(body.query, body.session_id);
     return NextResponse.json({
       ...result,
+      trace_id: crypto.randomUUID(),
       latency_ms: Date.now() - start,
       backend: "bedrock" as const,
     });
