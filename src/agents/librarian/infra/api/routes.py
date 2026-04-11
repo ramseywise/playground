@@ -1,0 +1,170 @@
+"""API routes for the Librarian RAG agent."""
+
+from __future__ import annotations
+
+import asyncio
+from collections.abc import AsyncGenerator
+from typing import Any
+
+import structlog
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
+
+from agents.librarian.infra.api.deps import get_graph, get_pipeline, get_settings
+from agents.librarian.infra.api.models import (
+    ChatRequest,
+    ChatResponse,
+    ErrorResponse,
+    IngestRequest,
+    IngestResponse,
+    IngestResultItem,
+)
+from agents.librarian.infra.api.streaming import format_sse
+from agents.librarian.utils.logging import get_logger
+
+log = get_logger(__name__)
+router = APIRouter()
+
+
+def _trace_id() -> str:
+    return structlog.contextvars.get_contextvars().get("trace_id", "")
+
+
+def _error_response(status: int, message: str, detail: str = "") -> JSONResponse:
+    body = ErrorResponse(error=message, trace_id=_trace_id(), detail=detail)
+    return JSONResponse(status_code=status, content=body.model_dump())
+
+
+@router.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Non-streaming chat: run the full graph and return the result."""
+    graph = get_graph()
+
+    log.info("api.chat", query=req.query[:80], session_id=req.session_id)
+
+    try:
+        result: dict[str, Any] = await graph.ainvoke({"query": req.query})
+    except Exception:
+        log.exception("api.chat.error")
+        return _error_response(500, "Internal graph error")
+
+    return ChatResponse(
+        response=result.get("response", ""),
+        citations=result.get("citations", []),
+        confidence_score=result.get("confidence_score", 0.0),
+        intent=result.get("intent", ""),
+        trace_id=_trace_id(),
+    )
+
+
+async def _stream_chat(
+    req: ChatRequest, timeout: float
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Run the graph with astream(), emitting SSE events per node."""
+    graph = get_graph()
+    trace_id = _trace_id()
+
+    log.info("api.chat.stream", query=req.query[:80], session_id=req.session_id)
+
+    # Only extract the four fields we need — avoids holding large state (e.g.
+    # raw chunks or embeddings) in memory for the full stream duration.
+    response = citations = confidence = intent = None
+
+    try:
+        async with asyncio.timeout(timeout):
+            async for event in graph.astream({"query": req.query}):
+                for node_name, update in event.items():
+                    if isinstance(update, dict):
+                        if "response" in update:
+                            response = update["response"]
+                        if "citations" in update:
+                            citations = update["citations"]
+                        if "confidence_score" in update:
+                            confidence = update["confidence_score"]
+                        if "intent" in update:
+                            intent = update["intent"]
+                    yield {"event": "status", "data": {"stage": node_name}}
+
+        yield {
+            "event": "done",
+            "data": {
+                "response": response or "",
+                "citations": citations or [],
+                "confidence_score": confidence or 0.0,
+                "intent": intent or "",
+                "trace_id": trace_id,
+            },
+        }
+    except asyncio.TimeoutError:
+        log.warning("api.chat.stream.timeout")
+        yield {"event": "error", "data": {"detail": "Graph timed out", "trace_id": trace_id}}
+    except Exception:
+        log.exception("api.chat.stream.error")
+        yield {"event": "error", "data": {"detail": "Internal graph error", "trace_id": trace_id}}
+
+
+@router.post("/chat/stream")
+async def chat_stream(req: ChatRequest) -> EventSourceResponse:
+    """Streaming chat: emit SSE events as the graph progresses."""
+    cfg = get_settings()
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        async for evt in _stream_chat(req, timeout=cfg.api_stream_timeout_seconds):
+            yield format_sse(evt["event"], evt["data"])
+
+    return EventSourceResponse(event_generator())
+
+
+@router.post("/ingest", response_model=IngestResponse)
+async def ingest(req: IngestRequest) -> IngestResponse | JSONResponse:
+    """Ingest documents from S3 or inline payload."""
+    pipeline = get_pipeline()
+    cfg = get_settings()
+
+    log.info(
+        "api.ingest",
+        s3_key=req.s3_key,
+        s3_prefix=req.s3_prefix,
+        inline=req.document is not None,
+    )
+
+    results: list[IngestResultItem] = []
+
+    try:
+        if req.s3_key:
+            r = await pipeline.ingest_s3_object(
+                bucket=cfg.s3_bucket, key=req.s3_key, region=cfg.s3_region,
+            )
+            results.append(IngestResultItem(
+                doc_id=r.doc_id, chunk_count=r.chunk_count,
+                snippet_count=r.snippet_count, skipped=r.skipped,
+            ))
+
+        if req.s3_prefix:
+            batch = await pipeline.ingest_s3_prefix(
+                bucket=cfg.s3_bucket, prefix=req.s3_prefix, region=cfg.s3_region,
+            )
+            for r in batch:
+                results.append(IngestResultItem(
+                    doc_id=r.doc_id, chunk_count=r.chunk_count,
+                    snippet_count=r.snippet_count, skipped=r.skipped,
+                ))
+
+        if req.document:
+            r = await pipeline.ingest_document(req.document)
+            results.append(IngestResultItem(
+                doc_id=r.doc_id, chunk_count=r.chunk_count,
+                snippet_count=r.snippet_count, skipped=r.skipped,
+            ))
+    except Exception:
+        log.exception("api.ingest.error")
+        return _error_response(500, "Ingestion error")
+
+    log.info("api.ingest.done", result_count=len(results))
+    return IngestResponse(results=results)

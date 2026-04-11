@@ -37,7 +37,7 @@ api = [
     "uvicorn[standard]>=0.30.0",
     "sse-starlette>=2.0.0",
 ]
-playground = [
+frontend = [
     "streamlit>=1.40.0",
 ]
 lambda = [
@@ -46,6 +46,13 @@ lambda = [
 mcp = [
     "mcp>=1.0.0",
     "snowflake-connector-python>=3.12.0",
+]
+otel = [
+    "opentelemetry-sdk>=1.25.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.25.0",
+    "arize-phoenix-otel>=0.6.0",
+    "openinference-instrumentation-langchain>=0.1.0",
+    "openinference-instrumentation-anthropic>=0.1.0",
 ]
 
 [build-system]
@@ -59,6 +66,7 @@ packages = ["src/agents", "src/core", "src/eval"]
 dev = [
     "duckdb>=1.5.1",
     "langgraph>=1.1.6",
+    "mypy>=1.10.0",
     "numpy>=2.4.4",
     "pyright>=1.1.408",
     "pytest>=9.0.2",
@@ -68,13 +76,37 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
 markers = ["integration: tests that hit real binaries or external services"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+ignore_missing_imports = true
+exclude = ["tests/", "\\.venv/", "build/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "langfuse.*",
+    "chromadb.*",
+    "sentence_transformers.*",
+    "ragas.*",
+    "deepeval.*",
+    "langgraph.*",
+    "openinference.*",
+    "phoenix.*",
+    "arize_phoenix_otel.*",
+]
+ignore_missing_imports = true
+ignore_errors = true
 
 [project.scripts]
 research-agent = "agents.researcher.__main__:main"
 presenter = "agents.presenter.__main__:main"
 cartographer = "agents.cartographer.__main__:main"
-librarian-api = "agents.librarian.api.app:main"
-mcp-snowflake = "agents.librarian.mcp.snowflake_server:main"
-mcp-s3 = "agents.librarian.mcp.s3_server:main"
-mcp-librarian = "agents.librarian.mcp.librarian_server:main"
+librarian-api = "agents.librarian.infra.api.app:main"
+mcp-snowflake = "agents.librarian.infra.mcp.snowflake_server:main"
+mcp-s3 = "agents.librarian.infra.mcp.s3_server:main"
+mcp-librarian = "agents.librarian.infra.mcp.librarian_server:main"

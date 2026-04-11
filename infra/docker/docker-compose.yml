@@ -11,9 +11,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 60s  # multilingual-e5-large loads ~45s on cold start
 
-  playground:
+  frontend:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile
@@ -22,10 +22,32 @@ services:
     environment:
       LIBRARIAN_API_URL: http://librarian-api:8000
     command: >
-      sh -c "pip install streamlit && streamlit run playground/librarian_chat.py
+      sh -c "pip install streamlit && streamlit run frontend/librarian_chat.py
       --server.port=8501 --server.address=0.0.0.0"
     volumes:
-      - ../../playground:/app/playground:ro
+      - ../../frontend:/app/frontend:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8501/_stcore/health').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       librarian-api:
         condition: service_healthy
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    profiles:
+      - tracing
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC ingest
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:14269/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s

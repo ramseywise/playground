@@ -13,16 +13,18 @@ from langgraph.graph.state import CompiledStateGraph
 
 from agents.librarian.orchestration.graph import build_graph
 from agents.librarian.orchestration.history import HistoryCondenser
-from agents.librarian.protocols import Chunker, Embedder, Reranker, Retriever
-from agents.librarian.retrieval.cache import RetrievalCache
-from agents.librarian.storage.metadata_db import MetadataDB
-from agents.librarian.storage.snippet_db import SnippetDB
+from agents.librarian.rag_core.ingestion.base import Chunker
+from agents.librarian.rag_core.retrieval.base import Embedder, Retriever
+from agents.librarian.rag_core.reranker.base import Reranker
+from agents.librarian.rag_core.retrieval.cache import RetrievalCache
+from agents.librarian.infra.storage.metadata_db import MetadataDB
+from agents.librarian.infra.storage.snippet_db import SnippetDB
 from agents.librarian.utils.config import LibrarySettings, settings as _default_settings
 from agents.librarian.utils.logging import get_logger
 
 if TYPE_CHECKING:
     from core.clients.llm import LLMClient
-    from agents.librarian.ingestion.pipeline import IngestionPipeline
+    from agents.librarian.rag_core.ingestion.pipeline import IngestionPipeline
 
 log = get_logger(__name__)
 
@@ -36,8 +38,8 @@ def _build_storage(cfg: LibrarySettings) -> tuple["MetadataDB", "SnippetDB"]:
     """Build (MetadataDB, SnippetDB) backed by cfg.duckdb_path."""
     from pathlib import Path
 
-    from agents.librarian.storage.metadata_db import MetadataDB
-    from agents.librarian.storage.snippet_db import SnippetDB
+    from agents.librarian.infra.storage.metadata_db import MetadataDB
+    from agents.librarian.infra.storage.snippet_db import SnippetDB
 
     db_path = cfg.duckdb_path
     if db_path != ":memory:":
@@ -49,29 +51,29 @@ def _build_storage(cfg: LibrarySettings) -> tuple["MetadataDB", "SnippetDB"]:
 
 
 def _build_embedder(cfg: LibrarySettings) -> Embedder:
-    from agents.librarian.preprocessing.embedding.embedders import MultilingualEmbedder
+    from agents.librarian.rag_core.ingestion.embeddings.embedders import MultilingualEmbedder
 
     return MultilingualEmbedder(model_name=cfg.embedding_model)
 
 
 def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
     if cfg.retrieval_strategy == "inmemory":
-        from agents.librarian.retrieval.infra.inmemory import InMemoryRetriever
+        from agents.librarian.infra.storage.vectordb.inmemory import InMemoryRetriever
 
         return InMemoryRetriever()
 
     if cfg.retrieval_strategy == "opensearch":
-        from agents.librarian.retrieval.infra.opensearch import OpenSearchRetriever
+        from agents.librarian.infra.storage.vectordb.opensearch import OpenSearchRetriever
 
         return OpenSearchRetriever(index=cfg.opensearch_index)
 
     if cfg.retrieval_strategy == "duckdb":
-        from agents.librarian.retrieval.infra.duckdb import DuckDBRetriever
+        from agents.librarian.infra.storage.vectordb.duckdb import DuckDBRetriever
 
         return DuckDBRetriever(db_path=cfg.duckdb_path)
 
     # Default: chroma (persistent, no Docker required)
-    from agents.librarian.retrieval.infra.chroma import ChromaRetriever
+    from agents.librarian.infra.storage.vectordb.chroma import ChromaRetriever
 
     return ChromaRetriever(
         persist_dir=cfg.chroma_persist_dir,
@@ -81,17 +83,17 @@ def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
 
 def _build_reranker(cfg: LibrarySettings, llm: LLMClient) -> Reranker:
     if cfg.reranker_strategy == "llm_listwise":
-        from agents.librarian.reranker.llm_listwise import LLMListwiseReranker
+        from agents.librarian.rag_core.reranker.llm_listwise import LLMListwiseReranker
 
         return LLMListwiseReranker(llm=llm)
 
     if cfg.reranker_strategy == "passthrough":
-        from agents.librarian.reranker.passthrough import PassthroughReranker
+        from agents.librarian.rag_core.reranker.passthrough import PassthroughReranker
 
         return PassthroughReranker()
 
     # Default: cross_encoder
-    from agents.librarian.reranker.cross_encoder import CrossEncoderReranker
+    from agents.librarian.rag_core.reranker.cross_encoder import CrossEncoderReranker
 
     return CrossEncoderReranker()
 
@@ -137,6 +139,9 @@ def create_librarian(
     Returns a LangGraph ``CompiledGraph`` ready for ``ainvoke``.
     """
     cfg = cfg or _default_settings
+
+    from agents.librarian.utils.otel import setup_otel
+    setup_otel()
 
     log.info(
         "librarian.factory.build",
@@ -189,8 +194,8 @@ def create_ingestion_pipeline(
 
     Returns a pipeline that can be used independently of the librarian graph.
     """
-    from agents.librarian.ingestion.pipeline import IngestionPipeline
-    from agents.librarian.preprocessing.chunking.html_aware import HtmlAwareChunker
+    from agents.librarian.rag_core.ingestion.pipeline import IngestionPipeline
+    from agents.librarian.rag_core.ingestion.chunking.html_aware import HtmlAwareChunker
 
     cfg = cfg or _default_settings
 

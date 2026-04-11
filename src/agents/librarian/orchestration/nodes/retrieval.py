@@ -4,11 +4,11 @@ import asyncio
 import inspect
 from typing import Any
 
-from agents.librarian.retrieval.base import Embedder, Retriever
-from agents.librarian.retrieval.cache import RetrievalCache
-from agents.librarian.schemas.chunks import GradedChunk
-from agents.librarian.schemas.retrieval import QueryPlan, RetrievalResult
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.retrieval.base import Embedder, Retriever
+from agents.librarian.rag_core.retrieval.cache import RetrievalCache
+from agents.librarian.rag_core.schemas.chunks import GradedChunk
+from agents.librarian.rag_core.schemas.retrieval import QueryPlan, RetrievalResult
+from agents.librarian.rag_core.schemas.state import LibrarianState
 from agents.librarian.utils.logging import get_logger
 
 log = get_logger(__name__)

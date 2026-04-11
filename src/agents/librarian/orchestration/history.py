@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from core.clients.llm import LLMClient
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.schemas.state import LibrarianState
 from agents.librarian.utils.logging import get_logger
 
 log = get_logger(__name__)

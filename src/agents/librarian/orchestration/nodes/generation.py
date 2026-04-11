@@ -4,12 +4,12 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from core.clients.llm import LLMClient
-from agents.librarian.generation.generator import (
+from agents.librarian.rag_core.generation.generator import (
     build_prompt,
     call_llm,
     extract_citations,
 )
-from agents.librarian.schemas.state import LibrarianState
+from agents.librarian.rag_core.schemas.state import LibrarianState
 from agents.librarian.utils.logging import get_logger
 
 log = get_logger(__name__)
