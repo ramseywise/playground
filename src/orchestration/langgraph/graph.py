@@ -1,3 +1,28 @@
+"""Librarian RAG Graph — CRAG pipeline with conditional routing.
+
+Topology::
+
+    START → condense → analyze →┬→ retrieve → rerank → gate →┬→ generate → END
+                                │                             │
+                                └→ snippet_retrieve ──────────┘→ retrieve (CRAG)
+
+Agents:
+    CondenserAgent   — rewrites multi-turn queries to standalone form (Haiku)
+    PlannerAgent     — intent classification + query expansion (no LLM)
+    RetrieverAgent   — multi-query embedding + hybrid search + grading
+    RerankerAgent    — cross-encoder or LLM-listwise reranking
+    GeneratorAgent   — prompt assembly + LLM generation + citation extraction
+    QualityGate      — confidence threshold check for CRAG retry decision
+
+Equivalent ADK structure (for reference)::
+
+    SequentialAgent("librarian", sub_agents=[
+        condenser, planner,
+        LoopAgent("crag", sub_agents=[retriever, reranker, gate]),
+        generator,
+    ])
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine, Hashable
@@ -8,13 +33,13 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from core.clients.llm import LLMClient
-from orchestration.query_understanding import (
+from orchestration.langgraph.query_understanding import (
     QueryAnalyzer,
 )
-from orchestration.history import HistoryCondenser
-from orchestration.nodes.generation import GenerationSubgraph
-from orchestration.nodes.reranker import RerankerSubgraph
-from orchestration.nodes.retrieval import RetrievalSubgraph
+from orchestration.langgraph.history import CondenserAgent
+from orchestration.langgraph.nodes.generation import GeneratorAgent
+from orchestration.langgraph.nodes.reranker import RerankerAgent
+from orchestration.langgraph.nodes.retrieval import RetrieverAgent
 from librarian.retrieval.cache import RetrievalCache
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever
@@ -38,7 +63,7 @@ _GATE = "gate"
 
 
 # ---------------------------------------------------------------------------
-# Node functions (thin wrappers around subgraph/analyzer objects)
+# Node functions (thin wrappers around agent objects)
 # ---------------------------------------------------------------------------
 
 
@@ -59,13 +84,6 @@ def _make_analyze_node(analyzer: QueryAnalyzer, *, max_variants: int = 3) -> _Sy
         }
 
     return analyze
-
-
-def _make_condense_node(condenser: HistoryCondenser) -> _AsyncNode:
-    async def condense(state: LibrarianState) -> dict[str, Any]:
-        return await condenser.condense(state)
-
-    return condense
 
 
 def _make_snippet_retrieve_node(snippet_retriever: Retriever) -> _AsyncNode:
@@ -99,40 +117,6 @@ def _make_snippet_retrieve_node(snippet_retriever: Retriever) -> _AsyncNode:
     return snippet_retrieve
 
 
-def _make_retrieve_node(subgraph: RetrievalSubgraph) -> _AsyncNode:
-    async def retrieve(state: LibrarianState) -> dict[str, Any]:
-        result = await subgraph.run(state)
-        retry_count = int(state.get("retry_count") or 0)
-        return {**result, "retry_count": retry_count}
-
-    return retrieve
-
-
-def _make_rerank_node(subgraph: RerankerSubgraph) -> _AsyncNode:
-    async def rerank(state: LibrarianState) -> dict[str, Any]:
-        return await subgraph.run(state)
-
-    return rerank
-
-
-def _make_generate_node(subgraph: GenerationSubgraph) -> _AsyncNode:
-    async def generate(state: LibrarianState) -> dict[str, Any]:
-        return await subgraph.run(state)
-
-    return generate
-
-
-def _make_gate_node(subgraph: GenerationSubgraph) -> _SyncNode:
-    def gate(state: LibrarianState) -> dict[str, Any]:
-        result = subgraph.confidence_gate(state)
-        # Increment retry_count here so the state update is persisted by LangGraph
-        if result.get("fallback_requested"):
-            result["retry_count"] = int(state.get("retry_count") or 0) + 1
-        return result
-
-    return gate
-
-
 # ---------------------------------------------------------------------------
 # Conditional edge functions
 # ---------------------------------------------------------------------------
@@ -159,7 +143,9 @@ def _route_after_gate(
 ) -> Literal["generate", "retrieve"]:
     """CRAG loop: retry retrieval if not confident and under retry cap.
 
-    retry_count at this point already reflects the increment applied by the gate node.
+    The gate node increments retry_count *before* this edge runs, so:
+      max_crag_retries=1 → allows exactly 1 retry (retry_count goes 0→1, 1≤1=True)
+      max_crag_retries=0 → no retries (retry_count goes 0→1, 1≤0=False)
     """
     retry_count = int(state.get("retry_count") or 0)
     if state.get("fallback_requested") and retry_count <= max_retries:
@@ -180,7 +166,7 @@ def build_graph(
     llm: LLMClient,
     *,
     history_llm: LLMClient | None = None,
-    history_condenser: HistoryCondenser | None = None,
+    history_condenser: CondenserAgent | None = None,
     snippet_retriever: Retriever | None = None,
     cache: RetrievalCache | None = None,
     cache_strategy: str = "",
@@ -200,33 +186,31 @@ def build_graph(
     Returns a compiled LangGraph runnable (``CompiledGraph``).
     """
     analyzer = QueryAnalyzer()
-    condenser = history_condenser or HistoryCondenser(llm=history_llm or llm)
+    condenser = history_condenser or CondenserAgent(llm=history_llm or llm)
 
-    retrieval_sg = RetrievalSubgraph(
+    retrieval_agent = RetrieverAgent(
         retriever=retriever,
         embedder=embedder,
         top_k=retrieval_k,
         cache=cache,
         cache_strategy=cache_strategy,
     )
-    reranker_sg = RerankerSubgraph(reranker=reranker, top_k=reranker_top_k)
-    generation_sg = GenerationSubgraph(
-        llm=llm, confidence_threshold=confidence_threshold
-    )
+    reranker_agent = RerankerAgent(reranker=reranker, top_k=reranker_top_k)
+    generator_agent = GeneratorAgent(llm=llm, confidence_threshold=confidence_threshold)
 
     has_snippet_retriever = snippet_retriever is not None
     graph = StateGraph(LibrarianState)
 
-    # Register nodes
-    graph.add_node(_CONDENSE, cast(Any, _make_condense_node(condenser)))
+    # Register nodes — each agent wires itself via as_node()
+    graph.add_node(_CONDENSE, cast(Any, condenser.as_node()))
     graph.add_node(
         _ANALYZE,
         cast(Any, _make_analyze_node(analyzer, max_variants=max_query_variants)),
     )
-    graph.add_node(_RETRIEVE, cast(Any, _make_retrieve_node(retrieval_sg)))
-    graph.add_node(_RERANK, cast(Any, _make_rerank_node(reranker_sg)))
-    graph.add_node(_GATE, cast(Any, _make_gate_node(generation_sg)))
-    graph.add_node(_GENERATE, cast(Any, _make_generate_node(generation_sg)))
+    graph.add_node(_RETRIEVE, cast(Any, retrieval_agent.as_node()))
+    graph.add_node(_RERANK, cast(Any, reranker_agent.as_node()))
+    graph.add_node(_GATE, cast(Any, generator_agent.as_gate_node()))
+    graph.add_node(_GENERATE, cast(Any, generator_agent.as_node()))
 
     if has_snippet_retriever:
         graph.add_node(

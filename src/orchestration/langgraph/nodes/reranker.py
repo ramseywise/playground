@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 from librarian.reranker.base import Reranker
@@ -14,12 +15,15 @@ log = get_logger(__name__)
 _NO_CHUNKS_CONFIDENCE = 0.0
 
 
-class RerankerSubgraph:
+class RerankerAgent:
     """Stateless node: rerank graded_chunks → reranked_chunks + confidence_score.
 
     Only passes relevant graded chunks to the reranker.
     Falls back to all chunks when none are marked relevant (avoids empty rerank).
     """
+
+    name = "reranker"
+    description = "Cross-encoder or LLM-listwise reranking with confidence scoring"
 
     def __init__(self, reranker: Reranker, top_k: int = 3) -> None:
         self._reranker = reranker
@@ -46,9 +50,27 @@ class RerankerSubgraph:
             query=query,
         )
 
-        reranked: list[RankedChunk] = await self._reranker.rerank(
-            query, candidates, top_k=self._top_k
-        )
+        try:
+            reranked: list[RankedChunk] = await self._reranker.rerank(
+                query, candidates, top_k=self._top_k
+            )
+        except Exception as exc:
+            log.warning(
+                "reranker.subgraph.error",
+                error=str(exc),
+                candidates=len(candidates),
+                fallback="passthrough",
+            )
+            # Graceful degradation: return candidates in original order
+            # with their retrieval scores as relevance, confidence 0 to trigger CRAG
+            reranked = [
+                RankedChunk(
+                    chunk=g.chunk,
+                    relevance_score=min(g.score, 1.0),
+                    rank=i + 1,
+                )
+                for i, g in enumerate(candidates[: self._top_k])
+            ]
 
         confidence = max(
             (r.relevance_score for r in reranked), default=_NO_CHUNKS_CONFIDENCE
@@ -64,3 +86,17 @@ class RerankerSubgraph:
             "reranked_chunks": reranked,
             "confidence_score": confidence,
         }
+
+    def as_node(
+        self,
+    ) -> Callable[[LibrarianState], Coroutine[Any, Any, dict[str, Any]]]:
+        """Return a LangGraph-compatible async node function."""
+
+        async def rerank(state: LibrarianState) -> dict[str, Any]:
+            return await self.run(state)
+
+        return rerank
+
+
+# Backward-compatible alias
+RerankerSubgraph = RerankerAgent

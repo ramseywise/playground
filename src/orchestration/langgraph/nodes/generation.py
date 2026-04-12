@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable, Coroutine
 from typing import Any
 
 from core.clients.llm import LLMClient
@@ -9,6 +9,7 @@ from librarian.generation.generator import (
     call_llm,
     extract_citations,
 )
+from librarian.generation.prompts import get_system_prompt
 from librarian.schemas.state import LibrarianState
 from core.logging import get_logger
 
@@ -19,12 +20,21 @@ log = get_logger(__name__)
 DEFAULT_CONFIDENCE_GATE = 0.3
 
 
-class GenerationSubgraph:
+class GeneratorAgent:
     """Stateless node: build_prompt → call_llm → extract_citations.
 
     Also exposes ``confidence_gate`` as a separate callable so the supervisor
     can use it as a conditional edge without instantiating a second object.
     """
+
+    name = "generator"
+    description = "Builds prompt from context, calls LLM, extracts citations"
+    instruction = (
+        "You are a precise research assistant. "
+        "Answer directly and concisely from the provided sources. "
+        "Cite the source URL inline when referencing specific facts. "
+        "If the sources do not contain the answer, say so — do not speculate."
+    )
 
     def __init__(
         self,
@@ -38,8 +48,21 @@ class GenerationSubgraph:
         reranked = list(state.get("reranked_chunks") or [])
 
         system, messages = build_prompt(state, reranked)
-        response_text = await call_llm(self._llm, system, messages)
         citations = extract_citations(reranked)
+
+        try:
+            response_text = await call_llm(self._llm, system, messages)
+        except Exception as exc:
+            log.error(
+                "generation.subgraph.llm_error",
+                error=str(exc),
+                error_type=type(exc).__name__,
+                reranked_count=len(reranked),
+            )
+            response_text = (
+                "I found relevant sources but encountered an error generating "
+                "the response. Please try again."
+            )
 
         log.info(
             "generation.subgraph.done",
@@ -100,3 +123,28 @@ class GenerationSubgraph:
             "confident": confident,
             "fallback_requested": not confident,
         }
+
+    def as_node(
+        self,
+    ) -> Callable[[LibrarianState], Coroutine[Any, Any, dict[str, Any]]]:
+        """Return a LangGraph-compatible async node function for generation."""
+
+        async def generate(state: LibrarianState) -> dict[str, Any]:
+            return await self.run(state)
+
+        return generate
+
+    def as_gate_node(self) -> Callable[[LibrarianState], dict[str, Any]]:
+        """Return a LangGraph-compatible sync node function for the confidence gate."""
+
+        def gate(state: LibrarianState) -> dict[str, Any]:
+            result = self.confidence_gate(state)
+            if result.get("fallback_requested"):
+                result["retry_count"] = int(state.get("retry_count") or 0) + 1
+            return result
+
+        return gate
+
+
+# Backward-compatible alias
+GenerationSubgraph = GeneratorAgent

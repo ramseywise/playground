@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from orchestration.graph import (
+from orchestration.langgraph.graph import (
     build_graph,
     _route_after_analyze,
     _route_after_gate,
@@ -52,6 +52,7 @@ def _make_graph(
 
     mock_embedder = MagicMock()
     mock_embedder.embed_query = MagicMock(return_value=[0.1] * 64)
+    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
 
     mock_retriever = MagicMock()
     mock_retriever.search = AsyncMock(return_value=retriever_results)
@@ -163,6 +164,7 @@ async def test_graph_conversational_goes_through_retrieval() -> None:
     mock_retriever.search = AsyncMock(return_value=[])
     mock_embedder = MagicMock()
     mock_embedder.embed_query = MagicMock(return_value=[0.1] * 64)
+    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
@@ -190,6 +192,7 @@ async def test_graph_out_of_scope_goes_through_retrieval() -> None:
     mock_retriever.search = AsyncMock(return_value=[])
     mock_embedder = MagicMock()
     mock_embedder.embed_query = MagicMock(return_value=[0.1] * 64)
+    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
@@ -230,6 +233,7 @@ async def test_graph_crag_retry_on_low_confidence() -> None:
     mock_retriever.search = AsyncMock(return_value=[])
     mock_embedder = MagicMock()
     mock_embedder.embed_query = MagicMock(return_value=[0.1] * 64)
+    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
     mock_reranker = MagicMock()
     # Returns empty → confidence = 0.0, below threshold=0.3
     mock_reranker.rerank = AsyncMock(return_value=[])
@@ -256,6 +260,7 @@ async def test_graph_no_retry_when_max_retries_zero() -> None:
     mock_retriever.search = AsyncMock(return_value=[])
     mock_embedder = MagicMock()
     mock_embedder.embed_query = MagicMock(return_value=[0.1] * 64)
+    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
@@ -293,6 +298,7 @@ async def test_graph_multi_turn_sets_standalone_query() -> None:
     mock_retriever.search = AsyncMock(return_value=[])
     mock_embedder = MagicMock()
     mock_embedder.embed_query = MagicMock(return_value=[0.1] * 64)
+    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
     mock_llm = MagicMock()
@@ -300,7 +306,7 @@ async def test_graph_multi_turn_sets_standalone_query() -> None:
     mock_history_llm = MagicMock()
     mock_history_llm.generate = AsyncMock(return_value="the auth flow in Python?")
 
-    from orchestration.history import HistoryCondenser
+    from orchestration.langgraph.history import HistoryCondenser
 
     graph = build_graph(
         retriever=mock_retriever,

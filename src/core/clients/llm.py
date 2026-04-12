@@ -28,6 +28,10 @@ class LLMClient(Protocol):
         self, system: str, messages: list[dict[str, str]], max_tokens: int = 4096
     ) -> str: ...
 
+    def stream(
+        self, system: str, messages: list[dict[str, str]], max_tokens: int = 4096
+    ) -> AsyncIterator[str]: ...
+
     @property
     def model(self) -> str: ...
 

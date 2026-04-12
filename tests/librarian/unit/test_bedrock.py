@@ -106,7 +106,7 @@ class TestBedrockKBClient:
         with pytest.raises(ValueError, match="not configured"):
             BedrockKBClient(cfg)
 
-    @patch("librarian.bedrock.client.boto3")
+    @patch("clients.bedrock.boto3")
     def test_query_returns_response(self, mock_boto3: MagicMock) -> None:
         mock_client = MagicMock()
         mock_boto3.client.return_value = mock_client
@@ -142,10 +142,12 @@ class TestBedrockKBClient:
         mock_client.retrieve_and_generate.assert_called_once()
         call_kwargs = mock_client.retrieve_and_generate.call_args[1]
         assert call_kwargs["input"]["text"] == "test question"
-        kb_config = call_kwargs["retrieveAndGenerateConfiguration"]["knowledgeBaseConfiguration"]
+        kb_config = call_kwargs["retrieveAndGenerateConfiguration"][
+            "knowledgeBaseConfiguration"
+        ]
         assert kb_config["knowledgeBaseId"] == "KB123"
 
-    @patch("librarian.bedrock.client.boto3")
+    @patch("clients.bedrock.boto3")
     def test_query_passes_session_id(self, mock_boto3: MagicMock) -> None:
         mock_client = MagicMock()
         mock_boto3.client.return_value = mock_client

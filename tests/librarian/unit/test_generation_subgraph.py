@@ -4,10 +4,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from orchestration.nodes.generation import (
+from orchestration.langgraph.nodes.generation import (
     DEFAULT_CONFIDENCE_GATE,
-    GenerationSubgraph,
+    GeneratorAgent,
 )
+
+# Backward-compatible alias used in test names below
+GenerationSubgraph = GeneratorAgent
 from librarian.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
 from librarian.schemas.state import LibrarianState
 

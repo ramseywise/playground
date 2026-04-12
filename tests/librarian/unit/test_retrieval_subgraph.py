@@ -4,10 +4,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from orchestration.nodes.retrieval import (
-    RetrievalSubgraph,
+from orchestration.langgraph.nodes.retrieval import (
+    RetrieverAgent,
     _grade_chunks,
 )
+
+# Backward-compatible alias used in test names below
+RetrievalSubgraph = RetrieverAgent
 from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
 from librarian.schemas.chunks import Chunk, ChunkMetadata

@@ -54,7 +54,16 @@ def _build_conversational_reply(query_lower: str) -> str:
 # Decision model
 # ---------------------------------------------------------------------------
 
-Route = Literal["librarian", "bedrock", "google_adk", "escalation", "direct"]
+Route = Literal[
+    "librarian",
+    "bedrock",
+    "google_adk",
+    "adk_bedrock",
+    "adk_custom_rag",
+    "adk_hybrid",
+    "escalation",
+    "direct",
+]
 
 
 class TriageDecision(BaseModel):
@@ -112,11 +121,33 @@ class TriageService:
         """
         if backend == "bedrock":
             return TriageDecision(
-                route="bedrock", intent="", confidence=1.0,
+                route="bedrock",
+                intent="",
+                confidence=1.0,
             )
         if backend == "google_adk":
             return TriageDecision(
-                route="google_adk", intent="", confidence=1.0,
+                route="google_adk",
+                intent="",
+                confidence=1.0,
+            )
+        if backend == "adk_bedrock":
+            return TriageDecision(
+                route="adk_bedrock",
+                intent="",
+                confidence=1.0,
+            )
+        if backend == "adk_custom_rag":
+            return TriageDecision(
+                route="adk_custom_rag",
+                intent="",
+                confidence=1.0,
+            )
+        if backend == "adk_hybrid":
+            return TriageDecision(
+                route="adk_hybrid",
+                intent="",
+                confidence=1.0,
             )
 
         intent, confidence = classify_intent(query.lower())

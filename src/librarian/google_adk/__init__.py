@@ -1,5 +1,7 @@
+"""Backward-compatible re-export — canonical location is ``clients.google_vertex``."""
+
 from __future__ import annotations
 
-from librarian.google_adk.client import GoogleRAGClient
+from clients.google_vertex import GoogleRAGClient, GoogleRAGResponse
 
-__all__ = ["GoogleRAGClient"]
+__all__ = ["GoogleRAGClient", "GoogleRAGResponse"]

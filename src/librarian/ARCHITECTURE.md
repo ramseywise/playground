@@ -5,7 +5,38 @@
 
 ---
 
-## 1. State Machine
+## Package Layout
+
+```
+src/
+  core/              # Foundation: config, logging, LLM clients, parsing
+  clients/           # Managed RAG API wrappers (Bedrock KB, Google Vertex)
+  librarian/         # RAG domain logic — shared by all orchestration options
+    schemas/         # LibrarianState, Chunk, GradedChunk, etc.
+    config.py        # LibrarySettings (pydantic-settings)
+    generation/      # Prompts, generator, context builder
+    ingestion/       # Chunking, embedding, indexing pipeline
+    plan/            # QueryAnalyzer, routing, expansion, intent
+    reranker/        # CrossEncoder, LLMListwise, Passthrough
+    retrieval/       # Embedder/Retriever protocols, cache, RRF
+    tasks/           # Golden sample extraction, tracing, failure clustering
+  orchestration/     # All orchestration options
+    factory.py       # DI assembly — builds any option from LibrarySettings
+    langgraph/       # Option 1: LangGraph CRAG pipeline
+      graph.py       # The compiled state graph
+      history.py     # CondenserAgent
+      query_understanding.py
+      nodes/         # RetrieverAgent, RerankerAgent, GeneratorAgent
+    adk/             # Options 2, 3, 4: Google ADK-based agents
+      bedrock_agent.py    # Option 2: ADK + Bedrock KB
+      custom_rag_agent.py # Option 3: ADK + custom tools (planned)
+      hybrid_agent.py     # Option 4: ADK + LangGraph hybrid (planned)
+  storage/           # ChromaDB, OpenSearch, DuckDB, InMemory backends
+  eval/              # Eval harness (works across all variants)
+  interfaces/        # FastAPI, MCP servers
+```
+
+## 1. State Machine (Option 1: LangGraph)
 
 ```
                     condense
@@ -27,20 +58,20 @@
        ▼             ▼         │
    retrieve       generate ◄───┘
   (CRAG retry)       │
-                     END
+                    END
 ```
 
 **Node responsibilities:**
 
 | Node | Module | What it does |
 |------|--------|-------------|
-| `condense` | `orchestration/history.py` | Rewrites multi-turn queries to standalone form (Haiku). No-op on single-turn. |
-| `analyze` | `orchestration/query_understanding.py` | Rule-based intent classification + query expansion + entity extraction. |
-| `retrieve` | `orchestration/nodes/retrieval.py` | Multi-query expansion → parallel embedding → hybrid search → deduplicate. |
-| `snippet_retrieve` | `graph.py` (inline) | Keyword-only DuckDB FTS path for simple factual lookups. Bypasses embedder + reranker. |
-| `rerank` | `orchestration/nodes/reranker.py` | Cross-encoder or LLM listwise reranking → `confidence_score`. |
-| `gate` | `orchestration/nodes/generation.py` | Compares `confidence_score` to threshold → `confident` / `fallback_requested`. |
-| `generate` | `orchestration/nodes/generation.py` | LLM call with system prompt + reranked context → `response` + `citations`. |
+| `condense` | `orchestration/langgraph/history.py` | Rewrites multi-turn queries to standalone form (Haiku). No-op on single-turn. |
+| `analyze` | `orchestration/langgraph/query_understanding.py` | Rule-based intent classification + query expansion + entity extraction. |
+| `retrieve` | `orchestration/langgraph/nodes/retrieval.py` | Multi-query expansion → parallel embedding → hybrid search → deduplicate. |
+| `snippet_retrieve` | `langgraph/graph.py` (inline) | Keyword-only DuckDB FTS path for simple factual lookups. Bypasses embedder + reranker. |
+| `rerank` | `orchestration/langgraph/nodes/reranker.py` | Cross-encoder or LLM listwise reranking → `confidence_score`. |
+| `gate` | `orchestration/langgraph/nodes/generation.py` | Compares `confidence_score` to threshold → `confident` / `fallback_requested`. |
+| `generate` | `orchestration/langgraph/nodes/generation.py` | LLM call with system prompt + reranked context → `response` + `citations`. |
 
 
 ## 2. CRAG Loop
@@ -72,7 +103,7 @@ confidence_score <  threshold → confident=False → fallback_requested=True �
 - The gate is a **separate node** (not inside generate) so the CRAG conditional edge can read its output
 
 
-## 4. DI Wiring (`factory.py`)
+## 4. DI Wiring (`orchestration/factory.py`)
 
 `factory.py` is the **single assembly point** for all components. Strategy selection is config-driven via `LibrarySettings` (pydantic-settings, env-var overridable).
 
@@ -111,6 +142,8 @@ create_librarian(cfg)
 3. **Embedder lazy load**: `_load_model()` is lazy — the 560MB model loads on first `embed_query`. Call `warm_up_embedder()` in the API lifespan to avoid cold-start latency. The `_MODEL_CACHE` is process-wide and keyed by `model_name@revision`.
 
 4. **Model version pinning**: Set `EMBEDDING_MODEL_REVISION` to a HuggingFace commit SHA to prevent silent model drift. When unset, `SentenceTransformer` downloads the latest revision.
+
+5. **One-way dependencies**: `core/ ← librarian/ ← orchestration/ ← interfaces/`. Clients (`clients/`) depend only on `librarian.config`. Storage depends on `librarian.schemas`.
 
 
 ## 6. Checkpointer Model

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 from core.clients.llm import LLMClient
@@ -24,8 +25,18 @@ def _message_to_dict(message: object) -> dict[str, str]:
     return {"role": "assistant" if role == "ai" else "user", "content": str(content)}
 
 
-class HistoryCondenser:
-    """Rewrite the latest user query into a standalone question."""
+class CondenserAgent:
+    """Rewrite the latest user query into a standalone question.
+
+    Uses a lightweight LLM (e.g. Haiku) to resolve coreferences in multi-turn
+    conversations. Single-turn queries pass through unchanged.
+    """
+
+    name = "condenser"
+    description = (
+        "Rewrites multi-turn queries to standalone form using conversation history"
+    )
+    instruction = _SYSTEM_PROMPT
 
     def __init__(self, llm: LLMClient) -> None:
         self._llm = llm
@@ -46,3 +57,17 @@ class HistoryCondenser:
             standalone_query=standalone_query[:120],
         )
         return {"standalone_query": standalone_query}
+
+    def as_node(
+        self,
+    ) -> Callable[[LibrarianState], Coroutine[Any, Any, dict[str, Any]]]:
+        """Return a LangGraph-compatible async node function."""
+
+        async def condense(state: LibrarianState) -> dict[str, Any]:
+            return await self.condense(state)
+
+        return condense
+
+
+# Backward-compatible alias
+HistoryCondenser = CondenserAgent

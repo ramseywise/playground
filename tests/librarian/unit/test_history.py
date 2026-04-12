@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from orchestration.history import HistoryCondenser
+from orchestration.langgraph.history import CondenserAgent as HistoryCondenser
 from librarian.schemas.state import LibrarianState
 
 
