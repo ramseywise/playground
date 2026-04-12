@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from orchestration.nodes.retrieval import (
+from orchestration.langgraph.nodes.retrieval import (
     RetrieverAgent,
     _grade_chunks,
 )

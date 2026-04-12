@@ -885,6 +885,174 @@ async def _run_adk_custom_rag_experiment(
     return result
 
 
+async def _run_adk_hybrid_experiment(
+    variant_name: str,
+    golden_samples: list[GoldenSample],
+    *,
+    cfg: LibrarySettings,
+    run_name: str,
+    ds_name: str,
+    lf: Any | None,
+) -> ExperimentResult:
+    """Run experiment via ADK-wrapped full LangGraph pipeline.
+
+    Uses the complete Librarian CRAG pipeline (condense → analyze →
+    retrieve → rerank → gate → generate) wrapped inside an ADK BaseAgent.
+    """
+    from unittest.mock import MagicMock
+
+    from google.adk.agents.invocation_context import InvocationContext
+    from google.adk.events import Event as ADKEvent
+    from google.adk.sessions import Session
+    from google.genai import types as genai_types
+
+    from orchestration.adk.hybrid_agent import LibrarianADKAgent
+    from orchestration.factory import create_librarian
+
+    graph = create_librarian(cfg)
+    agent = LibrarianADKAgent(graph=graph, cfg=cfg)
+
+    clusterer = FailureClusterer()
+    query_results: list[QueryResult] = []
+
+    for sample in golden_samples:
+        try:
+            user_event = ADKEvent(
+                author="user",
+                content=genai_types.Content(
+                    parts=[genai_types.Part(text=sample.query)]
+                ),
+            )
+            session = Session(
+                id=f"eval-{sample.query_id}",
+                app_name="eval",
+                user_id="eval-runner",
+                events=[user_event],
+            )
+            ctx = MagicMock(spec=InvocationContext)
+            ctx.session = session
+
+            t0 = time.perf_counter()
+            events: list[ADKEvent] = []
+            async for event in agent._run_async_impl(ctx):
+                events.append(event)
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            response_text = ""
+            if events and events[0].content and events[0].content.parts:
+                response_text = events[0].content.parts[0].text or ""
+
+            urls: list[str] = []
+            hit = sample.expected_doc_url in urls
+            rr = next(
+                (
+                    1.0 / (i + 1)
+                    for i, u in enumerate(urls)
+                    if u == sample.expected_doc_url
+                ),
+                0.0,
+            )
+
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=hit,
+                reciprocal_rank=rr,
+                retrieved_urls=urls[:5],
+                expected_url=sample.expected_doc_url,
+                latency_ms=latency_ms,
+                answer=response_text,
+            )
+        except Exception as exc:
+            log.warning(
+                "experiment.adk_hybrid.query_failed",
+                query_id=sample.query_id,
+                error=str(exc),
+            )
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=False,
+                reciprocal_rank=0.0,
+                retrieved_urls=[],
+                expected_url=sample.expected_doc_url,
+                latency_ms=0.0,
+            )
+
+        if lf is not None:
+            qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
+
+        query_results.append(qr)
+
+    n = len(query_results)
+    hits = sum(1 for qr in query_results if qr.hit)
+    hit_rate = hits / n if n else 0.0
+    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
+    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
+
+    from librarian.tasks.tracing import PipelineTracer
+
+    tracer = PipelineTracer()
+    for qr in query_results:
+        trace = tracer.create_trace(qr.query_id, qr.query)
+        trace.status = "success" if qr.hit else "failure"
+        trace.confidence = qr.reciprocal_rank
+        if not qr.hit:
+            trace.failure_reason = "expected_doc_not_in_top_k"
+    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
+
+    if lf is not None:
+        try:
+            summary_trace = lf.trace(
+                name=f"experiment_summary_{variant_name}",
+                metadata={
+                    "variant": variant_name,
+                    "run_name": run_name,
+                    "wrapper": "adk_hybrid",
+                },
+            )
+            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
+            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
+            lf.score(
+                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
+            )
+        except Exception as exc:
+            log.warning("experiment.langfuse.summary_failed", error=str(exc))
+        _langfuse_flush(lf)
+
+    result = ExperimentResult(
+        variant_name=variant_name,
+        dataset_name=ds_name,
+        run_name=run_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n_queries=n,
+        n_hits=hits,
+        avg_latency_ms=avg_latency,
+        query_results=query_results,
+        failure_clusters=clusters,
+        config_snapshot={
+            "retrieval_strategy": "adk_hybrid",
+            "embedding_provider": cfg.embedding_provider,
+            "reranker_strategy": cfg.reranker_strategy,
+            "retrieval_k": cfg.retrieval_k,
+            "confidence_threshold": cfg.confidence_threshold,
+            "max_crag_retries": cfg.max_crag_retries,
+            "wrapper": "google-adk + langgraph",
+        },
+    )
+
+    log.info(
+        "experiment.adk_hybrid.done",
+        variant=variant_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n=n,
+        avg_latency_ms=round(avg_latency, 1),
+    )
+    return result
+
+
 async def run_variant_experiment(
     variant_name: str,
     golden_samples: list[GoldenSample],
@@ -947,6 +1115,15 @@ async def run_variant_experiment(
         )
     if cfg.retrieval_strategy == "adk_custom_rag":
         return await _run_adk_custom_rag_experiment(
+            variant_name,
+            golden_samples,
+            cfg=cfg,
+            run_name=run_name,
+            ds_name=ds_name,
+            lf=lf,
+        )
+    if cfg.retrieval_strategy == "adk_hybrid":
+        return await _run_adk_hybrid_experiment(
             variant_name,
             golden_samples,
             cfg=cfg,

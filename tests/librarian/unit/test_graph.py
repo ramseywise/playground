@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from orchestration.graph import (
+from orchestration.langgraph.graph import (
     build_graph,
     _route_after_analyze,
     _route_after_gate,
@@ -300,7 +300,7 @@ async def test_graph_multi_turn_sets_standalone_query() -> None:
     mock_history_llm = MagicMock()
     mock_history_llm.generate = AsyncMock(return_value="the auth flow in Python?")
 
-    from orchestration.history import HistoryCondenser
+    from orchestration.langgraph.history import HistoryCondenser
 
     graph = build_graph(
         retriever=mock_retriever,

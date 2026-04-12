@@ -60,6 +60,7 @@ Route = Literal[
     "google_adk",
     "adk_bedrock",
     "adk_custom_rag",
+    "adk_hybrid",
     "escalation",
     "direct",
 ]
@@ -139,6 +140,12 @@ class TriageService:
         if backend == "adk_custom_rag":
             return TriageDecision(
                 route="adk_custom_rag",
+                intent="",
+                confidence=1.0,
+            )
+        if backend == "adk_hybrid":
+            return TriageDecision(
+                route="adk_hybrid",
                 intent="",
                 confidence=1.0,
             )

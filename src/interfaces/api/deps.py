@@ -5,7 +5,7 @@ from __future__ import annotations
 from langgraph.graph.state import CompiledStateGraph
 
 from librarian.factory import create_librarian, warm_up_embedder
-from orchestration.nodes.generation import GeneratorAgent
+from orchestration.langgraph.nodes.generation import GeneratorAgent
 from clients.bedrock import BedrockKBClient
 from clients.google_vertex import GoogleRAGClient
 from librarian.ingestion.pipeline import IngestionPipeline

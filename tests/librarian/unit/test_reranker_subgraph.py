@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from orchestration.nodes.reranker import RerankerAgent
+from orchestration.langgraph.nodes.reranker import RerankerAgent
 
 # Backward-compatible alias used in test names below
 RerankerSubgraph = RerankerAgent
