@@ -5,9 +5,9 @@ from __future__ import annotations
 from langgraph.graph.state import CompiledStateGraph
 
 from librarian.factory import create_librarian, warm_up_embedder
-from orchestration.nodes.generation import GenerationSubgraph
-from librarian.bedrock.client import BedrockKBClient
-from librarian.google_adk.client import GoogleRAGClient
+from orchestration.nodes.generation import GeneratorAgent
+from clients.bedrock import BedrockKBClient
+from clients.google_vertex import GoogleRAGClient
 from librarian.ingestion.pipeline import IngestionPipeline
 from librarian.config import LibrarySettings, settings as _default_settings
 from interfaces.api.triage import TriageService
@@ -17,7 +17,7 @@ from core.logging import get_logger
 log = get_logger(__name__)
 
 _graph: CompiledStateGraph | None = None
-_generation_sg: GenerationSubgraph | None = None
+_generation_sg: GeneratorAgent | None = None
 _pipeline: IngestionPipeline | None = None
 _bedrock_client: BedrockKBClient | None = None
 _google_adk_client: GoogleRAGClient | None = None
@@ -41,7 +41,7 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
         model=_settings.anthropic_model_sonnet,
         api_key=_settings.anthropic_api_key,
     )
-    _generation_sg = GenerationSubgraph(
+    _generation_sg = GeneratorAgent(
         llm=llm,
         confidence_threshold=_settings.confidence_threshold,
     )
@@ -85,12 +85,16 @@ def get_graph() -> CompiledStateGraph:
     return _graph
 
 
-def get_generation_subgraph() -> GenerationSubgraph:
-    """Return the generation subgraph for streaming."""
+def get_generator_agent() -> GeneratorAgent:
+    """Return the generator agent for streaming."""
     if _generation_sg is None:
-        msg = "Generation subgraph not initialised — call init_graph() first"
+        msg = "Generator agent not initialised — call init_graph() first"
         raise RuntimeError(msg)
     return _generation_sg
+
+
+# Backward-compatible alias
+get_generation_subgraph = get_generator_agent
 
 
 def init_pipeline(cfg: LibrarySettings | None = None) -> None:

@@ -279,7 +279,7 @@ async def _run_bedrock_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via real Bedrock KB API (RetrieveAndGenerate)."""
-    from librarian.bedrock.client import BedrockKBClient
+    from clients.bedrock import BedrockKBClient
 
     client = BedrockKBClient(cfg)
     clusterer = FailureClusterer()
@@ -294,7 +294,11 @@ async def _run_bedrock_experiment(
             urls = [c["url"] for c in resp.citations]
             hit = sample.expected_doc_url in urls
             rr = next(
-                (1.0 / (i + 1) for i, u in enumerate(urls) if u == sample.expected_doc_url),
+                (
+                    1.0 / (i + 1)
+                    for i, u in enumerate(urls)
+                    if u == sample.expected_doc_url
+                ),
                 0.0,
             )
 
@@ -361,7 +365,9 @@ async def _run_bedrock_experiment(
             )
             lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
             lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
-            lf.score(trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency)
+            lf.score(
+                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
+            )
         except Exception as exc:
             log.warning("experiment.langfuse.summary_failed", error=str(exc))
         _langfuse_flush(lf)
@@ -411,7 +417,7 @@ async def _run_google_adk_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via real Google Gemini + Vertex AI Search grounding."""
-    from librarian.google_adk.client import GoogleRAGClient
+    from clients.google_vertex import GoogleRAGClient
 
     client = GoogleRAGClient(cfg)
     clusterer = FailureClusterer()
@@ -426,7 +432,11 @@ async def _run_google_adk_experiment(
             urls = [c["url"] for c in resp.citations]
             hit = sample.expected_doc_url in urls
             rr = next(
-                (1.0 / (i + 1) for i, u in enumerate(urls) if u == sample.expected_doc_url),
+                (
+                    1.0 / (i + 1)
+                    for i, u in enumerate(urls)
+                    if u == sample.expected_doc_url
+                ),
                 0.0,
             )
 
@@ -494,7 +504,9 @@ async def _run_google_adk_experiment(
             )
             lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
             lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
-            lf.score(trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency)
+            lf.score(
+                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
+            )
         except Exception as exc:
             log.warning("experiment.langfuse.summary_failed", error=str(exc))
         _langfuse_flush(lf)
@@ -525,6 +537,182 @@ async def _run_google_adk_experiment(
 
     log.info(
         "experiment.google_adk.done",
+        variant=variant_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n=n,
+        avg_latency_ms=round(avg_latency, 1),
+    )
+    return result
+
+
+async def _run_adk_bedrock_experiment(
+    variant_name: str,
+    golden_samples: list[GoldenSample],
+    *,
+    cfg: LibrarySettings,
+    run_name: str,
+    ds_name: str,
+    lf: Any | None,
+) -> ExperimentResult:
+    """Run experiment via ADK-wrapped Bedrock KB agent.
+
+    Uses the same underlying Bedrock KB API as ``_run_bedrock_experiment``,
+    but routes through the ADK ``BedrockKBAgent`` to test ADK's session
+    management and event model.
+    """
+    from orchestration.adk.bedrock_agent import BedrockKBAgent
+
+    agent = BedrockKBAgent(cfg)
+    clusterer = FailureClusterer()
+    query_results: list[QueryResult] = []
+
+    # ADK agent needs a session context — build a minimal one per query
+    from unittest.mock import MagicMock
+
+    from google.adk.agents.invocation_context import InvocationContext
+    from google.adk.events import Event as ADKEvent
+    from google.adk.sessions import Session
+    from google.genai import types as genai_types
+
+    for sample in golden_samples:
+        try:
+            # Build minimal ADK context
+            user_event = ADKEvent(
+                author="user",
+                content=genai_types.Content(
+                    parts=[genai_types.Part(text=sample.query)]
+                ),
+            )
+            session = Session(
+                id=f"eval-{sample.query_id}",
+                app_name="eval",
+                user_id="eval-runner",
+                events=[user_event],
+            )
+            ctx = MagicMock(spec=InvocationContext)
+            ctx.session = session
+
+            t0 = time.perf_counter()
+            events: list[ADKEvent] = []
+            async for event in agent._run_async_impl(ctx):
+                events.append(event)
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            # Extract response text from ADK events
+            response_text = ""
+            if events and events[0].content and events[0].content.parts:
+                response_text = events[0].content.parts[0].text or ""
+
+            # For ADK-bedrock, citations come from the underlying BedrockKBClient
+            # but aren't exposed through the ADK event — use empty for now
+            urls: list[str] = []
+            hit = sample.expected_doc_url in urls
+            rr = next(
+                (
+                    1.0 / (i + 1)
+                    for i, u in enumerate(urls)
+                    if u == sample.expected_doc_url
+                ),
+                0.0,
+            )
+
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=hit,
+                reciprocal_rank=rr,
+                retrieved_urls=urls[:5],
+                expected_url=sample.expected_doc_url,
+                latency_ms=latency_ms,
+                answer=response_text,
+            )
+        except Exception as exc:
+            log.warning(
+                "experiment.adk_bedrock.query_failed",
+                query_id=sample.query_id,
+                error=str(exc),
+            )
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=False,
+                reciprocal_rank=0.0,
+                retrieved_urls=[],
+                expected_url=sample.expected_doc_url,
+                latency_ms=0.0,
+            )
+
+        if lf is not None:
+            qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
+
+        query_results.append(qr)
+
+    # Aggregate
+    n = len(query_results)
+    hits = sum(1 for qr in query_results if qr.hit)
+    hit_rate = hits / n if n else 0.0
+    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
+    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
+
+    # Cluster failures
+    from librarian.tasks.tracing import PipelineTracer
+
+    tracer = PipelineTracer()
+    for qr in query_results:
+        trace = tracer.create_trace(qr.query_id, qr.query)
+        trace.status = "success" if qr.hit else "failure"
+        trace.confidence = qr.reciprocal_rank
+        if not qr.hit:
+            trace.failure_reason = "expected_doc_not_in_top_k"
+    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
+
+    if lf is not None:
+        try:
+            summary_trace = lf.trace(
+                name=f"experiment_summary_{variant_name}",
+                metadata={
+                    "variant": variant_name,
+                    "run_name": run_name,
+                    "kb_id": cfg.bedrock_knowledge_base_id,
+                    "model_arn": cfg.bedrock_model_arn,
+                    "wrapper": "adk",
+                },
+            )
+            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
+            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
+            lf.score(
+                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
+            )
+        except Exception as exc:
+            log.warning("experiment.langfuse.summary_failed", error=str(exc))
+        _langfuse_flush(lf)
+
+    result = ExperimentResult(
+        variant_name=variant_name,
+        dataset_name=ds_name,
+        run_name=run_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n_queries=n,
+        n_hits=hits,
+        avg_latency_ms=avg_latency,
+        query_results=query_results,
+        failure_clusters=clusters,
+        config_snapshot={
+            "retrieval_strategy": "adk_bedrock",
+            "kb_id": cfg.bedrock_knowledge_base_id,
+            "model_arn": cfg.bedrock_model_arn,
+            "region": cfg.bedrock_region or cfg.s3_region or "default",
+            "retrieval_k": cfg.retrieval_k,
+            "embedding_provider": "aws_titan",
+            "reranker_strategy": "n/a",
+            "wrapper": "google-adk",
+        },
+    )
+
+    log.info(
+        "experiment.adk_bedrock.done",
         variant=variant_name,
         hit_rate=hit_rate,
         mrr=mrr,
@@ -578,6 +766,15 @@ async def run_variant_experiment(
         )
     if cfg.retrieval_strategy == "google_adk":
         return await _run_google_adk_experiment(
+            variant_name,
+            golden_samples,
+            cfg=cfg,
+            run_name=run_name,
+            ds_name=ds_name,
+            lf=lf,
+        )
+    if cfg.retrieval_strategy == "adk_bedrock":
+        return await _run_adk_bedrock_experiment(
             variant_name,
             golden_samples,
             cfg=cfg,
@@ -753,6 +950,16 @@ async def run_all_experiments(
                 reason="GOOGLE_DATASTORE_ID not set",
             )
             continue
+        if (
+            cfg.retrieval_strategy == "adk_bedrock"
+            and not cfg.bedrock_knowledge_base_id
+        ):
+            log.info(
+                "experiment.variant.skipped",
+                variant=name,
+                reason="BEDROCK_KNOWLEDGE_BASE_ID not set (adk_bedrock)",
+            )
+            continue
 
         results[name] = await run_variant_experiment(
             name,
@@ -804,9 +1011,7 @@ def print_comparison_table(results: dict[str, ExperimentResult]) -> None:
             kb_id = cs.get("kb_id", "?")
             kb_display = f"{kb_id[:12]}..." if len(kb_id) > 12 else kb_id
             print(  # noqa: T201
-                f"    {name}: bedrock-kb "
-                f"kb={kb_display} "
-                f"k={cs.get('retrieval_k', '?')}"
+                f"    {name}: bedrock-kb kb={kb_display} k={cs.get('retrieval_k', '?')}"
             )
         elif cs.get("retrieval_strategy") == "google_adk":
             ds_id = cs.get("google_datastore_id", "?")

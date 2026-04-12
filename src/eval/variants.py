@@ -124,6 +124,30 @@ GOOGLE_ADK_LIVE = LibrarySettings(
 )
 
 # ---------------------------------------------------------------------------
+# ADK + Bedrock KB — Bedrock KB accessed via Google ADK agent wrapper
+#   Same underlying Bedrock KB API, but routed through ADK's BaseAgent
+#   session management.  Tests whether ADK's session/event model adds
+#   value over the raw BedrockKBClient.
+#   Requires BEDROCK_KNOWLEDGE_BASE_ID + BEDROCK_MODEL_ARN env vars.
+#   retrieval_strategy="adk_bedrock" is the dispatch signal.
+# ---------------------------------------------------------------------------
+ADK_BEDROCK = LibrarySettings(
+    embedding_provider="aws_titan",  # documentary — Bedrock handles embeddings
+    embedding_model="",  # N/A — managed by Bedrock
+    retrieval_strategy="adk_bedrock",  # dispatch signal for experiment runner
+    reranker_strategy="passthrough",
+    retrieval_k=5,
+    reranker_top_k=5,
+    bm25_weight=0.0,
+    vector_weight=1.0,
+    confidence_threshold=0.0,
+    max_crag_retries=0,
+    anthropic_api_key="test",
+    # bedrock_knowledge_base_id, bedrock_model_arn, bedrock_region
+    # auto-populate from env vars via pydantic-settings.
+)
+
+# ---------------------------------------------------------------------------
 # Registry — keyed by variant name used in pytest parametrize
 # ---------------------------------------------------------------------------
 VARIANTS: dict[str, LibrarySettings] = {
@@ -132,4 +156,5 @@ VARIANTS: dict[str, LibrarySettings] = {
     "bedrock": BEDROCK,
     "bedrock-live": BEDROCK_LIVE,
     "google-adk": GOOGLE_ADK_LIVE,
+    "adk-bedrock": ADK_BEDROCK,
 }

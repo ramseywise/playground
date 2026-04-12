@@ -1,13 +1,12 @@
-"""Re-export from canonical location: plan/.
-
-Query analysis now lives in ``agents.librarian.plan``.
-This module re-exports for backward compatibility.
-"""
+"""Backward-compatible re-export — canonical location is ``orchestration.langgraph.query_understanding``."""
 
 from __future__ import annotations
 
-from librarian.plan.analyzer import QueryAnalysis, QueryAnalyzer  # noqa: F401
-from librarian.plan.expansion import TERM_EXPANSIONS  # noqa: F401
-from librarian.plan.routing import QueryRouter  # noqa: F401
+from orchestration.langgraph.query_understanding import (  # noqa: F401
+    QueryAnalysis,
+    QueryAnalyzer,
+    QueryRouter,
+    TERM_EXPANSIONS,
+)
 
 __all__ = ["QueryAnalysis", "QueryAnalyzer", "QueryRouter", "TERM_EXPANSIONS"]
