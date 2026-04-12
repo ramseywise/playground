@@ -76,11 +76,17 @@ class LibrarianADKAgent(BaseAgent):
             "messages": messages,
         }
 
-        # Run the full pipeline
-        result = await self._graph.ainvoke(
-            state,
-            config={"configurable": {"thread_id": ctx.session.id}},
+        # Build LangGraph config with Langfuse tracing when available
+        from librarian.tracing import build_langfuse_handler, make_runnable_config
+
+        handler = build_langfuse_handler(
+            session_id=ctx.session.id,
+            trace_id=f"adk-hybrid-{ctx.session.id}",
         )
+        config = make_runnable_config(handler, thread_id=ctx.session.id)
+
+        # Run the full pipeline with tracing
+        result = await self._graph.ainvoke(state, config=config)
 
         response_text = result.get("response", "")
         citations = result.get("citations", [])
