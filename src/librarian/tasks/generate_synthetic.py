@@ -30,18 +30,19 @@ from typing import Any
 
 import anthropic
 
-from librarian.tasks.models import GoldenSample
+from core.config.settings import BaseSettings
+from core.logging import get_logger
 from librarian.tasks.extract_golden import (
     _make_query_id,
     save_samples,
 )
-from core.logging import get_logger
+from librarian.tasks.models import GoldenSample
 
 log = get_logger(__name__)
 
 CONFIRM_EXPENSIVE_OPS = False  # never commit as True
 
-HAIKU_MODEL = "claude-haiku-4-5-20251001"
+_settings = BaseSettings()
 
 _SYSTEM = """\
 You are a question generation assistant.  Given a passage of text from a
@@ -63,12 +64,13 @@ def _generate_one(
     client: anthropic.Anthropic,
     text: str,
     url: str,
-    model: str = HAIKU_MODEL,
+    model: str = "",
 ) -> dict[str, Any] | None:
     """Call the LLM for a single chunk.  Returns parsed dict or None on error."""
+    resolved_model = model or _settings.model_haiku
     try:
         resp = client.messages.create(
-            model=model,
+            model=resolved_model,
             max_tokens=256,
             system=_SYSTEM,
             messages=[
@@ -92,7 +94,7 @@ def generate_from_chunks(
     chunks: list[dict],
     *,
     n: int | None = None,
-    model: str = HAIKU_MODEL,
+    model: str = "",
     text_field: str = "text",
     url_field: str = "url",
     chunk_id_field: str = "chunk_id",
@@ -120,7 +122,9 @@ def generate_from_chunks(
             "Estimated cost: ~$0.002–0.005 per sample with Haiku."
         )
 
-    client = anthropic.Anthropic()
+    from core.client import create_client
+
+    client = create_client()
     target = chunks[:n] if n is not None else chunks
     samples: list[GoldenSample] = []
 
@@ -205,8 +209,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--model",
-        default=HAIKU_MODEL,
-        help=f"Anthropic model ID (default: {HAIKU_MODEL}).",
+        default="",
+        help=f"Anthropic model ID (default: {_settings.model_haiku}).",
     )
     parser.add_argument(
         "--text-field",
