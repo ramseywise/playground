@@ -14,6 +14,7 @@ from orchestration.adk.tools import (
     analyze_query,
     condense_query,
     configure_tools,
+    escalate,
     rerank_results,
     search_knowledge_base,
 )
@@ -277,3 +278,56 @@ async def test_condense_query_rewrites_with_llm() -> None:
     )
     assert result["was_rewritten"] is True
     mock_llm.generate.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# escalate
+# ---------------------------------------------------------------------------
+
+
+def test_escalate_out_of_scope() -> None:
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+
+    result = escalate(
+        reason="out_of_scope",
+        query="what's the weather today?",
+    )
+
+    assert result["escalated"] is True
+    assert result["reason"] == "out_of_scope"
+    assert "outside the knowledge base" in result["message"]
+    assert result["reviewer_context"]["query"] == "what's the weather today?"
+
+
+def test_escalate_low_confidence() -> None:
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+
+    result = escalate(
+        reason="low_confidence",
+        query="what is quantum entanglement?",
+        context="Searched 3 times, max confidence 0.15",
+    )
+
+    assert result["escalated"] is True
+    assert result["reason"] == "low_confidence"
+    assert "human reviewer" in result["message"]
+    assert (
+        result["reviewer_context"]["context"] == "Searched 3 times, max confidence 0.15"
+    )
+
+
+def test_escalate_explicit_request() -> None:
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+
+    result = escalate(reason="explicit_request", query="let me talk to a human")
+    assert result["escalated"] is True
+    assert "connecting" in result["message"].lower()
+
+
+def test_escalate_unknown_reason_falls_back() -> None:
+    """Unknown reason should use out_of_scope message as fallback."""
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+
+    result = escalate(reason="something_else", query="test")
+    assert result["escalated"] is True
+    assert "outside the knowledge base" in result["message"]

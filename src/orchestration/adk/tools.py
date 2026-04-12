@@ -336,3 +336,77 @@ async def condense_query(
         "standalone_query": standalone,
         "was_rewritten": was_rewritten,
     }
+
+
+# ---------------------------------------------------------------------------
+# Tool: escalate
+# ---------------------------------------------------------------------------
+
+_ESCALATION_REASONS = {
+    "out_of_scope": (
+        "This question falls outside the knowledge base. "
+        "I can only answer questions about the curated document corpus."
+    ),
+    "low_confidence": (
+        "I wasn't able to find sufficiently relevant information to give "
+        "a reliable answer. A human reviewer may be able to help."
+    ),
+    "sensitive_topic": (
+        "This question may require human judgment. "
+        "I'm escalating to a human reviewer for a more considered response."
+    ),
+    "explicit_request": ("Understood — connecting you with a human reviewer."),
+}
+
+
+def escalate(
+    reason: str,
+    query: str,
+    context: str = "",
+) -> dict[str, Any]:
+    """Escalate a query to a human agent when the assistant cannot or should not answer.
+
+    Use this tool when:
+    - analyze_query returns intent "out_of_scope" (weather, sports, recipes, etc.)
+    - Search results have very low confidence after reranking (confidence < 0.2)
+    - The user explicitly asks to speak to a human
+    - The topic is sensitive and requires human judgment
+
+    This does NOT answer the question — it signals that a human should handle it.
+
+    Args:
+        reason: Why the escalation is needed. One of:
+            "out_of_scope" — query is outside the knowledge base domain
+            "low_confidence" — retrieval didn't find relevant information
+            "sensitive_topic" — requires human judgment
+            "explicit_request" — user asked for a human
+        query: The original user query being escalated.
+        context: Optional additional context for the human reviewer
+            (e.g. what was searched, what was found).
+
+    Returns:
+        A dict with:
+        - escalated: always True
+        - reason: the escalation reason
+        - message: a user-facing message explaining the escalation
+        - reviewer_context: context for the human reviewer
+    """
+    log.info(
+        "adk.tool.escalate",
+        reason=reason,
+        query=query[:80],
+        has_context=bool(context),
+    )
+
+    message = _ESCALATION_REASONS.get(reason, _ESCALATION_REASONS["out_of_scope"])
+
+    return {
+        "escalated": True,
+        "reason": reason,
+        "message": message,
+        "reviewer_context": {
+            "query": query,
+            "reason": reason,
+            "context": context,
+        },
+    }

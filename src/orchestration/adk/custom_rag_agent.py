@@ -24,6 +24,7 @@ from orchestration.adk.tools import (
     analyze_query,
     condense_query,
     configure_tools,
+    escalate,
     rerank_results,
     search_knowledge_base,
 )
@@ -48,6 +49,9 @@ Follow this workflow when answering questions:
 user's latest message as a standalone question.
 - Use analyze_query to understand the intent, extract entities, and get \
 recommended search terms and retrieval strategy.
+- **If intent is "out_of_scope"**, use escalate immediately with reason \
+"out_of_scope". Do NOT attempt to answer out-of-scope questions.
+- If intent is "conversational", respond directly without searching.
 
 **Step 2 — Retrieve information:**
 - Use search_knowledge_base with the standalone query (or original if single-turn).
@@ -59,12 +63,15 @@ recommended search terms and retrieval strategy.
 to surface the best matches.
 - If the top reranked result has confidence below 0.3, try searching again \
 with different phrasing or broader terms from the analysis.
+- **If confidence is still below 0.2 after retrying**, use escalate with reason \
+"low_confidence" — don't guess.
 
 **Step 4 — Answer:**
 - Base your answer strictly on retrieved passages — do not hallucinate or speculate.
 - Cite the source URL inline when referencing specific facts (e.g. [title](url)).
-- If no relevant passages are found after searching, say so clearly.
 - Keep answers concise and directly responsive to the question.
+- **If the user asks to speak to a human**, use escalate with reason \
+"explicit_request".
 """
 
 
@@ -116,6 +123,7 @@ def create_custom_rag_agent(
             condense_query,
             search_knowledge_base,
             rerank_results,
+            escalate,
         ],
         before_agent_callback=before_agent,
         after_agent_callback=after_agent,

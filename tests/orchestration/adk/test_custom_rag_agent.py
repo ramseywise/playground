@@ -43,7 +43,7 @@ def test_create_custom_rag_agent_returns_agent() -> None:
     )
 
     assert agent.name == "custom_rag"
-    assert len(agent.tools) == 4  # analyze, condense, search, rerank
+    assert len(agent.tools) == 5  # analyze, condense, search, rerank, escalate
     assert "gemini-2.0-flash" in agent.model
 
 
@@ -77,6 +77,7 @@ def test_create_custom_rag_agent_has_instruction() -> None:
     assert "rerank_results" in agent.instruction
     assert "condense_query" in agent.instruction
     assert "analyze_query" in agent.instruction
+    assert "escalate" in agent.instruction
 
 
 def test_create_custom_rag_agent_configures_tools() -> None:
