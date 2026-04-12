@@ -50,9 +50,27 @@ class RerankerAgent:
             query=query,
         )
 
-        reranked: list[RankedChunk] = await self._reranker.rerank(
-            query, candidates, top_k=self._top_k
-        )
+        try:
+            reranked: list[RankedChunk] = await self._reranker.rerank(
+                query, candidates, top_k=self._top_k
+            )
+        except Exception as exc:
+            log.warning(
+                "reranker.subgraph.error",
+                error=str(exc),
+                candidates=len(candidates),
+                fallback="passthrough",
+            )
+            # Graceful degradation: return candidates in original order
+            # with their retrieval scores as relevance, confidence 0 to trigger CRAG
+            reranked = [
+                RankedChunk(
+                    chunk=g.chunk,
+                    relevance_score=min(g.score, 1.0),
+                    rank=i + 1,
+                )
+                for i, g in enumerate(candidates[: self._top_k])
+            ]
 
         confidence = max(
             (r.relevance_score for r in reranked), default=_NO_CHUNKS_CONFIDENCE

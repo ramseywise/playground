@@ -48,8 +48,21 @@ class GeneratorAgent:
         reranked = list(state.get("reranked_chunks") or [])
 
         system, messages = build_prompt(state, reranked)
-        response_text = await call_llm(self._llm, system, messages)
         citations = extract_citations(reranked)
+
+        try:
+            response_text = await call_llm(self._llm, system, messages)
+        except Exception as exc:
+            log.error(
+                "generation.subgraph.llm_error",
+                error=str(exc),
+                error_type=type(exc).__name__,
+                reranked_count=len(reranked),
+            )
+            response_text = (
+                "I found relevant sources but encountered an error generating "
+                "the response. Please try again."
+            )
 
         log.info(
             "generation.subgraph.done",

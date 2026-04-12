@@ -147,7 +147,7 @@ async def search_knowledge_base(
 
 async def rerank_results(
     query: str,
-    passages: list[dict[str, str]],
+    passages: list[dict[str, Any]],
     top_k: int = 3,
 ) -> dict[str, Any]:
     """Re-rank passages by relevance to the query using a cross-encoder model.

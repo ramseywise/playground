@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 from collections.abc import Callable, Coroutine
 from typing import Any
 
@@ -99,34 +98,50 @@ class RetrieverAgent:
                 continue
             cached_results.extend(cached)
 
-        async def _embed_variant(variant: str) -> list[float]:
-            aembed_query = getattr(self._embedder, "aembed_query", None)
-            if callable(aembed_query):
-                result = aembed_query(variant)
-                if inspect.isawaitable(result):
-                    return await result
-                return result  # sync aembed_query — use result directly
-            return await asyncio.to_thread(self._embedder.embed_query, variant)
-
         all_results: list[RetrievalResult] = list(cached_results)
         if missed_variants:
-            query_vectors = await asyncio.gather(
-                *(_embed_variant(variant) for variant in missed_variants)
+            # Embed all variants in parallel; tolerate partial failures
+            embed_outcomes = await asyncio.gather(
+                *(self._embedder.aembed_query(v) for v in missed_variants),
+                return_exceptions=True,
             )
-            result_lists = await asyncio.gather(
-                *(
-                    self._retriever.search(
-                        query_text=variant,
-                        query_vector=query_vector,
-                        k=self._top_k,
+            # Pair variants with embeddings, skipping failures
+            valid_pairs: list[tuple[str, list[float]]] = []
+            for variant, outcome in zip(missed_variants, embed_outcomes):
+                if isinstance(outcome, BaseException):
+                    log.warning(
+                        "retrieval.embed.failed",
+                        variant=variant[:80],
+                        error=str(outcome),
                     )
-                    for variant, query_vector in zip(missed_variants, query_vectors)
+                    continue
+                valid_pairs.append((variant, outcome))
+
+            if valid_pairs:
+                search_outcomes = await asyncio.gather(
+                    *(
+                        self._retriever.search(
+                            query_text=variant,
+                            query_vector=qv,
+                            k=self._top_k,
+                        )
+                        for variant, qv in valid_pairs
+                    ),
+                    return_exceptions=True,
                 )
-            )
-            for variant, results in zip(missed_variants, result_lists):
-                all_results.extend(results)
-                if self._cache is not None:
-                    self._cache.put(variant, self._cache_strategy, self._top_k, results)
+                for (variant, _), outcome in zip(valid_pairs, search_outcomes):
+                    if isinstance(outcome, BaseException):
+                        log.warning(
+                            "retrieval.search.failed",
+                            variant=variant[:80],
+                            error=str(outcome),
+                        )
+                        continue
+                    all_results.extend(outcome)
+                    if self._cache is not None:
+                        self._cache.put(
+                            variant, self._cache_strategy, self._top_k, outcome
+                        )
 
         graded = _grade_chunks(all_results, threshold=self._threshold)
 
@@ -149,9 +164,7 @@ class RetrieverAgent:
         """Return a LangGraph-compatible async node function."""
 
         async def retrieve(state: LibrarianState) -> dict[str, Any]:
-            result = await self.run(state)
-            retry_count = int(state.get("retry_count") or 0)
-            return {**result, "retry_count": retry_count}
+            return await self.run(state)
 
         return retrieve
 

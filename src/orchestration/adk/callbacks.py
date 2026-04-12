@@ -31,15 +31,15 @@ async def before_agent(ctx: Context) -> types.Content | None:
         agent=agent_name,
         session_id=ctx.session.id if ctx.session else None,
     )
-    # Store start time in state for latency calculation
-    ctx.session.state[f"_agent_start_{agent_name}"] = time.perf_counter()
+    if ctx.session:
+        ctx.session.state[f"_agent_start_{agent_name}"] = time.perf_counter()
     return None
 
 
 async def after_agent(ctx: Context) -> types.Content | None:
     """Log when an agent finishes processing."""
     agent_name = ctx.agent.name if ctx.agent else "unknown"
-    start = ctx.session.state.get(f"_agent_start_{agent_name}")
+    start = ctx.session.state.get(f"_agent_start_{agent_name}") if ctx.session else None
     latency_ms = (time.perf_counter() - start) * 1000 if start else 0.0
 
     log.info(
@@ -73,8 +73,9 @@ async def before_tool(
         args=log_args,
         agent=ctx.agent.name if ctx.agent else None,
     )
-    ctx.session.state[f"_tool_start_{tool_name}"] = time.perf_counter()
-    return None  # Don't override — let the tool run normally
+    if ctx.session:
+        ctx.session.state[f"_tool_start_{tool_name}"] = time.perf_counter()
+    return None
 
 
 async def after_tool(
@@ -85,7 +86,7 @@ async def after_tool(
 ) -> dict | None:
     """Log tool completion with result summary."""
     tool_name = tool.name if hasattr(tool, "name") else str(tool)
-    start = ctx.session.state.get(f"_tool_start_{tool_name}")
+    start = ctx.session.state.get(f"_tool_start_{tool_name}") if ctx.session else None
     latency_ms = (time.perf_counter() - start) * 1000 if start else 0.0
 
     # Summarize result for logging (don't log full text content)
@@ -101,6 +102,9 @@ async def after_tool(
             summary["intent"] = result["intent"]
         if "standalone_query" in result:
             summary["was_rewritten"] = result.get("was_rewritten", False)
+        if "escalated" in result:
+            summary["escalated"] = result["escalated"]
+            summary["reason"] = result.get("reason")
 
     log.info(
         "adk.tool.done",
@@ -108,4 +112,4 @@ async def after_tool(
         **summary,
         agent=ctx.agent.name if ctx.agent else None,
     )
-    return None  # Don't modify the result
+    return None

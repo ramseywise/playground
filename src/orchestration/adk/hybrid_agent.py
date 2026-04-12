@@ -93,6 +93,8 @@ class LibrarianADKAgent(BaseAgent):
             confidence=confidence,
         )
 
+        # Surface full pipeline metadata for debugging and eval
+        reranked = result.get("reranked_chunks", [])
         yield Event(
             author=self.name,
             content=types.Content(
@@ -101,7 +103,13 @@ class LibrarianADKAgent(BaseAgent):
             custom_metadata={
                 "citations": citations,
                 "confidence_score": confidence,
-                "reranked_chunks": len(result.get("reranked_chunks", [])),
+                "intent": result.get("intent", ""),
+                "standalone_query": result.get("standalone_query", ""),
+                "retry_count": result.get("retry_count", 0),
+                "reranked_count": len(reranked),
+                "retrieved_urls": [
+                    r.chunk.metadata.url for r in reranked if hasattr(r, "chunk")
+                ][:10],
             },
         )
 

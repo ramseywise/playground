@@ -41,7 +41,7 @@ import structlog
 from eval.loaders import load_golden_from_jsonl
 from eval.variants import VARIANTS
 from librarian.config import LibrarySettings, settings
-from librarian.schemas.chunks import Chunk
+from librarian.schemas.chunks import Chunk, ChunkMetadata
 from librarian.schemas.retrieval import RetrievalResult
 from librarian.tasks.models import GoldenSample, RetrievalMetrics
 from librarian.tasks.tracing import FailureCluster, FailureClusterer
@@ -262,6 +262,147 @@ def upload_golden_dataset(
         n_items=uploaded,
     )
     return uploaded
+
+
+# ---------------------------------------------------------------------------
+# Shared eval helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_adk_context(query: str, query_id: str) -> tuple[Any, Any]:
+    """Build a real ADK Session + InvocationContext for eval (no MagicMock).
+
+    Returns (ctx, session) where ctx has a .session attribute.
+    """
+    from dataclasses import dataclass, field as dc_field
+
+    from google.adk.events import Event as ADKEvent
+    from google.adk.sessions import Session
+    from google.genai import types as genai_types
+
+    user_event = ADKEvent(
+        author="user",
+        content=genai_types.Content(parts=[genai_types.Part(text=query)]),
+    )
+    session = Session(
+        id=f"eval-{query_id}",
+        app_name="eval",
+        user_id="eval-runner",
+        events=[user_event],
+    )
+
+    @dataclass
+    class EvalInvocationContext:
+        """Lightweight context for eval — no MagicMock."""
+
+        session: Session
+
+    return EvalInvocationContext(session=session), session
+
+
+def _extract_urls_from_adk_events(events: list[Any]) -> list[str]:
+    """Extract citation URLs from ADK event custom_metadata."""
+    urls: list[str] = []
+    for event in events:
+        meta = getattr(event, "custom_metadata", None) or {}
+        # Citations from BedrockKB / Hybrid agents
+        for citation in meta.get("citations", []):
+            if isinstance(citation, dict) and citation.get("url"):
+                urls.append(citation["url"])
+        # Direct URLs from hybrid agent retrieved_urls
+        for url in meta.get("retrieved_urls", []):
+            if url:
+                urls.append(url)
+    return urls
+
+
+def _aggregate_results(
+    query_results: list[QueryResult],
+    *,
+    variant_name: str,
+    ds_name: str,
+    run_name: str,
+    config_snapshot: dict[str, Any],
+    lf: Any | None,
+) -> ExperimentResult:
+    """Shared aggregation logic for all experiment variants.
+
+    Computes hit_rate, MRR, avg_latency, clusters failures, logs to
+    LangFuse, and returns an ExperimentResult. Eliminates the ~60 lines
+    of duplicated code across 5+ experiment runners.
+    """
+    n = len(query_results)
+    hits = sum(1 for qr in query_results if qr.hit)
+    hit_rate = hits / n if n else 0.0
+    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
+    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
+
+    # Cluster failures
+    from librarian.tasks.tracing import PipelineTracer
+
+    clusterer = FailureClusterer()
+    tracer = PipelineTracer()
+    for qr in query_results:
+        trace = tracer.create_trace(qr.query_id, qr.query)
+        trace.status = "success" if qr.hit else "failure"
+        trace.confidence = qr.reciprocal_rank
+        if not qr.hit:
+            trace.failure_reason = "expected_doc_not_in_top_k"
+    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
+
+    # LangFuse summary
+    if lf is not None:
+        try:
+            summary_trace = lf.trace(
+                name=f"experiment_summary_{variant_name}",
+                metadata={
+                    "variant": variant_name,
+                    "run_name": run_name,
+                    **config_snapshot,
+                },
+            )
+            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
+            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
+            lf.score(
+                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
+            )
+        except Exception as exc:
+            log.warning("experiment.langfuse.summary_failed", error=str(exc))
+        _langfuse_flush(lf)
+
+    result = ExperimentResult(
+        variant_name=variant_name,
+        dataset_name=ds_name,
+        run_name=run_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n_queries=n,
+        n_hits=hits,
+        avg_latency_ms=avg_latency,
+        query_results=query_results,
+        failure_clusters=clusters,
+        config_snapshot=config_snapshot,
+    )
+
+    log.info(
+        "experiment.variant.done",
+        variant=variant_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n=n,
+        avg_latency_ms=round(avg_latency, 1),
+    )
+    return result
+
+
+def _score_hit(expected_url: str, urls: list[str]) -> tuple[bool, float]:
+    """Check if expected_url is in retrieved urls, compute reciprocal rank."""
+    hit = expected_url in urls
+    rr = next(
+        (1.0 / (i + 1) for i, u in enumerate(urls) if u == expected_url),
+        0.0,
+    )
+    return hit, rr
 
 
 # ---------------------------------------------------------------------------
@@ -555,67 +696,26 @@ async def _run_adk_bedrock_experiment(
     ds_name: str,
     lf: Any | None,
 ) -> ExperimentResult:
-    """Run experiment via ADK-wrapped Bedrock KB agent.
-
-    Uses the same underlying Bedrock KB API as ``_run_bedrock_experiment``,
-    but routes through the ADK ``BedrockKBAgent`` to test ADK's session
-    management and event model.
-    """
+    """Run experiment via ADK-wrapped Bedrock KB agent."""
     from orchestration.adk.bedrock_agent import BedrockKBAgent
 
     agent = BedrockKBAgent(cfg)
-    clusterer = FailureClusterer()
     query_results: list[QueryResult] = []
-
-    # ADK agent needs a session context — build a minimal one per query
-    from unittest.mock import MagicMock
-
-    from google.adk.agents.invocation_context import InvocationContext
-    from google.adk.events import Event as ADKEvent
-    from google.adk.sessions import Session
-    from google.genai import types as genai_types
 
     for sample in golden_samples:
         try:
-            # Build minimal ADK context
-            user_event = ADKEvent(
-                author="user",
-                content=genai_types.Content(
-                    parts=[genai_types.Part(text=sample.query)]
-                ),
-            )
-            session = Session(
-                id=f"eval-{sample.query_id}",
-                app_name="eval",
-                user_id="eval-runner",
-                events=[user_event],
-            )
-            ctx = MagicMock(spec=InvocationContext)
-            ctx.session = session
+            ctx, _ = _build_adk_context(sample.query, sample.query_id)
 
             t0 = time.perf_counter()
-            events: list[ADKEvent] = []
-            async for event in agent._run_async_impl(ctx):
-                events.append(event)
+            events = [e async for e in agent._run_async_impl(ctx)]
             latency_ms = (time.perf_counter() - t0) * 1000
 
-            # Extract response text from ADK events
             response_text = ""
             if events and events[0].content and events[0].content.parts:
                 response_text = events[0].content.parts[0].text or ""
 
-            # For ADK-bedrock, citations come from the underlying BedrockKBClient
-            # but aren't exposed through the ADK event — use empty for now
-            urls: list[str] = []
-            hit = sample.expected_doc_url in urls
-            rr = next(
-                (
-                    1.0 / (i + 1)
-                    for i, u in enumerate(urls)
-                    if u == sample.expected_doc_url
-                ),
-                0.0,
-            )
+            urls = _extract_urls_from_adk_events(events)
+            hit, rr = _score_hit(sample.expected_doc_url, urls)
 
             qr = QueryResult(
                 query_id=sample.query_id,
@@ -645,81 +745,21 @@ async def _run_adk_bedrock_experiment(
 
         if lf is not None:
             qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
-
         query_results.append(qr)
 
-    # Aggregate
-    n = len(query_results)
-    hits = sum(1 for qr in query_results if qr.hit)
-    hit_rate = hits / n if n else 0.0
-    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
-    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
-
-    # Cluster failures
-    from librarian.tasks.tracing import PipelineTracer
-
-    tracer = PipelineTracer()
-    for qr in query_results:
-        trace = tracer.create_trace(qr.query_id, qr.query)
-        trace.status = "success" if qr.hit else "failure"
-        trace.confidence = qr.reciprocal_rank
-        if not qr.hit:
-            trace.failure_reason = "expected_doc_not_in_top_k"
-    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
-
-    if lf is not None:
-        try:
-            summary_trace = lf.trace(
-                name=f"experiment_summary_{variant_name}",
-                metadata={
-                    "variant": variant_name,
-                    "run_name": run_name,
-                    "kb_id": cfg.bedrock_knowledge_base_id,
-                    "model_arn": cfg.bedrock_model_arn,
-                    "wrapper": "adk",
-                },
-            )
-            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
-            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
-            lf.score(
-                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
-            )
-        except Exception as exc:
-            log.warning("experiment.langfuse.summary_failed", error=str(exc))
-        _langfuse_flush(lf)
-
-    result = ExperimentResult(
+    return _aggregate_results(
+        query_results,
         variant_name=variant_name,
-        dataset_name=ds_name,
+        ds_name=ds_name,
         run_name=run_name,
-        hit_rate=hit_rate,
-        mrr=mrr,
-        n_queries=n,
-        n_hits=hits,
-        avg_latency_ms=avg_latency,
-        query_results=query_results,
-        failure_clusters=clusters,
+        lf=lf,
         config_snapshot={
             "retrieval_strategy": "adk_bedrock",
             "kb_id": cfg.bedrock_knowledge_base_id,
             "model_arn": cfg.bedrock_model_arn,
-            "region": cfg.bedrock_region or cfg.s3_region or "default",
-            "retrieval_k": cfg.retrieval_k,
-            "embedding_provider": "aws_titan",
-            "reranker_strategy": "n/a",
             "wrapper": "google-adk",
         },
     )
-
-    log.info(
-        "experiment.adk_bedrock.done",
-        variant=variant_name,
-        hit_rate=hit_rate,
-        mrr=mrr,
-        n=n,
-        avg_latency_ms=round(avg_latency, 1),
-    )
-    return result
 
 
 async def _run_adk_custom_rag_experiment(
@@ -731,55 +771,36 @@ async def _run_adk_custom_rag_experiment(
     ds_name: str,
     lf: Any | None,
 ) -> ExperimentResult:
-    """Run experiment via ADK agent with custom RAG tools.
-
-    Uses Gemini 2.0 Flash for orchestration (tool-calling decisions)
-    with the same retrieval and reranking stack as the Librarian pipeline.
-    The LLM decides when to search, rerank, and retry.
-    """
+    """Run experiment via ADK agent with custom RAG tools (Gemini 2.0 Flash)."""
     from orchestration.adk.custom_rag_agent import (
         create_custom_rag_agent,
         run_custom_rag_query,
     )
     from orchestration.factory import _build_embedder, _build_reranker, _build_retriever
-
-    # Build the shared retrieval components
-    embedder = _build_embedder(cfg)
-    retriever = _build_retriever(cfg, embedder)
-    # Build a passthrough LLM for _build_reranker (not used for generation)
     from core.clients.llm import AnthropicLLM
 
+    embedder = _build_embedder(cfg)
+    retriever = _build_retriever(cfg, embedder)
     llm = AnthropicLLM(model=cfg.anthropic_model_sonnet, api_key=cfg.anthropic_api_key)
     reranker = _build_reranker(cfg, llm)
-
     agent = create_custom_rag_agent(
         cfg, retriever=retriever, embedder=embedder, reranker=reranker
     )
 
-    clusterer = FailureClusterer()
     query_results: list[QueryResult] = []
 
     for sample in golden_samples:
         try:
             t0 = time.perf_counter()
             result = await run_custom_rag_query(
-                agent,
-                sample.query,
-                session_id=f"eval-{sample.query_id}",
+                agent, sample.query, session_id=f"eval-{sample.query_id}"
             )
             latency_ms = (time.perf_counter() - t0) * 1000
 
             response_text = result.get("response", "")
-            urls: list[str] = []  # TODO(3): extract URLs from tool call results
-            hit = sample.expected_doc_url in urls
-            rr = next(
-                (
-                    1.0 / (i + 1)
-                    for i, u in enumerate(urls)
-                    if u == sample.expected_doc_url
-                ),
-                0.0,
-            )
+            # Extract URLs from tool call events (search_knowledge_base returns urls)
+            urls = _extract_urls_from_adk_events(result.get("events", []))
+            hit, rr = _score_hit(sample.expected_doc_url, urls)
 
             qr = QueryResult(
                 query_id=sample.query_id,
@@ -809,80 +830,21 @@ async def _run_adk_custom_rag_experiment(
 
         if lf is not None:
             qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
-
         query_results.append(qr)
 
-    # Aggregate
-    n = len(query_results)
-    hits = sum(1 for qr in query_results if qr.hit)
-    hit_rate = hits / n if n else 0.0
-    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
-    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
-
-    # Cluster failures
-    from librarian.tasks.tracing import PipelineTracer
-
-    tracer = PipelineTracer()
-    for qr in query_results:
-        trace = tracer.create_trace(qr.query_id, qr.query)
-        trace.status = "success" if qr.hit else "failure"
-        trace.confidence = qr.reciprocal_rank
-        if not qr.hit:
-            trace.failure_reason = "expected_doc_not_in_top_k"
-    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
-
-    if lf is not None:
-        try:
-            summary_trace = lf.trace(
-                name=f"experiment_summary_{variant_name}",
-                metadata={
-                    "variant": variant_name,
-                    "run_name": run_name,
-                    "model": "gemini-2.0-flash",
-                    "wrapper": "adk_custom_rag",
-                },
-            )
-            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
-            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
-            lf.score(
-                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
-            )
-        except Exception as exc:
-            log.warning("experiment.langfuse.summary_failed", error=str(exc))
-        _langfuse_flush(lf)
-
-    result = ExperimentResult(
+    return _aggregate_results(
+        query_results,
         variant_name=variant_name,
-        dataset_name=ds_name,
+        ds_name=ds_name,
         run_name=run_name,
-        hit_rate=hit_rate,
-        mrr=mrr,
-        n_queries=n,
-        n_hits=hits,
-        avg_latency_ms=avg_latency,
-        query_results=query_results,
-        failure_clusters=clusters,
+        lf=lf,
         config_snapshot={
             "retrieval_strategy": "adk_custom_rag",
             "model": "gemini-2.0-flash",
             "embedding_provider": cfg.embedding_provider,
             "reranker_strategy": cfg.reranker_strategy,
-            "retrieval_k": cfg.retrieval_k,
-            "reranker_top_k": cfg.reranker_top_k,
-            "bm25_weight": cfg.bm25_weight,
-            "vector_weight": cfg.vector_weight,
         },
     )
-
-    log.info(
-        "experiment.adk_custom_rag.done",
-        variant=variant_name,
-        hit_rate=hit_rate,
-        mrr=mrr,
-        n=n,
-        avg_latency_ms=round(avg_latency, 1),
-    )
-    return result
 
 
 async def _run_adk_hybrid_experiment(
@@ -894,64 +856,28 @@ async def _run_adk_hybrid_experiment(
     ds_name: str,
     lf: Any | None,
 ) -> ExperimentResult:
-    """Run experiment via ADK-wrapped full LangGraph pipeline.
-
-    Uses the complete Librarian CRAG pipeline (condense → analyze →
-    retrieve → rerank → gate → generate) wrapped inside an ADK BaseAgent.
-    """
-    from unittest.mock import MagicMock
-
-    from google.adk.agents.invocation_context import InvocationContext
-    from google.adk.events import Event as ADKEvent
-    from google.adk.sessions import Session
-    from google.genai import types as genai_types
-
+    """Run experiment via ADK-wrapped full LangGraph pipeline."""
     from orchestration.adk.hybrid_agent import LibrarianADKAgent
     from orchestration.factory import create_librarian
 
     graph = create_librarian(cfg)
     agent = LibrarianADKAgent(graph=graph, cfg=cfg)
-
-    clusterer = FailureClusterer()
     query_results: list[QueryResult] = []
 
     for sample in golden_samples:
         try:
-            user_event = ADKEvent(
-                author="user",
-                content=genai_types.Content(
-                    parts=[genai_types.Part(text=sample.query)]
-                ),
-            )
-            session = Session(
-                id=f"eval-{sample.query_id}",
-                app_name="eval",
-                user_id="eval-runner",
-                events=[user_event],
-            )
-            ctx = MagicMock(spec=InvocationContext)
-            ctx.session = session
+            ctx, _ = _build_adk_context(sample.query, sample.query_id)
 
             t0 = time.perf_counter()
-            events: list[ADKEvent] = []
-            async for event in agent._run_async_impl(ctx):
-                events.append(event)
+            events = [e async for e in agent._run_async_impl(ctx)]
             latency_ms = (time.perf_counter() - t0) * 1000
 
             response_text = ""
             if events and events[0].content and events[0].content.parts:
                 response_text = events[0].content.parts[0].text or ""
 
-            urls: list[str] = []
-            hit = sample.expected_doc_url in urls
-            rr = next(
-                (
-                    1.0 / (i + 1)
-                    for i, u in enumerate(urls)
-                    if u == sample.expected_doc_url
-                ),
-                0.0,
-            )
+            urls = _extract_urls_from_adk_events(events)
+            hit, rr = _score_hit(sample.expected_doc_url, urls)
 
             qr = QueryResult(
                 query_id=sample.query_id,
@@ -981,76 +907,21 @@ async def _run_adk_hybrid_experiment(
 
         if lf is not None:
             qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
-
         query_results.append(qr)
 
-    n = len(query_results)
-    hits = sum(1 for qr in query_results if qr.hit)
-    hit_rate = hits / n if n else 0.0
-    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
-    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
-
-    from librarian.tasks.tracing import PipelineTracer
-
-    tracer = PipelineTracer()
-    for qr in query_results:
-        trace = tracer.create_trace(qr.query_id, qr.query)
-        trace.status = "success" if qr.hit else "failure"
-        trace.confidence = qr.reciprocal_rank
-        if not qr.hit:
-            trace.failure_reason = "expected_doc_not_in_top_k"
-    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
-
-    if lf is not None:
-        try:
-            summary_trace = lf.trace(
-                name=f"experiment_summary_{variant_name}",
-                metadata={
-                    "variant": variant_name,
-                    "run_name": run_name,
-                    "wrapper": "adk_hybrid",
-                },
-            )
-            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
-            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
-            lf.score(
-                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
-            )
-        except Exception as exc:
-            log.warning("experiment.langfuse.summary_failed", error=str(exc))
-        _langfuse_flush(lf)
-
-    result = ExperimentResult(
+    return _aggregate_results(
+        query_results,
         variant_name=variant_name,
-        dataset_name=ds_name,
+        ds_name=ds_name,
         run_name=run_name,
-        hit_rate=hit_rate,
-        mrr=mrr,
-        n_queries=n,
-        n_hits=hits,
-        avg_latency_ms=avg_latency,
-        query_results=query_results,
-        failure_clusters=clusters,
+        lf=lf,
         config_snapshot={
             "retrieval_strategy": "adk_hybrid",
             "embedding_provider": cfg.embedding_provider,
             "reranker_strategy": cfg.reranker_strategy,
-            "retrieval_k": cfg.retrieval_k,
-            "confidence_threshold": cfg.confidence_threshold,
-            "max_crag_retries": cfg.max_crag_retries,
             "wrapper": "google-adk + langgraph",
         },
     )
-
-    log.info(
-        "experiment.adk_hybrid.done",
-        variant=variant_name,
-        hit_rate=hit_rate,
-        mrr=mrr,
-        n=n,
-        avg_latency_ms=round(avg_latency, 1),
-    )
-    return result
 
 
 async def run_variant_experiment(
@@ -1502,7 +1373,9 @@ def _load_corpus(samples: list[GoldenSample]) -> list[Chunk]:
                 Chunk(
                     id=f"placeholder_{len(chunks)}",
                     text=sample.query,
-                    metadata=type("M", (), {"url": url, "title": url})(),  # noqa: UP003
+                    metadata=ChunkMetadata(
+                        url=url, title=url, doc_id=f"placeholder_{len(chunks)}"
+                    ),
                 )
             )
     return chunks
