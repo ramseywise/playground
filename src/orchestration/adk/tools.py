@@ -301,8 +301,9 @@ async def condense_query(
     """
     deps = _get_deps()
 
-    # Single-turn or no history — pass through unchanged
-    if not conversation_history or len(conversation_history) <= 1:
+    # No history or only one prior message (no multi-turn context to resolve)
+    # — aligns with CondenserAgent which checks len(messages) <= 1
+    if not conversation_history or len(conversation_history) < 2:
         return {"standalone_query": query, "was_rewritten": False}
 
     if deps.condenser_llm is None:

@@ -143,7 +143,9 @@ def _route_after_gate(
 ) -> Literal["generate", "retrieve"]:
     """CRAG loop: retry retrieval if not confident and under retry cap.
 
-    retry_count at this point already reflects the increment applied by the gate node.
+    The gate node increments retry_count *before* this edge runs, so:
+      max_crag_retries=1 → allows exactly 1 retry (retry_count goes 0→1, 1≤1=True)
+      max_crag_retries=0 → no retries (retry_count goes 0→1, 1≤0=False)
     """
     retry_count = int(state.get("retry_count") or 0)
     if state.get("fallback_requested") and retry_count <= max_retries:

@@ -149,25 +149,33 @@ async def run_custom_rag_query(
     *,
     session_id: str = "default",
     user_id: str = "eval",
+    runner: Any | None = None,
+    session_service: Any | None = None,
 ) -> dict[str, Any]:
     """Run a single query through the custom RAG agent and return the response.
 
     This is a convenience wrapper for eval and testing — it handles
     ADK session setup, runner creation, and response extraction.
 
+    Pass *runner* and *session_service* to reuse across calls (avoids
+    creating a new runner per query in eval loops).
+
     Returns:
-        Dict with 'response' (str) and 'events' (list of ADK events).
+        Dict with 'response' (str), 'events' (list of ADK events),
+        and 'session_id' (str).
     """
     from google.adk.runners import Runner
     from google.adk.sessions import InMemorySessionService
     from google.genai import types
 
-    session_service = InMemorySessionService()
-    runner = Runner(
-        agent=agent,
-        app_name="librarian_eval",
-        session_service=session_service,
-    )
+    if session_service is None:
+        session_service = InMemorySessionService()
+    if runner is None:
+        runner = Runner(
+            agent=agent,
+            app_name="librarian_eval",
+            session_service=session_service,
+        )
 
     session = await session_service.create_session(
         app_name="librarian_eval",
