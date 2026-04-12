@@ -1,91 +1,7 @@
-# Research: Three-Way RAG Architecture Comparison
+# Research: Librarian RAG vs AWS Bedrock Knowledge Bases
 
-Date: 2026-04-12 (updated)
-Context: Decision support for production architecture across three options
-
-| | BookKeeper Hero (Option 0) | PoC 1 — Bedrock KB | PoC 2 — Librarian (LangGraph) |
-|---|---|---|---|
-| Retrieval | Vendor black box | Dense-only (Titan/Cohere + OpenSearch Serverless) | Hybrid BM25+vector + cross-encoder rerank + CRAG |
-| Generator | Unknown (probably vendor-hosted) | Gemini (via API) | Claude (Anthropic API) |
-| Reranker | Unknown | None (sticky note: "no reranker — 15% uplift in precision" gap) | `ms-marco-MiniLM-L-6-v2` cross-encoder |
-| Observability | Thumbs up/down only | CloudWatch + response text | Structured traces, confidence scores, LangFuse/LangSmith |
-| Corpus control | None | S3 + AWS console | Full: 6 chunking strategies, swappable embedder, metadata schema |
-| Integration complexity | Low (SaaS embed) | Medium (AWS managed, but 2 vendors: Bedrock + Gemini) | High (self-managed pipeline + infra) |
-| Vendor lock-in | High (third-party SaaS) | High (AWS data plane + Gemini) | Low (Chroma portable, open-source orchestration) |
-| Self-learning loop | No (vendor-side only) | No | Yes (failure attribution → eval harness → CI regression) |
-
----
-
-## Risk scorecard
-
-🟢 Low risk &nbsp; 🟡 Medium risk &nbsp; 🔴 High risk
-
-| Risk dimension | BookKeeper Hero | PoC 1 — Bedrock KB | PoC 2 — Librarian |
-|---|---|---|---|
-| **Integration complexity** | 🟢 SaaS embed, no infra | 🟡 AWS managed but two vendors (Bedrock + Gemini) — two auth flows, two failure domains, no unified trace | 🔴 Full pipeline ownership: embedder, vector store, reranker, LangGraph graph, LangFuse — weeks to stand up |
-| **Cost** | 🟡 SaaS license (fixed, opaque, likely high at scale) | 🟢 Serverless per-call (~$0.0005–0.001/query + model tokens); cheapest at low volume (<5K/month) | 🟡 Fixed infra ~$50–80/month (Fargate) + model tokens; cheaper than Bedrock above ~5K queries/month |
-| **Latency** | 🟡 Unknown; vendor-controlled; no streaming | 🔴 1–2.5s blocking (single `RetrieveAndGenerate` call, no streaming); feels slow even when fast | 🟢 ~800ms–1.5s TTFT with streaming; reranker adds 200–500ms but user sees tokens arriving |
-| **Hallucination / answer quality** | 🔴 Unknown risk, no visibility; no reranker, no confidence gate, no failure attribution | 🔴 High risk: dense-only retrieval misses jargon/code; no reranker (15% precision gap); no confidence gate; no CRAG retry | 🟢 Lowest risk: hybrid retrieval + cross-encoder reranker prunes noise; CRAG retries on low confidence; `HistoryCondenser` prevents multi-turn drift |
-
----
-
-## Extended risk surface
-
-### Engineering risks
-
-| Risk | BookKeeper Hero | PoC 1 — Bedrock KB | PoC 2 — Librarian |
-|---|---|---|---|
-| **Cold start** | 🟢 Vendor-managed, always warm | 🟢 Serverless, no model to load | 🔴 Local embedder (560MB) needs loading on Fargate cold start — 30–60s spike on first request after scale-to-zero |
-| **Ingest concurrency** | 🟢 Vendor-managed | 🟢 S3 sync is parallelisable | 🟡 Chroma has a single-process write lock — parallel ingest workers will contend; mitigation: batch ingest via single worker or switch to OpenSearch |
-| **Rate limiting / throttling** | 🟡 One vendor SLA | 🔴 Two independent throttle surfaces — Bedrock service quotas + Gemini rate limits; a Gemini spike doesn't show up in Bedrock metrics | 🟡 One external API (Anthropic); local components don't throttle |
-| **Model drift** | 🔴 Vendor updates silently; no change log; you find out from user complaints | 🔴 Gemini model versions update on Google's schedule; Bedrock model ARN is pinned but KB embedding model may not be | 🟢 Model versions explicitly pinned in config; you control the upgrade |
-| **Data residency** | 🔴 Corpus + queries sent to third-party vendor; GDPR/SOC2 depends on their controls | 🔴 Queries sent to Gemini (Google); corpus lives in AWS OpenSearch Serverless | 🟡 Only generation context sent to Anthropic; embedder is local; Chroma is local — smallest external footprint |
-| **Re-embedding cost on model swap** | 🔴 Full re-ingest through vendor pipeline; opaque cost and timeline | 🟡 Full re-embed required; AWS hides the cost until you trigger it | 🟡 Full re-embed required but explicit: `IngestionPipeline` with new `EMBEDDING_PROVIDER`; cost is known upfront |
-| **Multi-turn checkpoint storage** | 🟢 Vendor-managed | 🟡 `sessionId` param; AWS manages history storage | 🔴 LangGraph checkpointing needs a persistent store (Redis or Postgres) at prod scale — not wired yet; in-memory checkpointer works locally only |
-| **Bus factor / knowledge risk** | 🟢 Vendor maintains it | 🟡 AWS-managed, but internal Gemini wiring and corpus shape is internal knowledge | 🔴 LangGraph graph topology, chunker configs, eval harness, and LangFuse setup all require deep familiarity — high knowledge concentration risk if team changes |
-
----
-
-### Product and design risks
-
-| Risk | BookKeeper Hero | PoC 1 — Bedrock KB | PoC 2 — Librarian |
-|---|---|---|---|
-| **Citation fidelity** | 🟡 Unknown format; vendor-controlled | 🟡 Document-level source links — user may click and land on the wrong section of a long doc | 🟢 Chunk-level citations with `confidence_score`; can surface the exact passage and flag low-confidence answers |
-| **Escalation path** | 🟢 Built-in (explicit escalation button in diagram) | 🔴 No escalation logic; low-confidence answers go to the user as if they were high-confidence | 🟡 `confidence_score` output exists but not yet wired to human handoff — product gap to design and implement |
-| **Out-of-scope UX** | 🟡 Vendor-defined deflection message | 🔴 Dense retrieval will surface the closest match and the model will confabulate rather than deflect | 🟢 `QueryRouter` routes out-of-scope to a controlled "I don't know" path — needs UX copy but the gate exists |
-| **Personalization ceiling** | 🔴 No account/CRM context; vendor can't access your data model | 🔴 Static corpus only; no tool use, no CRM integration | 🟢 LangGraph tool nodes can call internal APIs (billing, CRM, account data) — "what's my invoice?" is a graph extension, not a rearchitecture |
-| **Answer consistency** | 🔴 Same question, different session → potentially different answer; no control or visibility | 🔴 Same problem; Bedrock generation is non-deterministic and opaque | 🟡 Same underlying variance but `retrieved_chunks` and `confidence_score` are logged — inconsistency is diagnosable and reproducible in eval |
-| **Prompt injection / jailbreak** | 🟡 Vendor guardrails exist; strength unknown and not auditable | 🟡 Claude's built-in safety applies to generation; retrieval layer is not hardened | 🔴 Your responsibility end-to-end — system prompts in `generation/prompts.py` are the only guardrail; need explicit adversarial testing |
-| **Feedback loop closure** | 🔴 Thumbs up/down captured by vendor; no path to corpus or retrieval improvement | 🔴 CloudWatch logs exist but no structured signal; no path from user feedback to retrieval fix | 🟢 Full loop: UI signal → trace classification → failure attribution → grounding eval → CI regression — but requires intentional wiring at each step |
-
----
-
-## Key question: off-the-shelf observability vs self-learning pipeline
-
-The diagram you're working from draws a feedback loop that goes:
-
-```
-UI (thumbs up/down, escalation, chat history)
-  → V2 Eval Suite: Classify Traces
-      → Grounding Pipeline (regression tests)
-      → Failure-Attribution Pipeline (failure taxonomy → capability tests → confidence graders)
-          → pytest / CI integration
-              → Eval Harness (trials × graders × metrics)
-```
-
-This loop is only achievable end-to-end with **PoC 2**. Here's why each option breaks down:
-
-**BookKeeper Hero:** Feedback signal (thumbs up/down, escalation) exists but is trapped in a vendor dashboard. You can't route those signals back into a retrieval eval harness or attribute failures to retrieval vs. generation — the pipeline internals are invisible.
-
-**PoC 1 (Bedrock KB):** You get response text + citations. There is no `confidence_score`, no `retrieved_chunks` list, no per-step timing. "Why did it hallucinate?" has no answer. You can build an eval harness that scores final answers, but you can't diagnose whether the failure was a retrieval miss, wrong chunk, or model drift. The Grounding and Failure-Attribution pipelines in the diagram become guesswork.
-
-**PoC 2 (Librarian):** Every node emits structured state (`retrieved_chunks`, `reranked_chunks`, `confidence_score`, `failure_reason`). The `FailureClusterer` can group misses by pattern (`zero_retrieval`, `expected_doc_not_in_top_k`, `low_confidence`). This feeds directly into:
-- Grounding pipeline: regression tests assert that specific docs appear in top-k for known queries
-- Failure-attribution: classify failure by stage (retrieval miss vs. reranker fail vs. model hallucination)
-- Eval harness: trials are repeatable because the full intermediate state is logged
-- CI: a new corpus ingest or chunking config change triggers the eval suite and fails fast
-
-The self-learning loop — where observed failures improve the system without manual intervention — is what separates PoC 2 from the others architecturally. Off-the-shelf gets you signals; the custom pipeline lets you act on them.
+Date: 2026-04-11
+Context: Decision support for production architecture — Option 1 (Bedrock KB) vs Option 2 (LangGraph pipeline)
 
 ---
 
@@ -240,62 +156,23 @@ any cloud or on-prem.
 
 ---
 
-### 8. Integration complexity
+## When Bedrock KB is the right choice
 
-| Dimension | BookKeeper Hero | PoC 1 — Bedrock KB | PoC 2 — Librarian |
-|---|---|---|---|
-| Setup effort | Hours (SaaS embed) | Days (S3 + KB config + Gemini wiring) | Weeks (pipeline + infra + eval harness) |
-| Dependencies | 1 vendor contract | AWS + Gemini API | Python stack, Chroma/OpenSearch, LangFuse/LangSmith |
-| Corpus ingest | Vendor UI | S3 sync + AWS console | `IngestionPipeline` CLI + config |
-| Config surface | None | KB ID + model ARN + S3 bucket | env vars for each stage (embedder, chunker, retriever, reranker) |
-| Failure surface | Vendor-managed | AWS service health + Gemini uptime | Each pipeline node is a failure point; mitigated by node-level error handling |
-| On-call burden | Low (vendor SLA) | Medium (AWS + Gemini independently) | Higher (own the stack), offset by observability |
-| Iteration speed | None (closed) | Slow (re-ingest to change chunking) | Fast (swap config, re-ingest selectively by `doc_id`) |
+1. **Corpus is stable and well-structured** — standard prose documents (PDFs, web pages),
+   not code, structured records, or mixed-language content
+2. **No budget for always-on infra** — serverless, zero fixed cost
+3. **Speed to launch is the priority** — no model to run, no pipeline to configure
+4. **Acceptable to accept black-box retrieval** — you don't need to explain why an answer was wrong
+5. **Low query volume** (< 5K/month) — per-call cost is cheaper than fixed Fargate
 
-**Key integration risk in PoC 1:** Two-vendor answer chain (Bedrock retrieval + Gemini generation) means two failure domains, two pricing models, two auth flows, and no unified trace. If Gemini drifts, you don't know if the problem is retrieval or generation.
+## When Librarian is the right choice
 
----
-
-### 9. Hallucination risk
-
-Hallucination in RAG has two sources: **retrieval misses** (model lacks grounding) and **context overload** (model ignores good chunks or confabulates from noise). Both need to be measured independently.
-
-| Risk factor | BookKeeper Hero | PoC 1 — Bedrock KB | PoC 2 — Librarian |
-|---|---|---|---|
-| Retrieval miss rate | Unknown | High (dense-only, no keyword fallback for jargon/code) | Lower (hybrid + CRAG retry) |
-| Context noise | Unknown | High (no reranker — top-k cosine only) | Lower (cross-encoder reranker prunes irrelevant chunks) |
-| Low-confidence generation | No gate | No gate | CRAG gate: confidence < threshold → retry before generating |
-| Multi-turn drift | Unknown | Likely (raw query sent to retriever) | Low (`HistoryCondenser` rewrites ambiguous queries) |
-| Diagnosable? | No | No | Yes (`failure_reason`, `confidence_score`, chunk-level traces) |
-
-The PoC 1 sticky note in the diagram ("No reranker — 15% uplift in precision") quantifies the direct quality gap: every answer from PoC 1 is generated from a noisier context than PoC 2. That noise manifests as hallucination when the model synthesises across irrelevant chunks or fills gaps that the retriever left.
-
----
-
-## When each option is the right choice
-
-**BookKeeper Hero (Option 0 — off-the-shelf)**
-- Time-to-live is the only constraint — need something in front of users in days
-- Org has no ML/platform engineering capacity to maintain a pipeline
-- Feedback loop requirements are minimal (thumbs up/down sufficient)
-- Acceptable to not own the data or the improvement trajectory
-
-**PoC 1 — Bedrock KB**
-- Corpus is stable and well-structured (standard prose, not code or jargon-heavy)
-- No budget for always-on infra — serverless, zero fixed cost
-- Already committed to AWS (VPC, IAM, existing OpenSearch)
-- Low query volume (< 5K/month) — per-call cost cheaper than fixed Fargate
-- Acceptable to accept black-box retrieval without failure diagnosis
-- Note: Gemini as the generator in the PoC diagram adds vendor complexity — consider swapping to Claude via Bedrock to reduce integration surface
-
-**PoC 2 — Librarian (LangGraph)**
-- Retrieval quality matters — technical docs, product names, version numbers, code
-- Multi-turn conversations are a core UX (coreference resolution critical)
-- You need to improve the system over time — can't improve what you can't observe
-- The full feedback loop (UI signals → trace classification → grounding eval → CI regression) is a requirement, not a nice-to-have
-- Higher volume (> 5K queries/month) — fixed Fargate cost amortises
-- Corpus requires custom chunking, metadata, or access tiers
-- Streaming perceived latency matters to UX
+1. **Retrieval quality matters** — technical docs, code, domain-specific jargon, version numbers
+2. **Multi-turn conversations are a core UX** — coreference resolution is critical
+3. **You need to improve over time** — can't improve what you can't observe
+4. **Higher volume** (> 5K queries/month) — fixed cost amortises
+5. **Corpus requires custom chunking** — HTML-aware, parent-doc, access tiers
+6. **Streaming perceived latency** — blocking Bedrock vs. token-streaming Librarian
 
 ---
 

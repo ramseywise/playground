@@ -368,7 +368,7 @@ def test_generate_from_chunks_returns_golden_samples() -> None:
             True,
         ),
         patch(
-            "librarian.tasks.generate_synthetic.anthropic.Anthropic",
+            "core.client.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -395,7 +395,7 @@ def test_generate_from_chunks_n_limits_output() -> None:
             True,
         ),
         patch(
-            "librarian.tasks.generate_synthetic.anthropic.Anthropic",
+            "core.client.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -417,7 +417,7 @@ def test_generate_from_chunks_skips_missing_text() -> None:
             True,
         ),
         patch(
-            "librarian.tasks.generate_synthetic.anthropic.Anthropic",
+            "core.client.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -440,7 +440,7 @@ def test_generate_from_chunks_handles_parse_error() -> None:
             True,
         ),
         patch(
-            "librarian.tasks.generate_synthetic.anthropic.Anthropic",
+            "core.client.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -464,7 +464,7 @@ def test_generate_from_chunks_handles_api_error() -> None:
             True,
         ),
         patch(
-            "librarian.tasks.generate_synthetic.anthropic.Anthropic",
+            "core.client.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -486,7 +486,7 @@ def test_generate_from_chunks_query_id_is_deterministic() -> None:
             True,
         ),
         patch(
-            "librarian.tasks.generate_synthetic.anthropic.Anthropic",
+            "core.client.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):
@@ -509,7 +509,7 @@ def test_generate_from_chunks_difficulty_propagated() -> None:
             True,
         ),
         patch(
-            "librarian.tasks.generate_synthetic.anthropic.Anthropic",
+            "core.client.anthropic.Anthropic",
             return_value=mock_client,
         ),
     ):

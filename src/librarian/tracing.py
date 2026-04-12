@@ -65,12 +65,20 @@ def build_langfuse_handler(
     return handler
 
 
-def make_runnable_config(handler: Any | None) -> dict[str, Any]:
+def make_runnable_config(
+    handler: Any | None,
+    thread_id: str | None = None,
+) -> dict[str, Any]:
     """Build a LangGraph-compatible RunnableConfig dict with the Langfuse callback.
+
+    When *thread_id* is provided it is set in ``configurable`` so the graph's
+    checkpointer can persist / restore conversation state.
 
     Returns a dict that satisfies ``langgraph.types.RunnableConfig`` at runtime.
     Typed as ``dict[str, Any]`` to avoid hard dep on langchain-core typestubs.
     Use ``cast(RunnableConfig, ...)`` at call sites if the type checker complains.
     """
     config: dict[str, Any] = {"callbacks": [handler] if handler else []}
+    if thread_id:
+        config["configurable"] = {"thread_id": thread_id}
     return config

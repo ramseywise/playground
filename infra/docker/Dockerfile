@@ -16,6 +16,11 @@ RUN uv sync --frozen --no-dev --extra librarian --extra api --extra lambda
 
 COPY src/ ./src/
 
+# Pre-download the embedding model into the image so cold starts don't
+# incur a 30–60s HuggingFace download.  The model is cached under
+# /root/.cache/torch/sentence_transformers/ and reused by the running app.
+RUN uv run python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-large')"
+
 # ---------------------------------------------------------------------------
 # Stage 2 — lean runtime image
 # ---------------------------------------------------------------------------

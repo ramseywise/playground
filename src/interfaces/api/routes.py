@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import uuid
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 
@@ -13,6 +14,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from interfaces.api.deps import (
     get_bedrock_client,
+    get_google_adk_client,
     get_graph,
     get_pipeline,
     get_settings,
@@ -55,6 +57,8 @@ async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
 
     if decision.route == "bedrock":
         return await _chat_bedrock(req)
+    if decision.route == "google_adk":
+        return await _chat_google_adk(req)
     if decision.route in ("escalation", "direct"):
         return ChatResponse(
             response=decision.response or "",
@@ -74,11 +78,12 @@ async def _chat_librarian(req: ChatRequest) -> ChatResponse | JSONResponse:
 
     log.info("api.chat.librarian", query=req.query[:80], session_id=req.session_id)
 
+    thread_id = req.session_id or req.conversation_id or str(uuid.uuid4())
     handler = build_langfuse_handler(
         session_id=req.session_id or "",
         trace_id=trace_id,
     )
-    config = make_runnable_config(handler)
+    config = make_runnable_config(handler, thread_id=thread_id)
 
     try:
         result: dict[str, Any] = await graph.ainvoke(
@@ -88,10 +93,14 @@ async def _chat_librarian(req: ChatRequest) -> ChatResponse | JSONResponse:
         log.exception("api.chat.librarian.error")
         return _error_response(500, "Internal graph error")
 
+    confident = result.get("confident", True)
+    fallback_requested = result.get("fallback_requested", False)
     return ChatResponse(
         response=result.get("response", ""),
         citations=result.get("citations", []),
         confidence_score=result.get("confidence_score", 0.0),
+        confident=confident,
+        escalate=not confident or fallback_requested,
         intent=result.get("intent", ""),
         trace_id=_trace_id(),
         backend="librarian",
@@ -126,6 +135,34 @@ async def _chat_bedrock(req: ChatRequest) -> ChatResponse | JSONResponse:
     )
 
 
+async def _chat_google_adk(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Call Google Gemini with Vertex AI Search grounding."""
+    client = get_google_adk_client()
+    if client is None:
+        return _error_response(
+            503,
+            "Google RAG not configured",
+            detail="Set GOOGLE_DATASTORE_ID and GEMINI_API_KEY in .env",
+        )
+
+    log.info("api.chat.google_adk", query=req.query[:80], session_id=req.session_id)
+
+    try:
+        result = await client.aquery(req.query, session_id=req.session_id)
+    except Exception:
+        log.exception("api.chat.google_adk.error")
+        return _error_response(502, "Google RAG error")
+
+    return ChatResponse(
+        response=result.response,
+        citations=result.citations,
+        confidence_score=0.0,
+        intent="google_rag",
+        trace_id=_trace_id(),
+        backend="google_adk",
+    )
+
+
 async def _stream_chat(
     req: ChatRequest, timeout: float
 ) -> AsyncGenerator[dict[str, Any], None]:
@@ -135,15 +172,18 @@ async def _stream_chat(
 
     log.info("api.chat.stream", query=req.query[:80], session_id=req.session_id)
 
+    thread_id = req.session_id or req.conversation_id or str(uuid.uuid4())
     handler = build_langfuse_handler(
         session_id=req.session_id or "",
         trace_id=trace_id,
     )
-    config = make_runnable_config(handler)
+    config = make_runnable_config(handler, thread_id=thread_id)
 
-    # Only extract the four fields we need — avoids holding large state (e.g.
+    # Only extract the fields we need — avoids holding large state (e.g.
     # raw chunks or embeddings) in memory for the full stream duration.
     response = citations = confidence = intent = None
+    confident: bool = True
+    fallback_requested: bool = False
 
     try:
         async with asyncio.timeout(timeout):
@@ -160,14 +200,21 @@ async def _stream_chat(
                             confidence = update["confidence_score"]
                         if "intent" in update:
                             intent = update["intent"]
+                        if "confident" in update:
+                            confident = update["confident"]
+                        if "fallback_requested" in update:
+                            fallback_requested = update["fallback_requested"]
                     yield {"event": "status", "data": {"stage": node_name}}
 
+        escalate = not confident or fallback_requested
         yield {
             "event": "done",
             "data": {
                 "response": response or "",
                 "citations": citations or [],
                 "confidence_score": confidence or 0.0,
+                "confident": confident,
+                "escalate": escalate,
                 "intent": intent or "",
                 "trace_id": trace_id,
             },
@@ -195,15 +242,26 @@ async def chat_stream(req: ChatRequest) -> EventSourceResponse:
 
         async def triage_events() -> AsyncGenerator[str, None]:
             yield format_sse("status", {"stage": "triage"})
-            yield format_sse("done", {
-                "response": decision.response or "",
-                "citations": [],
-                "confidence_score": decision.confidence,
-                "intent": decision.intent,
-                "trace_id": _trace_id(),
-            })
+            yield format_sse(
+                "done",
+                {
+                    "response": decision.response or "",
+                    "citations": [],
+                    "confidence_score": decision.confidence,
+                    "intent": decision.intent,
+                    "trace_id": _trace_id(),
+                },
+            )
 
         return EventSourceResponse(triage_events())
+
+    if decision.route in ("bedrock", "google_adk"):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "detail": f"Streaming is not supported for the {decision.route} backend. Use /chat instead.",
+            },
+        )
 
     cfg = get_settings()
 

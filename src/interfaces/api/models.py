@@ -11,7 +11,7 @@ class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4000)
     session_id: str | None = None
     conversation_id: str | None = None  # legacy alias — prefer session_id
-    backend: Literal["librarian", "bedrock"] = "librarian"
+    backend: Literal["librarian", "bedrock", "google_adk"] = "librarian"
 
 
 class ChatResponse(BaseModel):
@@ -20,6 +20,8 @@ class ChatResponse(BaseModel):
     response: str
     citations: list[dict[str, str]]
     confidence_score: float
+    confident: bool = True
+    escalate: bool = False
     intent: str
     trace_id: str = ""
     backend: str = "librarian"

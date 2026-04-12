@@ -10,13 +10,13 @@ issues=""
 
 # --- B1: No bare SDK client instantiation ---
 # Anthropic: only client.py may call anthropic.Anthropic(
-if ! echo "$path" | grep -qE 'utils/client\.py$'; then
+if ! echo "$path" | grep -qE '(utils/client|core/clients/llm)\.py$'; then
   line=$(grep -n 'anthropic\.Anthropic(' "$path" 2>/dev/null | grep -v '# noqa' | head -1 || true)
   [ -n "$line" ] && issues="$issues  [sdk-factory] use create_client(), not bare anthropic.Anthropic(): $line\n"
 fi
 
 # Google: only factory file may instantiate genai/generativeai clients
-if ! echo "$path" | grep -qE 'utils/client\.py$'; then
+if ! echo "$path" | grep -qE '(utils/client|core/clients/llm)\.py$'; then
   line=$(grep -nE 'genai\.Client\(|generativeai\.GenerativeModel\(|GenerativeModel\(' "$path" 2>/dev/null | grep -v '# noqa' | head -1 || true)
   [ -n "$line" ] && issues="$issues  [sdk-factory] use factory function, not bare Google AI client: $line\n"
 fi

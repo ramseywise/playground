@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from core.schemas.chunks import Chunk
-from core.schemas.retrieval import RetrievalResult
+from librarian.schemas.chunks import Chunk
+from librarian.schemas.retrieval import RetrievalResult
 from librarian.config import settings
 from core.logging import get_logger
 
@@ -114,7 +114,7 @@ class OpenSearchRetriever:
         for hit in resp["hits"]["hits"]:
             src = hit["_source"]
             meta_data = src.get("metadata", {})
-            from core.schemas.chunks import ChunkMetadata
+            from librarian.schemas.chunks import ChunkMetadata
 
             chunk = Chunk(
                 id=hit["_id"],

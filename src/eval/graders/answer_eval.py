@@ -24,13 +24,14 @@ from typing import Any
 
 import anthropic
 
+from core.config.settings import BaseSettings
 from core.logging import get_logger
 
 log = get_logger(__name__)
 
 CONFIRM_EXPENSIVE_OPS = False  # never commit as True
 
-HAIKU_MODEL = "claude-haiku-4-5-20251001"
+_settings = BaseSettings()
 
 _JUDGE_SYSTEM = """\
 You are an expert evaluator for a customer support RAG system.
@@ -86,11 +87,13 @@ class AnswerJudge:
 
     def __init__(
         self,
-        model: str = HAIKU_MODEL,
+        model: str = "",
         max_context_chars: int = 3000,
     ) -> None:
-        self._client = anthropic.Anthropic()
-        self._model = model
+        from core.client import create_client
+
+        self._client = create_client()
+        self._model = model or _settings.model_haiku
         self._max_context_chars = max_context_chars
 
     def evaluate(
@@ -216,9 +219,11 @@ class ClosedBookBaseline:
         "as best you can from your own knowledge. If you are unsure, say so."
     )
 
-    def __init__(self, model: str = HAIKU_MODEL) -> None:
-        self._client = anthropic.Anthropic()
-        self._model = model
+    def __init__(self, model: str = "") -> None:
+        from core.client import create_client
+
+        self._client = create_client()
+        self._model = model or _settings.model_haiku
 
     def answer(self, question: str) -> str:
         """Generate a closed-book answer (no retrieval context)."""

@@ -34,11 +34,17 @@ class LibrarySettings(BaseSettings):
 
     # Embedding
     embedding_model: str = "intfloat/multilingual-e5-large"
+    embedding_model_revision: str = (
+        ""  # HuggingFace commit SHA — pin for reproducibility
+    )
     embedding_provider: str = "multilingual"  # multilingual | minilm
 
     # Strategies
     ingestion_strategy: str = "html_aware"
-    retrieval_strategy: str = "chroma"  # chroma | opensearch | duckdb | inmemory
+    # chroma | opensearch | duckdb | inmemory
+    # NOTE: Chroma uses PersistentClient with a single-writer lock.
+    # For multi-worker ingest (parallel Fargate tasks), use opensearch.
+    retrieval_strategy: str = "chroma"
     reranker_strategy: str = "cross_encoder"
     planning_mode: Literal["rule_based", "llm"] = "rule_based"
 
@@ -96,10 +102,20 @@ class LibrarySettings(BaseSettings):
         ""  # path to golden samples JSONL (external, never committed)
     )
 
+    # Google RAG (Vertex AI Search / Gemini grounding — alternative RAG backend)
+    google_project_id: str = ""
+    google_location: str = "global"
+    google_datastore_id: str = ""  # Vertex AI Search datastore for grounding
+
     # Bedrock Knowledge Bases (alternative RAG backend for A/B comparison)
     bedrock_knowledge_base_id: str = ""
     bedrock_model_arn: str = ""  # full ARN, e.g. arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0
     bedrock_region: str = ""  # falls back to s3_region / AWS_DEFAULT_REGION
+
+    # Checkpointer — persistent conversation state across task restarts
+    checkpoint_backend: str = "memory"  # memory | sqlite | postgres
+    checkpoint_sqlite_path: str = ".duckdb/checkpoints.sqlite"
+    checkpoint_postgres_url: str = ""  # required when checkpoint_backend=postgres
 
     # OpenTelemetry (optional — requires the otel extra)
     otel_enabled: bool = False

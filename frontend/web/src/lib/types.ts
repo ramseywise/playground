@@ -20,7 +20,7 @@ export interface RagRequest {
   session_id?: string;
 }
 
-export type Backend = "librarian" | "bedrock" | "triage" | "both";
+export type Backend = "librarian" | "bedrock" | "google_adk" | "triage" | "both";
 
 export interface ChatMessage {
   id: string;

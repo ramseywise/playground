@@ -77,6 +77,12 @@ async def test_variant_retrieval_comparison(
     production conditions (raptor/bedrock retrieve 5, librarian retrieves 10).
     """
     cfg = VARIANTS[variant_name]
+    if cfg.retrieval_strategy == "bedrock" and not cfg.bedrock_knowledge_base_id:
+        pytest.skip("BEDROCK_KNOWLEDGE_BASE_ID not set")
+    if cfg.retrieval_strategy == "google_adk" and not (
+        cfg.google_datastore_id or cfg.google_project_id
+    ):
+        pytest.skip("GOOGLE_DATASTORE_ID not set")
     embedder = MockEmbedder(dim=64, seed=42)
     retriever = await _build_populated_retriever(
         corpus=CORPUS,
@@ -124,6 +130,12 @@ async def test_variant_metrics_are_valid(
 ) -> None:
     """All variants must return well-formed RetrievalMetrics — no exceptions, valid range."""
     cfg = VARIANTS[variant_name]
+    if cfg.retrieval_strategy == "bedrock" and not cfg.bedrock_knowledge_base_id:
+        pytest.skip("BEDROCK_KNOWLEDGE_BASE_ID not set")
+    if cfg.retrieval_strategy == "google_adk" and not (
+        cfg.google_datastore_id or cfg.google_project_id
+    ):
+        pytest.skip("GOOGLE_DATASTORE_ID not set")
     embedder = MockEmbedder(dim=64, seed=42)
     retriever = await _build_populated_retriever(
         corpus=CORPUS,

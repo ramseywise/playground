@@ -5,8 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from core.schemas.chunks import Chunk
-from core.schemas.retrieval import RetrievalResult  # noqa: F401
+from librarian.schemas.chunks import Chunk
 
 
 class Intent(str, Enum):
@@ -17,6 +16,12 @@ class Intent(str, Enum):
     OUT_OF_SCOPE = "out_of_scope"  # outside the corpus domain
 
 
+class RetrievalResult(BaseModel):
+    chunk: Chunk
+    score: float
+    source: Literal["vector", "bm25", "hybrid"]
+
+
 class QueryPlan(BaseModel):
     intent: Intent
     routing: Literal["retrieve", "direct", "clarify"]
@@ -24,6 +29,3 @@ class QueryPlan(BaseModel):
     needs_clarification: bool
     clarification_question: str | None = None
     retrieval_mode: Literal["dense", "hybrid", "snippet"] = "dense"
-
-
-__all__ = ["Chunk", "Intent", "QueryPlan", "RetrievalResult"]

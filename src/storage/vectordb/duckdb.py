@@ -24,10 +24,10 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from core.retrieval.rrf import fuse_rankings
-from core.retrieval.scoring import term_overlap
-from core.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
-from core.schemas.retrieval import RetrievalResult
+from librarian.retrieval.rrf import fuse_rankings
+from librarian.retrieval.scoring import term_overlap
+from librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
+from librarian.schemas.retrieval import RetrievalResult
 from core.logging import get_logger
 
 log = get_logger(__name__)

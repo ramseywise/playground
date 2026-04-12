@@ -14,16 +14,12 @@ log = get_logger(__name__)
 _NO_CHUNKS_CONFIDENCE = 0.0
 
 
-class RerankerAgent:
-    """Cross-encoder reranking and confidence scoring.
+class RerankerSubgraph:
+    """Stateless node: rerank graded_chunks → reranked_chunks + confidence_score.
 
-    Stateless agent: filters graded chunks to relevant candidates, applies the
-    configured reranker, and emits a confidence_score (max relevance_score) used
-    by the downstream quality gate.
+    Only passes relevant graded chunks to the reranker.
+    Falls back to all chunks when none are marked relevant (avoids empty rerank).
     """
-
-    name = "reranker"
-    description = "Cross-encoder reranking and confidence scoring"
 
     def __init__(self, reranker: Reranker, top_k: int = 3) -> None:
         self._reranker = reranker
@@ -68,10 +64,3 @@ class RerankerAgent:
             "reranked_chunks": reranked,
             "confidence_score": confidence,
         }
-
-    def as_node(self) -> Any:
-        """Return a LangGraph-compatible async node function."""
-        async def rerank(state: LibrarianState) -> dict[str, Any]:
-            return await self.run(state)
-
-        return rerank

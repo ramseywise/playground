@@ -19,18 +19,12 @@ log = get_logger(__name__)
 DEFAULT_CONFIDENCE_GATE = 0.3
 
 
-class GeneratorAgent:
-    """Prompt assembly, answer generation, and citation extraction.
+class GenerationSubgraph:
+    """Stateless node: build_prompt → call_llm → extract_citations.
 
-    Stateless agent: assembles a retrieval-augmented prompt from reranked chunks,
-    calls the LLM, and extracts chunk-level citations.
-
-    Also exposes a ``confidence_gate`` method (used as a separate graph node)
-    so the gate and generator share the same threshold without a second instance.
+    Also exposes ``confidence_gate`` as a separate callable so the supervisor
+    can use it as a conditional edge without instantiating a second object.
     """
-
-    name = "generator"
-    description = "Prompt assembly and answer generation with citation extraction"
 
     def __init__(
         self,
@@ -106,21 +100,3 @@ class GeneratorAgent:
             "confident": confident,
             "fallback_requested": not confident,
         }
-
-    def as_node(self) -> Any:
-        """Return a LangGraph-compatible async generate node function."""
-        async def generate(state: LibrarianState) -> dict[str, Any]:
-            return await self.run(state)
-
-        return generate
-
-    def gate_as_node(self) -> Any:
-        """Return a LangGraph-compatible sync gate node function."""
-        def gate(state: LibrarianState) -> dict[str, Any]:
-            result = self.confidence_gate(state)
-            # Increment retry_count so the state update is persisted by LangGraph
-            if result.get("fallback_requested"):
-                result["retry_count"] = int(state.get("retry_count") or 0) + 1
-            return result
-
-        return gate

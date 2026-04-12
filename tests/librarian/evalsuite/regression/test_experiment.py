@@ -18,6 +18,7 @@ from eval.experiment import (
     upload_golden_dataset,
 )
 from eval.variants import VARIANTS
+from librarian.config import LibrarySettings
 from librarian.schemas.chunks import Chunk
 from librarian.tasks.models import GoldenSample
 from tests.librarian.evalsuite.conftest import CORPUS, GOLDEN
@@ -81,6 +82,14 @@ async def test_query_results_contain_expected_fields() -> None:
 @pytest.mark.parametrize("variant_name", list(VARIANTS.keys()))
 async def test_all_variants_produce_valid_results(variant_name: str) -> None:
     """Every registered variant runs without errors and produces valid metrics."""
+    cfg = VARIANTS[variant_name]
+    if cfg.retrieval_strategy == "bedrock" and not cfg.bedrock_knowledge_base_id:
+        pytest.skip("BEDROCK_KNOWLEDGE_BASE_ID not set")
+    if cfg.retrieval_strategy == "google_adk" and not (
+        cfg.google_datastore_id or cfg.google_project_id
+    ):
+        pytest.skip("GOOGLE_DATASTORE_ID not set")
+
     result = await run_variant_experiment(
         variant_name,
         GOLDEN,
@@ -100,10 +109,23 @@ async def test_all_variants_produce_valid_results(variant_name: str) -> None:
 
 @pytest.mark.asyncio
 async def test_run_all_returns_all_variants() -> None:
-    """run_all_experiments returns results for every variant."""
+    """run_all_experiments returns results for every configured variant."""
     results = await run_all_experiments(GOLDEN, CORPUS)
 
-    assert set(results.keys()) == set(VARIANTS.keys())
+    # Live variants are skipped when credentials are absent
+    def _variant_runnable(name: str, cfg: LibrarySettings) -> bool:
+        if cfg.retrieval_strategy == "bedrock" and not cfg.bedrock_knowledge_base_id:
+            return False
+        if cfg.retrieval_strategy == "google_adk" and not (
+            cfg.google_datastore_id or cfg.google_project_id
+        ):
+            return False
+        return True
+
+    expected = {
+        name for name, cfg in VARIANTS.items() if _variant_runnable(name, cfg)
+    }
+    assert set(results.keys()) == expected
     for name, result in results.items():
         assert result.variant_name == name
         assert result.n_queries == len(GOLDEN)
@@ -151,6 +173,7 @@ async def test_print_comparison_table_runs(capsys: pytest.CaptureFixture[str]) -
     captured = capsys.readouterr()
     assert "librarian" in captured.out
     assert "raptor" in captured.out
+    # "bedrock" (mock) is always present; "bedrock-live" only when configured
     assert "bedrock" in captured.out
     assert "hit_rate" in captured.out
     assert "MRR" in captured.out

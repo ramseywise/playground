@@ -54,6 +54,13 @@ variable "anthropic_api_key" {
   sensitive   = true
 }
 
+variable "checkpoint_postgres_url" {
+  description = "Postgres connection URL for LangGraph checkpointer — stored in Secrets Manager"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # ---------------------------------------------------------------------------
 # Lambda (opt-in)
 # ---------------------------------------------------------------------------

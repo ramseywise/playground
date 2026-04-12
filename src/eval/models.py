@@ -12,6 +12,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from core.config.settings import BaseSettings as _BaseSettings
+
+_settings = _BaseSettings()
+
 
 # ---------------------------------------------------------------------------
 # Task — a single evaluation item
@@ -67,7 +71,7 @@ class EvalRunConfig(BaseModel):
 
     run_name: str = ""
     prompt_version: str = "v0.1.0"
-    model_id: str = "claude-haiku-4-5-20251001"
+    model_id: str = Field(default_factory=lambda: _settings.model_haiku)
     eval_dataset: str = ""
     corpus_version: str = ""
     top_k: int = 5
