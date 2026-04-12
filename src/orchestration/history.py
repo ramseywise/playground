@@ -14,7 +14,7 @@ _SYSTEM_PROMPT = (
 )
 
 
-def _message_to_dict(message: object) -> dict[str, str]:
+def _message_to_dict(message: object) -> dict[str, str]:  # noqa: D103
     if isinstance(message, dict):
         role = str(message.get("role", "user"))
         content = str(message.get("content", ""))
@@ -24,8 +24,17 @@ def _message_to_dict(message: object) -> dict[str, str]:
     return {"role": "assistant" if role == "ai" else "user", "content": str(content)}
 
 
-class HistoryCondenser:
-    """Rewrite the latest user query into a standalone question."""
+class CondenserAgent:
+    """Rewrite multi-turn queries into standalone questions.
+
+    On single-turn conversations (one message or fewer) this is a no-op.
+    On multi-turn it calls the LLM (Haiku) to resolve coreferences and produce
+    a self-contained query for downstream retrieval.
+    """
+
+    name = "condenser"
+    description = "Rewrite multi-turn queries into standalone questions"
+    instruction = _SYSTEM_PROMPT
 
     def __init__(self, llm: LLMClient) -> None:
         self._llm = llm
@@ -46,3 +55,10 @@ class HistoryCondenser:
             standalone_query=standalone_query[:120],
         )
         return {"standalone_query": standalone_query}
+
+    def as_node(self) -> Any:
+        """Return a LangGraph-compatible async node function."""
+        async def _condense_node(state: LibrarianState) -> dict[str, Any]:
+            return await self.condense(state)
+
+        return _condense_node

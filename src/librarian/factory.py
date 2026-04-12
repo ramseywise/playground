@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, cast
 from langgraph.graph.state import CompiledStateGraph
 
 from orchestration.graph import build_graph
-from orchestration.history import HistoryCondenser
+from orchestration.history import CondenserAgent
 from librarian.ingestion.base import Chunker
 from librarian.retrieval.base import Embedder, Retriever
 from librarian.reranker.base import Reranker
@@ -195,7 +195,7 @@ def create_librarian(
     resolved_embedder = embedder or _build_embedder(cfg)
     resolved_retriever = retriever or _build_retriever(cfg, resolved_embedder)
     resolved_reranker = reranker or _build_reranker(cfg, resolved_llm)
-    resolved_history_condenser = HistoryCondenser(llm=resolved_history_llm)
+    resolved_history_condenser = CondenserAgent(llm=resolved_history_llm)
     retrieval_cache = (
         RetrievalCache(max_size=cfg.cache_max_size, ttl_seconds=cfg.cache_ttl_seconds)
         if cfg.cache_enabled

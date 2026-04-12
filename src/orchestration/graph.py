@@ -10,10 +10,10 @@ from core.clients.llm import LLMClient
 from orchestration.query_understanding import (
     QueryAnalyzer,
 )
-from orchestration.history import HistoryCondenser
-from orchestration.nodes.generation import GenerationSubgraph
-from orchestration.nodes.reranker import RerankerSubgraph
-from orchestration.nodes.retrieval import RetrievalSubgraph
+from orchestration.history import CondenserAgent
+from orchestration.nodes.generation import GeneratorAgent
+from orchestration.nodes.reranker import RerankerAgent
+from orchestration.nodes.retrieval import RetrieverAgent
 from librarian.retrieval.cache import RetrievalCache
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever
@@ -46,6 +46,7 @@ _AsyncNode = Callable[[LibrarianState], Coroutine[Any, Any, dict[str, Any]]]
 
 
 def _make_analyze_node(analyzer: QueryAnalyzer, *, max_variants: int = 3) -> _SyncNode:
+    """PlannerAgent is rule-based; no as_node() yet — built inline here."""
     def analyze(state: LibrarianState) -> dict[str, Any]:
         query = state.get("standalone_query") or state.get("query", "")
         analysis = analyzer.analyze(query)
@@ -60,16 +61,9 @@ def _make_analyze_node(analyzer: QueryAnalyzer, *, max_variants: int = 3) -> _Sy
     return analyze
 
 
-def _make_condense_node(condenser: HistoryCondenser) -> _AsyncNode:
-    async def condense(state: LibrarianState) -> dict[str, Any]:
-        return await condenser.condense(state)
-
-    return condense
-
-
 def _make_snippet_retrieve_node(snippet_retriever: Retriever) -> _AsyncNode:
+    """Keyword-based retrieval from the snippet DB, bypassing embedding + reranker."""
     async def snippet_retrieve(state: LibrarianState) -> dict[str, Any]:
-        """Keyword-based retrieval from the snippet DB, bypassing embedding + reranker."""
         query = state.get("standalone_query") or state.get("query", "")
         results = await snippet_retriever.search(
             query_text=query,
@@ -96,40 +90,6 @@ def _make_snippet_retrieve_node(snippet_retriever: Retriever) -> _AsyncNode:
         }
 
     return snippet_retrieve
-
-
-def _make_retrieve_node(subgraph: RetrievalSubgraph) -> _AsyncNode:
-    async def retrieve(state: LibrarianState) -> dict[str, Any]:
-        result = await subgraph.run(state)
-        retry_count = int(state.get("retry_count") or 0)
-        return {**result, "retry_count": retry_count}
-
-    return retrieve
-
-
-def _make_rerank_node(subgraph: RerankerSubgraph) -> _AsyncNode:
-    async def rerank(state: LibrarianState) -> dict[str, Any]:
-        return await subgraph.run(state)
-
-    return rerank
-
-
-def _make_generate_node(subgraph: GenerationSubgraph) -> _AsyncNode:
-    async def generate(state: LibrarianState) -> dict[str, Any]:
-        return await subgraph.run(state)
-
-    return generate
-
-
-def _make_gate_node(subgraph: GenerationSubgraph) -> _SyncNode:
-    def gate(state: LibrarianState) -> dict[str, Any]:
-        result = subgraph.confidence_gate(state)
-        # Increment retry_count here so the state update is persisted by LangGraph
-        if result.get("fallback_requested"):
-            result["retry_count"] = int(state.get("retry_count") or 0) + 1
-        return result
-
-    return gate
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +139,7 @@ def build_graph(
     llm: LLMClient,
     *,
     history_llm: LLMClient | None = None,
-    history_condenser: HistoryCondenser | None = None,
+    history_condenser: CondenserAgent | None = None,
     snippet_retriever: Retriever | None = None,
     cache: RetrievalCache | None = None,
     cache_strategy: str = "",
@@ -191,40 +151,48 @@ def build_graph(
 ) -> CompiledStateGraph:
     """Build and compile the LibrarianGraph.
 
+    Agent pipeline (default path):
+        START → condense → analyze → retrieve → rerank → gate → generate → END
+
+    Routing:
+        analyze: routes to snippet_retrieve when retrieval_mode="snippet" and a
+                 snippet_retriever is configured; otherwise → retrieve
+        gate:    CRAG back-edge → retrieve when confidence_score < threshold
+                 and retry_count <= max_crag_retries; otherwise → generate
+        snippet_retrieve: skips rerank + gate → routes directly to generate
+
     When *snippet_retriever* is provided, simple factual queries are routed to
     the snippet_retrieve node (keyword-based DuckDB FTS) instead of the vector
     store, bypassing embedding and reranking for fast lookup.
 
     Returns a compiled LangGraph runnable (``CompiledGraph``).
     """
+    # Instantiate agents
     analyzer = QueryAnalyzer()
-    condenser = history_condenser or HistoryCondenser(llm=history_llm or llm)
-
-    retrieval_sg = RetrievalSubgraph(
+    condenser_agent = history_condenser or CondenserAgent(llm=history_llm or llm)
+    retriever_agent = RetrieverAgent(
         retriever=retriever,
         embedder=embedder,
         top_k=retrieval_k,
         cache=cache,
         cache_strategy=cache_strategy,
     )
-    reranker_sg = RerankerSubgraph(reranker=reranker, top_k=reranker_top_k)
-    generation_sg = GenerationSubgraph(
-        llm=llm, confidence_threshold=confidence_threshold
-    )
+    reranker_agent = RerankerAgent(reranker=reranker, top_k=reranker_top_k)
+    generator_agent = GeneratorAgent(llm=llm, confidence_threshold=confidence_threshold)
 
     has_snippet_retriever = snippet_retriever is not None
     graph = StateGraph(LibrarianState)
 
     # Register nodes
-    graph.add_node(_CONDENSE, cast(Any, _make_condense_node(condenser)))
+    graph.add_node(_CONDENSE, cast(Any, condenser_agent.as_node()))
     graph.add_node(
         _ANALYZE,
         cast(Any, _make_analyze_node(analyzer, max_variants=max_query_variants)),
     )
-    graph.add_node(_RETRIEVE, cast(Any, _make_retrieve_node(retrieval_sg)))
-    graph.add_node(_RERANK, cast(Any, _make_rerank_node(reranker_sg)))
-    graph.add_node(_GATE, cast(Any, _make_gate_node(generation_sg)))
-    graph.add_node(_GENERATE, cast(Any, _make_generate_node(generation_sg)))
+    graph.add_node(_RETRIEVE, cast(Any, retriever_agent.as_node()))
+    graph.add_node(_RERANK, cast(Any, reranker_agent.as_node()))
+    graph.add_node(_GATE, cast(Any, generator_agent.gate_as_node()))
+    graph.add_node(_GENERATE, cast(Any, generator_agent.as_node()))
 
     if has_snippet_retriever:
         graph.add_node(

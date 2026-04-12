@@ -5,7 +5,7 @@ from __future__ import annotations
 from langgraph.graph.state import CompiledStateGraph
 
 from librarian.factory import create_librarian
-from orchestration.nodes.generation import GenerationSubgraph
+from orchestration.nodes.generation import GeneratorAgent
 from librarian.bedrock.client import BedrockKBClient
 from librarian.ingestion.pipeline import IngestionPipeline
 from librarian.config import LibrarySettings, settings as _default_settings
@@ -16,7 +16,7 @@ from core.logging import get_logger
 log = get_logger(__name__)
 
 _graph: CompiledStateGraph | None = None
-_generation_sg: GenerationSubgraph | None = None
+_generator_agent: GeneratorAgent | None = None
 _pipeline: IngestionPipeline | None = None
 _bedrock_client: BedrockKBClient | None = None
 _triage: TriageService | None = None
@@ -25,7 +25,7 @@ _settings: LibrarySettings = _default_settings
 
 def init_graph(cfg: LibrarySettings | None = None) -> None:
     """Initialise the graph singleton. Called once at app startup."""
-    global _graph, _generation_sg, _bedrock_client, _settings  # noqa: PLW0603
+    global _graph, _generator_agent, _bedrock_client, _settings  # noqa: PLW0603
     _settings = cfg or _default_settings
 
     log.info("api.deps.init_graph", retrieval=_settings.retrieval_strategy)
@@ -35,7 +35,7 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
         model=_settings.anthropic_model_sonnet,
         api_key=_settings.anthropic_api_key,
     )
-    _generation_sg = GenerationSubgraph(
+    _generator_agent = GeneratorAgent(
         llm=llm,
         confidence_threshold=_settings.confidence_threshold,
     )
@@ -60,12 +60,12 @@ def get_graph() -> CompiledStateGraph:
     return _graph
 
 
-def get_generation_subgraph() -> GenerationSubgraph:
-    """Return the generation subgraph for streaming."""
-    if _generation_sg is None:
-        msg = "Generation subgraph not initialised — call init_graph() first"
+def get_generator_agent() -> GeneratorAgent:
+    """Return the generator agent for streaming."""
+    if _generator_agent is None:
+        msg = "Generator agent not initialised — call init_graph() first"
         raise RuntimeError(msg)
-    return _generation_sg
+    return _generator_agent
 
 
 def init_pipeline(cfg: LibrarySettings | None = None) -> None:

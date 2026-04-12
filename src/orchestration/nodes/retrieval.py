@@ -38,12 +38,16 @@ def _grade_chunks(
     return graded
 
 
-class RetrievalSubgraph:
-    """Stateless node: retrieve → deduplicate → grade.
+class RetrieverAgent:
+    """Hybrid multi-query retrieval with relevance grading.
 
-    Expands the query using plan.query_variants (multi-query).
-    Falls back to state["query"] / state["standalone_query"] when no plan.
+    Stateless agent: expands the query using plan.query_variants, embeds each
+    variant, searches the vector store, deduplicates, and grades results by
+    relevance threshold.
     """
+
+    name = "retriever"
+    description = "Hybrid multi-query retrieval with relevance grading"
 
     def __init__(
         self,
@@ -136,3 +140,12 @@ class RetrievalSubgraph:
             "graded_chunks": graded,
             "query_variants": variants,
         }
+
+    def as_node(self) -> Any:
+        """Return a LangGraph-compatible async node function."""
+        async def retrieve(state: LibrarianState) -> dict[str, Any]:
+            result = await self.run(state)
+            retry_count = int(state.get("retry_count") or 0)
+            return {**result, "retry_count": retry_count}
+
+        return retrieve
