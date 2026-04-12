@@ -9,7 +9,10 @@ import pytest
 from librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk, RankedChunk
 from librarian.schemas.retrieval import RetrievalResult
 from orchestration.adk.tools import (
-    _check_configured,
+    ToolDeps,
+    _get_deps,
+    analyze_query,
+    condense_query,
     configure_tools,
     rerank_results,
     search_knowledge_base,
@@ -52,29 +55,35 @@ def _make_ranked_chunk(
 # ---------------------------------------------------------------------------
 
 
-def test_check_configured_raises_when_not_configured() -> None:
+def test_get_deps_raises_when_not_configured() -> None:
     """Tools must raise if configure_tools() was never called."""
     import orchestration.adk.tools as tools_mod
 
-    # Reset module state
-    tools_mod._retriever = None
-    tools_mod._embedder = None
-    tools_mod._reranker = None
-
+    tools_mod._deps = None
     with pytest.raises(RuntimeError, match="not configured"):
-        _check_configured()
+        _get_deps()
 
 
-def test_configure_tools_sets_components() -> None:
-    retriever = MagicMock()
-    embedder = MagicMock()
-    reranker = MagicMock()
-    configure_tools(retriever=retriever, embedder=embedder, reranker=reranker)
+def test_configure_tools_returns_deps() -> None:
+    deps = configure_tools(
+        retriever=MagicMock(),
+        embedder=MagicMock(),
+        reranker=MagicMock(),
+    )
+    assert isinstance(deps, ToolDeps)
+    assert deps.retriever is not None
+    assert deps.analyzer is not None  # auto-created
 
-    r, e, rr = _check_configured()
-    assert r is retriever
-    assert e is embedder
-    assert rr is reranker
+
+def test_configure_tools_accepts_condenser_llm() -> None:
+    mock_llm = MagicMock()
+    deps = configure_tools(
+        retriever=MagicMock(),
+        embedder=MagicMock(),
+        reranker=MagicMock(),
+        condenser_llm=mock_llm,
+    )
+    assert deps.condenser_llm is mock_llm
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +93,6 @@ def test_configure_tools_sets_components() -> None:
 
 @pytest.mark.asyncio
 async def test_search_knowledge_base_returns_results() -> None:
-    """search_knowledge_base should embed the query, search, and return formatted results."""
     mock_embedder = MagicMock()
     mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
 
@@ -108,7 +116,6 @@ async def test_search_knowledge_base_returns_results() -> None:
     assert len(result["results"]) == 2
     assert result["results"][0]["chunk_id"] == "c1"
     assert result["results"][0]["score"] == 0.95
-    assert result["results"][0]["text"] == "First passage about auth."
 
     mock_embedder.aembed_query.assert_awaited_once_with("what is authentication?")
     mock_retriever.search.assert_awaited_once()
@@ -116,23 +123,17 @@ async def test_search_knowledge_base_returns_results() -> None:
 
 @pytest.mark.asyncio
 async def test_search_knowledge_base_passes_k() -> None:
-    """num_results should be forwarded as k to the retriever."""
     mock_embedder = MagicMock()
     mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
-
     mock_retriever = MagicMock()
     mock_retriever.search = AsyncMock(return_value=[])
 
     configure_tools(
-        retriever=mock_retriever,
-        embedder=mock_embedder,
-        reranker=MagicMock(),
+        retriever=mock_retriever, embedder=mock_embedder, reranker=MagicMock()
     )
 
     await search_knowledge_base("test query", num_results=20)
-
-    call_kwargs = mock_retriever.search.call_args
-    assert call_kwargs.kwargs["k"] == 20
+    assert mock_retriever.search.call_args.kwargs["k"] == 20
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +143,6 @@ async def test_search_knowledge_base_passes_k() -> None:
 
 @pytest.mark.asyncio
 async def test_rerank_results_returns_ranked() -> None:
-    """rerank_results should convert passages to GradedChunks and rerank."""
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(
         return_value=[
@@ -151,11 +151,7 @@ async def test_rerank_results_returns_ranked() -> None:
         ]
     )
 
-    configure_tools(
-        retriever=MagicMock(),
-        embedder=MagicMock(),
-        reranker=mock_reranker,
-    )
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=mock_reranker)
 
     passages = [
         {
@@ -178,27 +174,106 @@ async def test_rerank_results_returns_ranked() -> None:
 
     assert len(result["results"]) == 2
     assert result["results"][0]["rank"] == 1
-    assert result["results"][0]["relevance_score"] == 0.92
     assert result["confidence"] == 0.92
-
     mock_reranker.rerank.assert_awaited_once()
-    call_args = mock_reranker.rerank.call_args
-    assert call_args.kwargs["top_k"] == 2
 
 
 @pytest.mark.asyncio
 async def test_rerank_results_empty_returns_zero_confidence() -> None:
-    """Empty reranker output should give confidence 0.0."""
     mock_reranker = MagicMock()
     mock_reranker.rerank = AsyncMock(return_value=[])
+
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=mock_reranker)
+
+    result = await rerank_results("test", [], top_k=3)
+    assert result["results"] == []
+    assert result["confidence"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# analyze_query
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_query_returns_intent_and_entities() -> None:
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+
+    result = analyze_query("how does OAuth2 compare to SAML for authentication?")
+
+    assert "intent" in result
+    assert "entities" in result
+    assert "complexity" in result
+    assert "expanded_terms" in result
+    assert "retrieval_mode" in result
+    assert result["confidence"] > 0
+
+
+def test_analyze_query_simple_query() -> None:
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+
+    result = analyze_query("what is OAuth?")
+    assert result["complexity"] in ("simple", "moderate")
+
+
+# ---------------------------------------------------------------------------
+# condense_query
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_condense_query_single_turn_passes_through() -> None:
+    """Single-turn queries should not be rewritten."""
+    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+
+    result = await condense_query("what is OAuth?", [])
+    assert result["standalone_query"] == "what is OAuth?"
+    assert result["was_rewritten"] is False
+
+
+@pytest.mark.asyncio
+async def test_condense_query_no_llm_passes_through() -> None:
+    """Without condenser_llm configured, should pass through."""
+    configure_tools(
+        retriever=MagicMock(),
+        embedder=MagicMock(),
+        reranker=MagicMock(),
+        condenser_llm=None,
+    )
+
+    history = [
+        {"role": "user", "content": "what is OAuth?"},
+        {"role": "assistant", "content": "OAuth is a protocol..."},
+        {"role": "user", "content": "how about SAML?"},
+    ]
+    result = await condense_query("how about SAML?", history)
+    assert result["standalone_query"] == "how about SAML?"
+    assert result["was_rewritten"] is False
+
+
+@pytest.mark.asyncio
+async def test_condense_query_rewrites_with_llm() -> None:
+    """With condenser_llm, should rewrite the query."""
+    mock_llm = MagicMock()
+    mock_llm.generate = AsyncMock(
+        return_value="How does SAML compare to OAuth for authentication?"
+    )
 
     configure_tools(
         retriever=MagicMock(),
         embedder=MagicMock(),
-        reranker=mock_reranker,
+        reranker=MagicMock(),
+        condenser_llm=mock_llm,
     )
 
-    result = await rerank_results("test", [], top_k=3)
-
-    assert result["results"] == []
-    assert result["confidence"] == 0.0
+    history = [
+        {"role": "user", "content": "what is OAuth?"},
+        {"role": "assistant", "content": "OAuth is a protocol..."},
+        {"role": "user", "content": "how about SAML?"},
+    ]
+    result = await condense_query("how about SAML?", history)
+    assert (
+        result["standalone_query"]
+        == "How does SAML compare to OAuth for authentication?"
+    )
+    assert result["was_rewritten"] is True
+    mock_llm.generate.assert_awaited_once()

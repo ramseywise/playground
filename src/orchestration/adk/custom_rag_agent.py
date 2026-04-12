@@ -14,7 +14,15 @@ from typing import Any
 
 from google.adk.agents import Agent
 
+from orchestration.adk.callbacks import (
+    after_agent,
+    after_tool,
+    before_agent,
+    before_tool,
+)
 from orchestration.adk.tools import (
+    analyze_query,
+    condense_query,
     configure_tools,
     rerank_results,
     search_knowledge_base,
@@ -22,6 +30,7 @@ from orchestration.adk.tools import (
 from librarian.config import LibrarySettings
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever
+from core.clients.llm import LLMClient
 from core.logging import get_logger
 
 log = get_logger(__name__)
@@ -32,17 +41,30 @@ _DEFAULT_MODEL = "gemini-2.0-flash"
 _INSTRUCTION = """\
 You are a knowledgeable research assistant with access to a curated knowledge base.
 
-When answering questions:
-1. ALWAYS use search_knowledge_base first to find relevant passages.
-2. Review the search results. If they seem noisy or you need higher precision, \
-use rerank_results to surface the best matches.
-3. If the top reranked result has confidence below 0.3, try searching again \
-with different phrasing or broader terms.
-4. Base your answer strictly on retrieved passages — do not hallucinate or speculate.
-5. Cite the source URL inline when referencing specific facts (e.g. [title](url)).
-6. If no relevant passages are found after searching, say so clearly — \
-do not make up an answer.
-7. Keep answers concise and directly responsive to the question.
+Follow this workflow when answering questions:
+
+**Step 1 — Understand the query:**
+- If the conversation has prior messages, use condense_query to rewrite the \
+user's latest message as a standalone question.
+- Use analyze_query to understand the intent, extract entities, and get \
+recommended search terms and retrieval strategy.
+
+**Step 2 — Retrieve information:**
+- Use search_knowledge_base with the standalone query (or original if single-turn).
+- If analyze_query suggested expanded_terms, consider searching with those too.
+- For complex queries with sub_queries, search each sub-question separately.
+
+**Step 3 — Refine results:**
+- Review search results. If they seem noisy or low-quality, use rerank_results \
+to surface the best matches.
+- If the top reranked result has confidence below 0.3, try searching again \
+with different phrasing or broader terms from the analysis.
+
+**Step 4 — Answer:**
+- Base your answer strictly on retrieved passages — do not hallucinate or speculate.
+- Cite the source URL inline when referencing specific facts (e.g. [title](url)).
+- If no relevant passages are found after searching, say so clearly.
+- Keep answers concise and directly responsive to the question.
 """
 
 
@@ -52,26 +74,33 @@ def create_custom_rag_agent(
     retriever: Retriever,
     embedder: Embedder,
     reranker: Reranker,
+    condenser_llm: LLMClient | None = None,
     model: str = _DEFAULT_MODEL,
 ) -> Agent:
-    """Build an ADK Agent with custom RAG tools.
+    """Build an ADK Agent with the full custom RAG tool suite.
 
     The agent uses Gemini for orchestration (tool-calling decisions)
-    while the actual retrieval and reranking use the same Librarian
-    infrastructure as the LangGraph pipeline.
+    while the actual retrieval, reranking, query understanding, and
+    condensation use the same Librarian infrastructure as the LangGraph
+    pipeline.
 
     Args:
         cfg: Library settings (used for logging / config context).
         retriever: The vector store retriever (Chroma, OpenSearch, etc.).
         embedder: The embedding model (E5, MiniLM, etc.).
         reranker: The reranking model (cross-encoder, LLM-listwise, etc.).
+        condenser_llm: LLM for multi-turn query rewriting (e.g. Haiku). Optional.
         model: Gemini model name for the orchestrating agent.
 
     Returns:
         A configured ADK Agent ready for ``Runner.run_async()``.
     """
-    # Wire the retrieval components into the tool functions
-    configure_tools(retriever=retriever, embedder=embedder, reranker=reranker)
+    configure_tools(
+        retriever=retriever,
+        embedder=embedder,
+        reranker=reranker,
+        condenser_llm=condenser_llm,
+    )
 
     agent = Agent(
         model=model,
@@ -82,14 +111,25 @@ def create_custom_rag_agent(
             "pipeline but with Gemini controlling the orchestration."
         ),
         instruction=_INSTRUCTION,
-        tools=[search_knowledge_base, rerank_results],
+        tools=[
+            analyze_query,
+            condense_query,
+            search_knowledge_base,
+            rerank_results,
+        ],
+        before_agent_callback=before_agent,
+        after_agent_callback=after_agent,
+        before_tool_callback=before_tool,
+        after_tool_callback=after_tool,
     )
 
     log.info(
         "adk.custom_rag.created",
         model=model,
+        tool_count=len(agent.tools),
         retrieval_strategy=cfg.retrieval_strategy,
         reranker_strategy=cfg.reranker_strategy,
+        has_condenser=condenser_llm is not None,
     )
 
     return agent

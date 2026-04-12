@@ -84,7 +84,10 @@ async def test_bedrock_agent_emits_event(
         assert len(events) == 1
         assert events[0].author == "bedrock_kb"
         assert events[0].content is not None
-        assert events[0].content.parts[0].text == mock_bedrock_response.response
+        assert mock_bedrock_response.response in events[0].content.parts[0].text
+        # Citations should be appended as sources
+        assert "Auth Docs" in events[0].content.parts[0].text
+        assert events[0].custom_metadata["citations"] == mock_bedrock_response.citations
 
 
 @pytest.mark.asyncio

@@ -17,19 +17,10 @@ from google.genai import types
 
 from clients.bedrock import BedrockKBClient
 from librarian.config import LibrarySettings
+from orchestration.adk.utils import extract_latest_query
 from core.logging import get_logger
 
 log = get_logger(__name__)
-
-
-def _extract_latest_query(ctx: InvocationContext) -> str:
-    """Extract the latest user message text from ADK session events."""
-    for event in reversed(ctx.session.events):
-        if event.author == "user" and event.content and event.content.parts:
-            for part in event.content.parts:
-                if hasattr(part, "text") and part.text:
-                    return part.text
-    return ""
 
 
 class BedrockKBAgent(BaseAgent):
@@ -58,7 +49,7 @@ class BedrockKBAgent(BaseAgent):
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
         """Extract query from ADK session, forward to Bedrock, emit response."""
-        query = _extract_latest_query(ctx)
+        query = extract_latest_query(ctx)
 
         log.info(
             "adk.bedrock_kb.query",
@@ -77,9 +68,21 @@ class BedrockKBAgent(BaseAgent):
             citation_count=len(resp.citations),
         )
 
+        # Build response with citations appended as references
+        response_text = resp.response
+        if resp.citations:
+            refs = "\n\n**Sources:**\n"
+            for c in resp.citations:
+                refs += f"- [{c.get('title', 'Source')}]({c.get('url', '')})\n"
+            response_text += refs
+
         yield Event(
             author=self.name,
             content=types.Content(
-                parts=[types.Part(text=resp.response)],
+                parts=[types.Part(text=response_text)],
             ),
+            custom_metadata={
+                "citations": resp.citations,
+                "session_id": resp.session_id,
+            },
         )

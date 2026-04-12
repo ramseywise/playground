@@ -1,19 +1,19 @@
-"""ADK FunctionTools wrapping the Librarian retrieval and reranking stack.
+"""ADK FunctionTools wrapping the Librarian retrieval, reranking, and query understanding stack.
 
 These are plain async Python functions with type hints and docstrings.
 ADK auto-wraps them as ``FunctionTool`` when passed to an ``Agent``.
 
-The tools use the same Retriever/Embedder/Reranker infrastructure as the
-LangGraph pipeline — they just expose it as LLM-callable functions so
-the ADK agent can decide *when* to search and *when* to rerank.
-
-Components are injected via ``configure_tools()`` at startup.
+Components are injected via ``configure_tools()`` at startup into a
+module-level ``ToolDeps`` container (not bare globals).
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
+from core.clients.llm import LLMClient
+from librarian.plan.analyzer import QueryAnalyzer
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever
 from librarian.schemas.chunks import GradedChunk
@@ -23,40 +23,68 @@ log = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Module-level singletons — set via configure_tools()
+# Dependency container — set via configure_tools()
 # ---------------------------------------------------------------------------
 
-_retriever: Retriever | None = None
-_embedder: Embedder | None = None
-_reranker: Reranker | None = None
+
+@dataclass
+class ToolDeps:
+    """Injected dependencies for ADK tool functions.
+
+    Using a container instead of bare module globals for testability
+    and thread-safety.
+    """
+
+    retriever: Retriever
+    embedder: Embedder
+    reranker: Reranker
+    condenser_llm: LLMClient | None = None
+    analyzer: QueryAnalyzer | None = None
+
+
+_deps: ToolDeps | None = None
 
 
 def configure_tools(
     retriever: Retriever,
     embedder: Embedder,
     reranker: Reranker,
-) -> None:
+    *,
+    condenser_llm: LLMClient | None = None,
+    analyzer: QueryAnalyzer | None = None,
+) -> ToolDeps:
     """Inject retrieval components into the tool functions.
 
     Must be called before any tool function is invoked (typically at
     application startup or test setup).
+
+    Returns the ``ToolDeps`` container for direct use if needed.
     """
-    global _retriever, _embedder, _reranker  # noqa: PLW0603
-    _retriever = retriever
-    _embedder = embedder
-    _reranker = reranker
+    global _deps  # noqa: PLW0603
+    _deps = ToolDeps(
+        retriever=retriever,
+        embedder=embedder,
+        reranker=reranker,
+        condenser_llm=condenser_llm,
+        analyzer=analyzer or QueryAnalyzer(),
+    )
     log.info("adk.tools.configured")
+    return _deps
 
 
-def _check_configured() -> tuple[Retriever, Embedder, Reranker]:
-    """Raise if tools have not been configured."""
-    if _retriever is None or _embedder is None or _reranker is None:
+def _get_deps() -> ToolDeps:
+    """Return the configured ToolDeps or raise."""
+    if _deps is None:
         msg = (
             "ADK tools not configured — call configure_tools() before using "
-            "search_knowledge_base or rerank_results"
+            "any tool function"
         )
         raise RuntimeError(msg)
-    return _retriever, _embedder, _reranker
+    return _deps
+
+
+# Keep backward-compat alias for existing tests
+_check_configured = _get_deps
 
 
 # ---------------------------------------------------------------------------
@@ -82,12 +110,12 @@ async def search_knowledge_base(
         - results: list of passages with text, url, title, and score
         - total: number of results returned
     """
-    retriever, embedder, _ = _check_configured()
+    deps = _get_deps()
 
     log.info("adk.tool.search", query=query[:80], k=num_results)
 
-    query_vector = await embedder.aembed_query(query)
-    raw_results = await retriever.search(
+    query_vector = await deps.embedder.aembed_query(query)
+    raw_results = await deps.retriever.search(
         query_text=query,
         query_vector=query_vector,
         k=num_results,
@@ -138,11 +166,10 @@ async def rerank_results(
         - results: list of reranked passages with relevance_score and rank
         - confidence: maximum relevance_score (0-1) — indicates overall quality
     """
-    _, _, reranker = _check_configured()
+    deps = _get_deps()
 
     log.info("adk.tool.rerank", query=query[:80], n_passages=len(passages), top_k=top_k)
 
-    # Convert passage dicts to GradedChunks for the reranker protocol
     from librarian.schemas.chunks import Chunk, ChunkMetadata
 
     graded_chunks = []
@@ -160,7 +187,7 @@ async def rerank_results(
             GradedChunk(chunk=chunk, score=float(p.get("score", 0.5)), relevant=True)
         )
 
-    ranked = await reranker.rerank(query, graded_chunks, top_k=top_k)
+    ranked = await deps.reranker.rerank(query, graded_chunks, top_k=top_k)
 
     results = [
         {
@@ -186,4 +213,126 @@ async def rerank_results(
     return {
         "results": results,
         "confidence": round(confidence, 4),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tool: analyze_query
+# ---------------------------------------------------------------------------
+
+
+def analyze_query(query: str) -> dict[str, Any]:
+    """Analyze a query to understand its intent, entities, complexity, and best retrieval strategy.
+
+    Use this BEFORE searching to understand what the user is asking and how
+    best to retrieve relevant information. The analysis includes:
+    - Intent classification (lookup, comparison, exploration, etc.)
+    - Named entity extraction (technologies, concepts, people)
+    - Sub-query decomposition for complex questions
+    - Term expansion with domain synonyms
+    - Recommended retrieval mode (dense, hybrid, or snippet)
+
+    Args:
+        query: The user's question in natural language.
+
+    Returns:
+        A dict with:
+        - intent: the classified intent (lookup, compare, explore, etc.)
+        - confidence: how confident the classification is (0-1)
+        - entities: dict of entity_type → list of matched strings
+        - sub_queries: list of decomposed sub-questions (for complex queries)
+        - expanded_terms: list of related search terms and synonyms
+        - complexity: "simple", "moderate", or "complex"
+        - retrieval_mode: recommended mode — "dense", "hybrid", or "snippet"
+    """
+    deps = _get_deps()
+    analyzer = deps.analyzer or QueryAnalyzer()
+
+    log.info("adk.tool.analyze", query=query[:80])
+
+    analysis = analyzer.analyze(query)
+
+    result = {
+        "intent": analysis.intent.value,
+        "confidence": round(analysis.confidence, 3),
+        "entities": analysis.entities,
+        "sub_queries": analysis.sub_queries,
+        "expanded_terms": analysis.expanded_terms,
+        "complexity": analysis.complexity,
+        "retrieval_mode": analysis.retrieval_mode,
+    }
+
+    log.info(
+        "adk.tool.analyze.done",
+        intent=result["intent"],
+        complexity=result["complexity"],
+        entity_count=sum(len(v) for v in analysis.entities.values()),
+        expansion_count=len(analysis.expanded_terms),
+    )
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Tool: condense_query
+# ---------------------------------------------------------------------------
+
+
+async def condense_query(
+    query: str,
+    conversation_history: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Rewrite a follow-up question into a standalone query using conversation context.
+
+    Use this when the user's message references previous conversation context
+    (e.g. "what about that one?", "how does it compare?", "tell me more").
+    The tool uses a lightweight LLM to resolve coreferences and produce a
+    self-contained query that can be used for search.
+
+    Args:
+        query: The user's latest message (may contain coreferences).
+        conversation_history: List of prior messages, each with "role" and "content" keys.
+            Example: [{"role": "user", "content": "what is OAuth?"}, {"role": "assistant", "content": "OAuth is..."}]
+
+    Returns:
+        A dict with:
+        - standalone_query: the rewritten self-contained query
+        - was_rewritten: whether the query was actually changed
+    """
+    deps = _get_deps()
+
+    # Single-turn or no history — pass through unchanged
+    if not conversation_history or len(conversation_history) <= 1:
+        return {"standalone_query": query, "was_rewritten": False}
+
+    if deps.condenser_llm is None:
+        log.warning(
+            "adk.tool.condense.no_llm",
+            msg="condenser_llm not configured, passing through",
+        )
+        return {"standalone_query": query, "was_rewritten": False}
+
+    log.info(
+        "adk.tool.condense", query=query[:80], history_len=len(conversation_history)
+    )
+
+    system_prompt = (
+        "Rewrite the user's latest message as a standalone query using the full "
+        "conversation context. Return only the rewritten query."
+    )
+
+    standalone = await deps.condenser_llm.generate(system_prompt, conversation_history)
+    standalone = standalone.strip() or query
+    was_rewritten = standalone != query
+
+    log.info(
+        "adk.tool.condense.done",
+        original=query[:80],
+        standalone=standalone[:80],
+        was_rewritten=was_rewritten,
+    )
+
+    return {
+        "standalone_query": standalone,
+        "was_rewritten": was_rewritten,
     }

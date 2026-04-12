@@ -19,26 +19,10 @@ from google.genai import types
 from langgraph.graph.state import CompiledStateGraph
 
 from librarian.config import LibrarySettings
+from orchestration.adk.utils import extract_latest_query, extract_messages
 from core.logging import get_logger
 
 log = get_logger(__name__)
-
-
-def _extract_messages(events: list[Event]) -> list[dict[str, str]]:
-    """Convert ADK session events into LangGraph-compatible message dicts."""
-    messages: list[dict[str, str]] = []
-    for event in events:
-        if not event.content or not event.content.parts:
-            continue
-        text = ""
-        for part in event.content.parts:
-            if hasattr(part, "text") and part.text:
-                text += part.text
-        if not text:
-            continue
-        role = "user" if event.author == "user" else "assistant"
-        messages.append({"role": role, "content": text})
-    return messages
 
 
 class LibrarianADKAgent(BaseAgent):
@@ -76,8 +60,8 @@ class LibrarianADKAgent(BaseAgent):
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
         """Extract query from ADK session, run full LangGraph pipeline, emit response."""
-        query = _extract_latest_query(ctx)
-        messages = _extract_messages(ctx.session.events)
+        query = extract_latest_query(ctx)
+        messages = extract_messages(ctx.session.events)
 
         log.info(
             "adk.hybrid.query",
@@ -100,12 +84,13 @@ class LibrarianADKAgent(BaseAgent):
 
         response_text = result.get("response", "")
         citations = result.get("citations", [])
+        confidence = result.get("confidence_score", 0.0)
 
         log.info(
             "adk.hybrid.response",
             response_len=len(response_text),
             citation_count=len(citations) if isinstance(citations, list) else 0,
-            confidence=result.get("confidence_score", 0.0),
+            confidence=confidence,
         )
 
         yield Event(
@@ -113,17 +98,12 @@ class LibrarianADKAgent(BaseAgent):
             content=types.Content(
                 parts=[types.Part(text=response_text)],
             ),
+            custom_metadata={
+                "citations": citations,
+                "confidence_score": confidence,
+                "reranked_chunks": len(result.get("reranked_chunks", [])),
+            },
         )
-
-
-def _extract_latest_query(ctx: InvocationContext) -> str:
-    """Extract the latest user message text from ADK session events."""
-    for event in reversed(ctx.session.events):
-        if event.author == "user" and event.content and event.content.parts:
-            for part in event.content.parts:
-                if hasattr(part, "text") and part.text:
-                    return part.text
-    return ""
 
 
 def create_hybrid_agent(
