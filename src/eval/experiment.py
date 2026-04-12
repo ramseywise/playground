@@ -722,6 +722,169 @@ async def _run_adk_bedrock_experiment(
     return result
 
 
+async def _run_adk_custom_rag_experiment(
+    variant_name: str,
+    golden_samples: list[GoldenSample],
+    *,
+    cfg: LibrarySettings,
+    run_name: str,
+    ds_name: str,
+    lf: Any | None,
+) -> ExperimentResult:
+    """Run experiment via ADK agent with custom RAG tools.
+
+    Uses Gemini 2.0 Flash for orchestration (tool-calling decisions)
+    with the same retrieval and reranking stack as the Librarian pipeline.
+    The LLM decides when to search, rerank, and retry.
+    """
+    from orchestration.adk.custom_rag_agent import (
+        create_custom_rag_agent,
+        run_custom_rag_query,
+    )
+    from orchestration.factory import _build_embedder, _build_reranker, _build_retriever
+
+    # Build the shared retrieval components
+    embedder = _build_embedder(cfg)
+    retriever = _build_retriever(cfg, embedder)
+    # Build a passthrough LLM for _build_reranker (not used for generation)
+    from core.clients.llm import AnthropicLLM
+
+    llm = AnthropicLLM(model=cfg.anthropic_model_sonnet, api_key=cfg.anthropic_api_key)
+    reranker = _build_reranker(cfg, llm)
+
+    agent = create_custom_rag_agent(
+        cfg, retriever=retriever, embedder=embedder, reranker=reranker
+    )
+
+    clusterer = FailureClusterer()
+    query_results: list[QueryResult] = []
+
+    for sample in golden_samples:
+        try:
+            t0 = time.perf_counter()
+            result = await run_custom_rag_query(
+                agent,
+                sample.query,
+                session_id=f"eval-{sample.query_id}",
+            )
+            latency_ms = (time.perf_counter() - t0) * 1000
+
+            response_text = result.get("response", "")
+            urls: list[str] = []  # TODO(3): extract URLs from tool call results
+            hit = sample.expected_doc_url in urls
+            rr = next(
+                (
+                    1.0 / (i + 1)
+                    for i, u in enumerate(urls)
+                    if u == sample.expected_doc_url
+                ),
+                0.0,
+            )
+
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=hit,
+                reciprocal_rank=rr,
+                retrieved_urls=urls[:5],
+                expected_url=sample.expected_doc_url,
+                latency_ms=latency_ms,
+                answer=response_text,
+            )
+        except Exception as exc:
+            log.warning(
+                "experiment.adk_custom_rag.query_failed",
+                query_id=sample.query_id,
+                error=str(exc),
+            )
+            qr = QueryResult(
+                query_id=sample.query_id,
+                query=sample.query,
+                hit=False,
+                reciprocal_rank=0.0,
+                retrieved_urls=[],
+                expected_url=sample.expected_doc_url,
+                latency_ms=0.0,
+            )
+
+        if lf is not None:
+            qr.trace_id = _langfuse_log_trace(lf, variant_name, qr, run_name, ds_name)
+
+        query_results.append(qr)
+
+    # Aggregate
+    n = len(query_results)
+    hits = sum(1 for qr in query_results if qr.hit)
+    hit_rate = hits / n if n else 0.0
+    mrr = sum(qr.reciprocal_rank for qr in query_results) / n if n else 0.0
+    avg_latency = sum(qr.latency_ms for qr in query_results) / n if n else 0.0
+
+    # Cluster failures
+    from librarian.tasks.tracing import PipelineTracer
+
+    tracer = PipelineTracer()
+    for qr in query_results:
+        trace = tracer.create_trace(qr.query_id, qr.query)
+        trace.status = "success" if qr.hit else "failure"
+        trace.confidence = qr.reciprocal_rank
+        if not qr.hit:
+            trace.failure_reason = "expected_doc_not_in_top_k"
+    clusters = clusterer.cluster_failures(tracer.get_failure_traces())
+
+    if lf is not None:
+        try:
+            summary_trace = lf.trace(
+                name=f"experiment_summary_{variant_name}",
+                metadata={
+                    "variant": variant_name,
+                    "run_name": run_name,
+                    "model": "gemini-2.0-flash",
+                    "wrapper": "adk_custom_rag",
+                },
+            )
+            lf.score(trace_id=summary_trace.id, name="hit_rate_at_k", value=hit_rate)
+            lf.score(trace_id=summary_trace.id, name="mrr", value=mrr)
+            lf.score(
+                trace_id=summary_trace.id, name="avg_latency_ms", value=avg_latency
+            )
+        except Exception as exc:
+            log.warning("experiment.langfuse.summary_failed", error=str(exc))
+        _langfuse_flush(lf)
+
+    result = ExperimentResult(
+        variant_name=variant_name,
+        dataset_name=ds_name,
+        run_name=run_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n_queries=n,
+        n_hits=hits,
+        avg_latency_ms=avg_latency,
+        query_results=query_results,
+        failure_clusters=clusters,
+        config_snapshot={
+            "retrieval_strategy": "adk_custom_rag",
+            "model": "gemini-2.0-flash",
+            "embedding_provider": cfg.embedding_provider,
+            "reranker_strategy": cfg.reranker_strategy,
+            "retrieval_k": cfg.retrieval_k,
+            "reranker_top_k": cfg.reranker_top_k,
+            "bm25_weight": cfg.bm25_weight,
+            "vector_weight": cfg.vector_weight,
+        },
+    )
+
+    log.info(
+        "experiment.adk_custom_rag.done",
+        variant=variant_name,
+        hit_rate=hit_rate,
+        mrr=mrr,
+        n=n,
+        avg_latency_ms=round(avg_latency, 1),
+    )
+    return result
+
+
 async def run_variant_experiment(
     variant_name: str,
     golden_samples: list[GoldenSample],
@@ -775,6 +938,15 @@ async def run_variant_experiment(
         )
     if cfg.retrieval_strategy == "adk_bedrock":
         return await _run_adk_bedrock_experiment(
+            variant_name,
+            golden_samples,
+            cfg=cfg,
+            run_name=run_name,
+            ds_name=ds_name,
+            lf=lf,
+        )
+    if cfg.retrieval_strategy == "adk_custom_rag":
+        return await _run_adk_custom_rag_experiment(
             variant_name,
             golden_samples,
             cfg=cfg,
@@ -958,6 +1130,13 @@ async def run_all_experiments(
                 "experiment.variant.skipped",
                 variant=name,
                 reason="BEDROCK_KNOWLEDGE_BASE_ID not set (adk_bedrock)",
+            )
+            continue
+        if cfg.retrieval_strategy == "adk_custom_rag" and not cfg.gemini_api_key:
+            log.info(
+                "experiment.variant.skipped",
+                variant=name,
+                reason="GEMINI_API_KEY not set (adk_custom_rag)",
             )
             continue
 

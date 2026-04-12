@@ -55,7 +55,13 @@ def _build_conversational_reply(query_lower: str) -> str:
 # ---------------------------------------------------------------------------
 
 Route = Literal[
-    "librarian", "bedrock", "google_adk", "adk_bedrock", "escalation", "direct"
+    "librarian",
+    "bedrock",
+    "google_adk",
+    "adk_bedrock",
+    "adk_custom_rag",
+    "escalation",
+    "direct",
 ]
 
 
@@ -127,6 +133,12 @@ class TriageService:
         if backend == "adk_bedrock":
             return TriageDecision(
                 route="adk_bedrock",
+                intent="",
+                confidence=1.0,
+            )
+        if backend == "adk_custom_rag":
+            return TriageDecision(
+                route="adk_custom_rag",
                 intent="",
                 confidence=1.0,
             )
