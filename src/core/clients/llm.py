@@ -71,7 +71,9 @@ class AnthropicLLM:
     ) -> str:
         """Call the Anthropic messages API (async) and return response text."""
         if self._async_client is None:
-            self._async_client = anthropic.AsyncAnthropic(api_key=self._api_key)
+            self._async_client = anthropic.AsyncAnthropic(
+                api_key=self._api_key, max_retries=3
+            )
         response = await self._async_client.messages.create(
             model=self._model,
             system=system,
@@ -97,7 +99,9 @@ class AnthropicLLM:
     ) -> str:
         """Call the Anthropic messages API (sync) and return response text."""
         if self._sync_client is None:
-            self._sync_client = anthropic.Anthropic(api_key=self._api_key)
+            self._sync_client = anthropic.Anthropic(
+                api_key=self._api_key, max_retries=3
+            )
         response = self._sync_client.messages.create(
             model=self._model,
             system=system,
@@ -121,7 +125,9 @@ class AnthropicLLM:
     ) -> AsyncIterator[str]:
         """Yield text chunks as they arrive from the Anthropic streaming API."""
         if self._async_client is None:
-            self._async_client = anthropic.AsyncAnthropic(api_key=self._api_key)
+            self._async_client = anthropic.AsyncAnthropic(
+                api_key=self._api_key, max_retries=3
+            )
         async with self._async_client.messages.stream(
             model=self._model,
             system=system,
@@ -207,7 +213,9 @@ class GeminiLLM:
                 "llm.gemini.generate.safety_blocked",
                 model=self._model,
                 finish_reason=getattr(
-                    getattr(response, "candidates", [None])[0] if response.candidates else None,
+                    getattr(response, "candidates", [None])[0]
+                    if response.candidates
+                    else None,
                     "finish_reason",
                     "unknown",
                 ),
@@ -249,7 +257,9 @@ class GeminiLLM:
                 "llm.gemini.generate_sync.safety_blocked",
                 model=self._model,
                 finish_reason=getattr(
-                    getattr(response, "candidates", [None])[0] if response.candidates else None,
+                    getattr(response, "candidates", [None])[0]
+                    if response.candidates
+                    else None,
                     "finish_reason",
                     "unknown",
                 ),

@@ -162,11 +162,49 @@ class TestIngestEndpoint:
         assert resp.status_code == 500
 
 
+class TestEscalationSignal:
+    """Verify that escalation fields are surfaced in the API response."""
+
+    def test_chat_includes_escalate_false_when_confident(
+        self, client: TestClient
+    ) -> None:
+        resp = client.post("/api/v1/chat", json={"query": "What is 42?"})
+        assert resp.status_code == 200
+        data = resp.json()
+        # Mock graph returns confidence_score=0.85, confident is not set → defaults True
+        assert data["confident"] is True
+        assert data["escalate"] is False
+
+    def test_chat_includes_escalate_true_when_not_confident(
+        self,
+        client: TestClient,
+        _mock_graph: Any,
+    ) -> None:
+        _mock_graph.ainvoke = AsyncMock(
+            return_value={
+                "response": "I'm not sure.",
+                "citations": [],
+                "confidence_score": 0.15,
+                "confident": False,
+                "fallback_requested": True,
+                "intent": "lookup",
+            }
+        )
+        resp = client.post("/api/v1/chat", json={"query": "Obscure question?"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["confident"] is False
+        assert data["escalate"] is True
+        assert data["confidence_score"] == 0.15
+
+
 class TestLangfuseConfig:
     """Verify Langfuse config is passed to graph invocations."""
 
     def test_chat_passes_config_to_ainvoke(
-        self, client: TestClient, _mock_graph: Any,
+        self,
+        client: TestClient,
+        _mock_graph: Any,
     ) -> None:
         resp = client.post("/api/v1/chat", json={"query": "What is 42?"})
         assert resp.status_code == 200
@@ -176,7 +214,9 @@ class TestLangfuseConfig:
         assert "callbacks" in kwargs["config"]
 
     def test_langfuse_disabled_passes_empty_callbacks(
-        self, client: TestClient, _mock_graph: Any,
+        self,
+        client: TestClient,
+        _mock_graph: Any,
     ) -> None:
         """When LANGFUSE_ENABLED=false (default), callbacks list is empty."""
         resp = client.post("/api/v1/chat", json={"query": "What is 42?"})

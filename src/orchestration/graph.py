@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Coroutine, Hashable
 from typing import Any, Literal, cast
 
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -188,6 +189,7 @@ def build_graph(
     confidence_threshold: float = 0.3,
     max_crag_retries: int = 1,
     max_query_variants: int = 3,
+    checkpointer: BaseCheckpointSaver | None = None,
 ) -> CompiledStateGraph:
     """Build and compile the LibrarianGraph.
 
@@ -264,4 +266,4 @@ def build_graph(
     # Terminal
     graph.add_edge(_GENERATE, END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)

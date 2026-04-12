@@ -23,6 +23,8 @@ from librarian.config import LibrarySettings, settings as _default_settings
 from core.logging import get_logger
 
 if TYPE_CHECKING:
+    from langgraph.checkpoint.base import BaseCheckpointSaver
+
     from core.clients.llm import LLMClient
     from librarian.ingestion.pipeline import IngestionPipeline
 
@@ -82,6 +84,82 @@ def _build_embedder(cfg: LibrarySettings) -> Embedder:
     from librarian.ingestion.embeddings.embedders import MultilingualEmbedder
 
     return MultilingualEmbedder(model_name=cfg.embedding_model)
+
+
+def warm_up_embedder(cfg: LibrarySettings | None = None) -> None:
+    """Pre-load the embedding model into ``_MODEL_CACHE`` so the first real request is fast.
+
+    Call this once during application startup (e.g. in the FastAPI lifespan).
+    The model cache is process-wide, so any ``MultilingualEmbedder`` /
+    ``MiniLMEmbedder`` instance created later will find the model already loaded.
+    """
+    cfg = cfg or _default_settings
+    embedder = _build_embedder(cfg)
+    embedder.embed_query("warmup")
+    log.info("librarian.factory.embedder_warmup.done", model=cfg.embedding_model)
+
+
+def _build_checkpointer(cfg: LibrarySettings) -> "BaseCheckpointSaver | None":
+    """Build a LangGraph checkpointer based on ``cfg.checkpoint_backend``.
+
+    - ``memory``  — in-process ``MemorySaver`` (default, no persistence across restarts)
+    - ``sqlite``  — ``SqliteSaver`` backed by ``cfg.checkpoint_sqlite_path`` (local dev)
+    - ``postgres`` — ``AsyncPostgresSaver`` via ``cfg.checkpoint_postgres_url`` (production)
+
+    Returns ``None`` only when the backend is explicitly unknown so the caller
+    can decide how to proceed.
+    """
+    from langgraph.checkpoint.base import BaseCheckpointSaver
+
+    backend = cfg.checkpoint_backend
+
+    if backend == "memory":
+        from langgraph.checkpoint.memory import MemorySaver
+
+        log.info("librarian.factory.checkpointer", backend="memory")
+        return MemorySaver()
+
+    if backend == "sqlite":
+        try:
+            from langgraph.checkpoint.sqlite import SqliteSaver
+        except ImportError as exc:
+            msg = (
+                "langgraph-checkpoint-sqlite is required for checkpoint_backend='sqlite'. "
+                "Install with: uv add langgraph-checkpoint-sqlite"
+            )
+            raise ImportError(msg) from exc
+
+        from pathlib import Path
+
+        Path(cfg.checkpoint_sqlite_path).parent.mkdir(parents=True, exist_ok=True)
+        log.info(
+            "librarian.factory.checkpointer",
+            backend="sqlite",
+            path=cfg.checkpoint_sqlite_path,
+        )
+        return SqliteSaver.from_conn_string(cfg.checkpoint_sqlite_path)
+
+    if backend == "postgres":
+        try:
+            from langgraph.checkpoint.postgres import PostgresSaver
+        except ImportError as exc:
+            msg = (
+                "langgraph-checkpoint-postgres is required for checkpoint_backend='postgres'. "
+                "Install with: uv add langgraph-checkpoint-postgres"
+            )
+            raise ImportError(msg) from exc
+
+        if not cfg.checkpoint_postgres_url:
+            msg = (
+                "CHECKPOINT_POSTGRES_URL must be set when checkpoint_backend='postgres'"
+            )
+            raise ValueError(msg)
+
+        log.info("librarian.factory.checkpointer", backend="postgres")
+        return PostgresSaver.from_conn_string(cfg.checkpoint_postgres_url)
+
+    log.warning("librarian.factory.checkpointer.unknown", backend=backend)
+    return None
 
 
 def _build_retriever(cfg: LibrarySettings, embedder: Embedder) -> Retriever:
@@ -189,6 +267,7 @@ def create_librarian(
     cfg = cfg or _default_settings
 
     from librarian.otel import setup_otel
+
     setup_otel()
 
     log.info(
@@ -206,6 +285,7 @@ def create_librarian(
     resolved_retriever = retriever or _build_retriever(cfg, resolved_embedder)
     resolved_reranker = reranker or _build_reranker(cfg, resolved_llm)
     resolved_history_condenser = HistoryCondenser(llm=resolved_history_llm)
+    resolved_checkpointer = _build_checkpointer(cfg)
     retrieval_cache = (
         RetrievalCache(max_size=cfg.cache_max_size, ttl_seconds=cfg.cache_ttl_seconds)
         if cfg.cache_enabled
@@ -227,6 +307,7 @@ def create_librarian(
         confidence_threshold=cfg.confidence_threshold,
         max_crag_retries=cfg.max_crag_retries,
         max_query_variants=cfg.max_query_variants,
+        checkpointer=resolved_checkpointer,
     )
 
 
@@ -241,6 +322,12 @@ def create_ingestion_pipeline(
     """Build an ``IngestionPipeline`` for raw-text -> vectorDB + metadataDB + traceDB.
 
     Returns a pipeline that can be used independently of the librarian graph.
+
+    **Single-writer constraint (Chroma):** ``ChromaRetriever`` uses
+    ``PersistentClient`` which holds a process-level write lock.  Concurrent
+    within-process upserts are serialised via an ``asyncio.Lock()``, but
+    multi-process ingest (e.g. parallel Fargate tasks) will fail with a lock
+    error.  For multi-worker ingest, set ``retrieval_strategy=opensearch``.
     """
     from librarian.ingestion.pipeline import IngestionPipeline
 

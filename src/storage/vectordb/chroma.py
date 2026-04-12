@@ -15,6 +15,16 @@ log = get_logger(__name__)
 _DEFAULT_PERSIST_DIR = ".chroma"
 _DEFAULT_COLLECTION = "librarian-chunks"
 
+# Module-level write lock — serialises upserts within a single process.
+# PersistentClient holds a process-level write lock on the .chroma/ directory;
+# concurrent upserts from coroutines/threads would race on it.  This asyncio
+# lock ensures that only one coroutine writes at a time.
+#
+# NOTE: This does NOT protect across processes.  For multi-worker ingest
+# (e.g. multiple Fargate tasks writing simultaneously), use
+# retrieval_strategy=opensearch which supports concurrent writers natively.
+_WRITE_LOCK = asyncio.Lock()
+
 # BM25-like term overlap used as sparse signal alongside Chroma's cosine distance.
 # Chroma only returns vector scores; we blend manually to mirror InMemoryRetriever.
 _BM25_WEIGHT = 0.3
@@ -69,6 +79,12 @@ class ChromaRetriever:
         return self._collection
 
     async def upsert(self, chunks: list[Chunk]) -> None:
+        """Upsert chunks to ChromaDB.
+
+        Serialised via ``_WRITE_LOCK`` to avoid racing on PersistentClient's
+        internal write lock.  For multi-worker ingest, use
+        ``retrieval_strategy=opensearch`` instead.
+        """
         collection = self._get_collection()
         if not chunks:
             return
@@ -90,13 +106,14 @@ class ChromaRetriever:
             metadatas.append({k: v for k, v in meta.items() if v is not None})
 
         if ids:
-            await asyncio.to_thread(
-                collection.upsert,
-                ids=ids,
-                embeddings=embeddings,
-                documents=documents,
-                metadatas=metadatas,
-            )
+            async with _WRITE_LOCK:
+                await asyncio.to_thread(
+                    collection.upsert,
+                    ids=ids,
+                    embeddings=embeddings,
+                    documents=documents,
+                    metadatas=metadatas,
+                )
             log.info("chroma.upsert.done", n=len(ids), collection=self._collection_name)
 
     async def search(

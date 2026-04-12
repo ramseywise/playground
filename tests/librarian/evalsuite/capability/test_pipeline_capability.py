@@ -37,7 +37,8 @@ async def test_lookup_response_and_citations(
         reranker=mock_reranker_passthrough,
     )
     result = await graph.ainvoke(
-        {"query": "how do I reset my API key?", "intent": "lookup"}
+        {"query": "how do I reset my API key?", "intent": "lookup"},
+        config={"configurable": {"thread_id": "eval-1"}},
     )
     assert result["response"] == "eval answer"
     assert isinstance(result["citations"], list)
@@ -59,7 +60,8 @@ async def test_citations_have_url_and_title(
         reranker=mock_reranker_passthrough,
     )
     result = await graph.ainvoke(
-        {"query": "how do I reset my API key?", "intent": "lookup"}
+        {"query": "how do I reset my API key?", "intent": "lookup"},
+        config={"configurable": {"thread_id": "eval-2"}},
     )
     for citation in result["citations"]:
         assert "url" in citation
@@ -83,8 +85,11 @@ async def test_all_golden_queries_complete(
         retriever=populated_retriever,
         reranker=mock_reranker_passthrough,
     )
-    for sample in golden_samples:
-        result = await graph.ainvoke({"query": sample.query, "intent": "lookup"})
+    for i, sample in enumerate(golden_samples):
+        result = await graph.ainvoke(
+            {"query": sample.query, "intent": "lookup"},
+            config={"configurable": {"thread_id": f"eval-golden-{i}"}},
+        )
         assert result["response"], f"Empty response for query_id={sample.query_id}"
 
 
@@ -153,7 +158,10 @@ async def test_crag_loop_terminates_with_max_retries(
         retriever=empty_retriever,
         reranker=empty_reranker,
     )
-    result = await graph.ainvoke({"query": "auth question", "intent": "lookup"})
+    result = await graph.ainvoke(
+        {"query": "auth question", "intent": "lookup"},
+        config={"configurable": {"thread_id": "eval-crag"}},
+    )
     # Graph must terminate: max 3 total search calls (initial + 2 retries)
     assert empty_retriever.search.call_count <= 3
     assert result["response"] == "eval answer"
@@ -180,7 +188,8 @@ async def test_pipeline_output_has_required_state_keys(
         reranker=mock_reranker_passthrough,
     )
     result = await graph.ainvoke(
-        {"query": "what is the rate limit?", "intent": "lookup"}
+        {"query": "what is the rate limit?", "intent": "lookup"},
+        config={"configurable": {"thread_id": "eval-state-keys"}},
     )
     for key in ("response", "citations", "intent", "graded_chunks", "reranked_chunks"):
         assert key in result, f"Missing state key: {key}"

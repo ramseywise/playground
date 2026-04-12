@@ -10,13 +10,14 @@ log = get_logger(__name__)
 _MODEL_CACHE: dict[str, object] = {}
 
 
-def _load_model(model_name: str) -> object:
-    if model_name not in _MODEL_CACHE:
+def _load_model(model_name: str, revision: str | None = None) -> object:
+    cache_key = f"{model_name}@{revision}" if revision else model_name
+    if cache_key not in _MODEL_CACHE:
         from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]
 
-        log.info("embedder.load", model=model_name)
-        _MODEL_CACHE[model_name] = SentenceTransformer(model_name)
-    return _MODEL_CACHE[model_name]
+        log.info("embedder.load", model=model_name, revision=revision or "latest")
+        _MODEL_CACHE[cache_key] = SentenceTransformer(model_name, revision=revision)
+    return _MODEL_CACHE[cache_key]
 
 
 class MultilingualEmbedder:
@@ -30,12 +31,17 @@ class MultilingualEmbedder:
     Swap to intfloat/e5-large-v2 for English-only corpora (~20% faster, same dim).
     """
 
-    def __init__(self, model_name: str | None = None) -> None:
+    def __init__(
+        self,
+        model_name: str | None = None,
+        revision: str | None = None,
+    ) -> None:
         self._model_name = model_name or settings.embedding_model
+        self._revision = revision or settings.embedding_model_revision or None
 
     @property
     def _model(self) -> object:
-        return _load_model(self._model_name)
+        return _load_model(self._model_name, revision=self._revision)
 
     def embed_query(self, text: str) -> list[float]:
         from sentence_transformers import SentenceTransformer  # type: ignore[import-untyped]

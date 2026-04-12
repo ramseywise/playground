@@ -23,7 +23,9 @@ def meta_db() -> MetadataDB:
     db.close()
 
 
-def _insert_doc(db: MetadataDB, *, doc_id: str = "doc1", checksum: str = "abc123") -> None:
+def _insert_doc(
+    db: MetadataDB, *, doc_id: str = "doc1", checksum: str = "abc123"
+) -> None:
     db.insert_document(
         doc_id,
         title="Blues History",
@@ -151,7 +153,9 @@ class TestSnippetDB:
         results = snippet_db.search_snippets("Robert Johnson", k=5)
         assert all("score" in r for r in results)
 
-    def test_search_snippets_no_match_returns_empty(self, snippet_db: SnippetDB) -> None:
+    def test_search_snippets_no_match_returns_empty(
+        self, snippet_db: SnippetDB
+    ) -> None:
         snippet_db.insert_snippets(_make_snippets())
         results = snippet_db.search_snippets("xyzzy_no_match_term", k=5)
         assert results == []
@@ -167,3 +171,57 @@ class TestSnippetDB:
         with SnippetDB(":memory:") as db:
             db.insert_snippets(_make_snippets())
             assert len(db.get_snippets_by_doc("doc1")) == 3
+
+
+# ---------------------------------------------------------------------------
+# ChromaRetriever — write lock
+# ---------------------------------------------------------------------------
+
+
+class TestChromaWriteLock:
+    """Verify that concurrent upserts are serialised by _WRITE_LOCK."""
+
+    @pytest.mark.asyncio
+    async def test_concurrent_upserts_serialised(self) -> None:
+        """Two concurrent upserts should not race — _WRITE_LOCK serialises them."""
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from storage.vectordb.chroma import ChromaRetriever, _WRITE_LOCK
+        from librarian.schemas.chunks import Chunk, ChunkMetadata
+
+        retriever = ChromaRetriever(persist_dir="/tmp/test-chroma")
+
+        # Mock the collection so we never touch real Chroma
+        mock_collection = MagicMock()
+        mock_collection.upsert = MagicMock()
+        retriever._collection = mock_collection
+
+        call_order: list[int] = []
+
+        original_to_thread = asyncio.to_thread
+
+        async def _tracked_to_thread(fn, *args, **kwargs):
+            idx = len(call_order)
+            call_order.append(idx)
+            # Simulate some I/O time to test lock serialisation
+            await asyncio.sleep(0.01)
+            return fn(*args, **kwargs)
+
+        chunk = Chunk(
+            id="c1",
+            text="test",
+            metadata=ChunkMetadata(url="u", title="t", doc_id="d"),
+            embedding=[0.1] * 10,
+        )
+
+        with patch(
+            "storage.vectordb.chroma.asyncio.to_thread", side_effect=_tracked_to_thread
+        ):
+            await asyncio.gather(
+                retriever.upsert([chunk]),
+                retriever.upsert([chunk]),
+            )
+
+        # Both upserts completed (2 calls)
+        assert mock_collection.upsert.call_count == 2

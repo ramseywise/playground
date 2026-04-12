@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from langgraph.graph.state import CompiledStateGraph
 
-from librarian.factory import create_librarian
+from librarian.factory import create_librarian, warm_up_embedder
 from orchestration.nodes.generation import GenerationSubgraph
 from librarian.bedrock.client import BedrockKBClient
 from librarian.google_adk.client import GoogleRAGClient
@@ -33,6 +33,10 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
     log.info("api.deps.init_graph", retrieval=_settings.retrieval_strategy)
     _graph = create_librarian(_settings)
 
+    # Warm up the embedding model so the first request doesn't pay cold-start cost.
+    # _MODEL_CACHE is process-wide — the graph's embedder will find the model hot.
+    warm_up_embedder(_settings)
+
     llm = AnthropicLLM(
         model=_settings.anthropic_model_sonnet,
         api_key=_settings.anthropic_api_key,
@@ -46,12 +50,16 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
     if _settings.bedrock_knowledge_base_id:
         try:
             _bedrock_client = BedrockKBClient(_settings)
-            log.info("api.deps.bedrock_kb.init", kb_id=_settings.bedrock_knowledge_base_id)
+            log.info(
+                "api.deps.bedrock_kb.init", kb_id=_settings.bedrock_knowledge_base_id
+            )
         except Exception:
             log.warning("api.deps.bedrock_kb.init_failed", exc_info=True)
             _bedrock_client = None
     else:
-        log.info("api.deps.bedrock_kb.skipped", reason="no knowledge_base_id configured")
+        log.info(
+            "api.deps.bedrock_kb.skipped", reason="no knowledge_base_id configured"
+        )
 
     # Google RAG client — optional, only if configured
     if _settings.google_datastore_id or _settings.google_project_id:

@@ -20,6 +20,8 @@ class ChatResponse(BaseModel):
     response: str
     citations: list[dict[str, str]]
     confidence_score: float
+    confident: bool = True
+    escalate: bool = False
     intent: str
     trace_id: str = ""
     backend: str = "librarian"

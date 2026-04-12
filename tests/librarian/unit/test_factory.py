@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from librarian.factory import create_librarian
+from librarian.factory import create_librarian, warm_up_embedder
 from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
 from librarian.config import LibrarySettings
@@ -142,7 +142,10 @@ async def test_create_graph_is_invokable() -> None:
         retriever=InMemoryRetriever(),
         reranker=_mock_reranker(),
     )
-    result = await graph.ainvoke({"query": "hello", "intent": "conversational"})
+    result = await graph.ainvoke(
+        {"query": "hello", "intent": "conversational"},
+        config={"configurable": {"thread_id": "test-1"}},
+    )
     assert result["response"] == "the answer"
 
 
@@ -156,8 +159,94 @@ async def test_create_confidence_threshold_propagated() -> None:
         retriever=InMemoryRetriever(),
         reranker=_mock_reranker(),
     )
-    result = await graph.ainvoke({"query": "what is auth?", "intent": "lookup"})
+    result = await graph.ainvoke(
+        {"query": "what is auth?", "intent": "lookup"},
+        config={"configurable": {"thread_id": "test-2"}},
+    )
     assert result["response"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# warm_up_embedder — Step 1: embedder warm-up
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# _build_checkpointer — Step 2: LangGraph checkpointer
+# ---------------------------------------------------------------------------
+
+
+def test_default_checkpoint_backend_is_memory() -> None:
+    """Default config uses MemorySaver (no persistence)."""
+    from langgraph.checkpoint.memory import MemorySaver
+
+    cfg = _cfg()
+    graph = create_librarian(
+        cfg=cfg,
+        llm=_mock_llm(),
+        embedder=MockEmbedder(dim=64),
+        retriever=InMemoryRetriever(),
+        reranker=_mock_reranker(),
+    )
+    assert isinstance(graph.checkpointer, MemorySaver)
+
+
+def test_checkpointer_sqlite_raises_without_package() -> None:
+    """Requesting sqlite backend without package raises ImportError."""
+    with patch(
+        "librarian.factory._build_checkpointer",
+        side_effect=ImportError("langgraph-checkpoint-sqlite is required"),
+    ):
+        with pytest.raises(ImportError, match="langgraph-checkpoint-sqlite"):
+            create_librarian(
+                cfg=_cfg(checkpoint_backend="sqlite"),
+                llm=_mock_llm(),
+                embedder=MockEmbedder(dim=64),
+                retriever=InMemoryRetriever(),
+                reranker=_mock_reranker(),
+            )
+
+
+def test_checkpointer_postgres_raises_without_url() -> None:
+    """Requesting postgres backend without a URL raises ValueError."""
+    from librarian.factory import _build_checkpointer
+
+    with pytest.raises((ImportError, ValueError)):
+        _build_checkpointer(_cfg(checkpoint_backend="postgres"))
+
+
+@pytest.mark.asyncio
+async def test_graph_with_checkpointer_requires_thread_id() -> None:
+    """Graph compiled with MemorySaver raises without thread_id."""
+    graph = create_librarian(
+        cfg=_cfg(),
+        llm=_mock_llm(),
+        embedder=MockEmbedder(dim=64),
+        retriever=InMemoryRetriever(),
+        reranker=_mock_reranker(),
+    )
+    with pytest.raises(ValueError, match="thread_id"):
+        await graph.ainvoke({"query": "hello", "intent": "lookup"})
+
+
+# ---------------------------------------------------------------------------
+# warm_up_embedder — Step 1: embedder warm-up
+# ---------------------------------------------------------------------------
+
+
+def test_warm_up_embedder_calls_embed_query() -> None:
+    """warm_up_embedder builds an embedder and calls embed_query to pre-load the model."""
+    mock_embedder = MagicMock(spec=MockEmbedder)
+    mock_embedder.embed_query.return_value = [0.1] * 64
+
+    with patch(
+        "librarian.factory._build_embedder", return_value=mock_embedder
+    ) as mock_build:
+        cfg = _cfg(embedding_model="test-warmup-model")
+        warm_up_embedder(cfg)
+
+        mock_build.assert_called_once_with(cfg)
+        mock_embedder.embed_query.assert_called_once_with("warmup")
 
 
 @pytest.mark.asyncio
@@ -178,9 +267,7 @@ async def test_create_default_cfg_uses_module_settings() -> None:
             "librarian.factory._build_retriever",
             return_value=InMemoryRetriever(),
         ),
-        patch(
-            "librarian.factory._build_reranker", return_value=_mock_reranker()
-        ),
+        patch("librarian.factory._build_reranker", return_value=_mock_reranker()),
     ):
         create_librarian()  # cfg=None
         mock_llm_build.assert_called_once()
