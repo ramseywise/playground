@@ -1,15 +1,13 @@
-"""Re-export from canonical location: schemas.queries.
+"""Re-exports from canonical locations.
 
-All query/retrieval models now live in ``agents.librarian.schemas.queries``.
-This module re-exports for backward compatibility.
+- Chunk types    → core.schemas.chunks
+- RetrievalResult → core.schemas.retrieval
+- Intent/QueryPlan → librarian.schemas.queries (domain types, stay in librarian)
 """
 
 from __future__ import annotations
 
-from librarian.schemas.queries import (  # noqa: F401
-    Intent,
-    QueryPlan,
-    RetrievalResult,
-)
+from core.schemas.retrieval import RetrievalResult  # noqa: F401
+from librarian.schemas.queries import Intent, QueryPlan  # noqa: F401
 
 __all__ = ["Intent", "QueryPlan", "RetrievalResult"]

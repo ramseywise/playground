@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from librarian.retrieval.scoring import cosine_similarity, term_overlap
-from librarian.schemas.chunks import Chunk, GradedChunk
-from librarian.schemas.retrieval import RetrievalResult
+from core.retrieval.scoring import cosine_similarity, term_overlap
+from core.schemas.chunks import Chunk, GradedChunk
+from core.schemas.retrieval import RetrievalResult
 
 
 class InMemoryRetriever:
