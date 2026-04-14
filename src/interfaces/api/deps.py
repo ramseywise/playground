@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from langgraph.graph.state import CompiledStateGraph
 
-from librarian.factory import create_librarian, warm_up_embedder
+from orchestration.factory import create_librarian, warm_up_embedder
 from orchestration.langgraph.nodes.generation import GeneratorAgent
 from clients.bedrock_KB import BedrockKBClient
 from clients.google_vertex import GoogleRAGClient
@@ -100,7 +100,7 @@ get_generation_subgraph = get_generator_agent
 def init_pipeline(cfg: LibrarySettings | None = None) -> None:
     """Initialise the ingestion pipeline singleton."""
     global _pipeline  # noqa: PLW0603
-    from librarian.factory import create_ingestion_pipeline
+    from orchestration.factory import create_ingestion_pipeline
 
     _pipeline = create_ingestion_pipeline(cfg or _settings)
     log.info("api.deps.init_pipeline")

@@ -103,9 +103,15 @@ confidence_score <  threshold → confident=False → fallback_requested=True �
 - The gate is a **separate node** (not inside generate) so the CRAG conditional edge can read its output
 
 
-## 4. DI Wiring (`orchestration/factory.py`)
+## 4. DI Wiring
 
-`factory.py` is the **single assembly point** for all components. Strategy selection is config-driven via `LibrarySettings` (pydantic-settings, env-var overridable).
+Component construction lives in `orchestration/components.py` — shared by all
+orchestration options.  Framework-specific assembly lives in:
+- `orchestration/factory.py` — LangGraph pipeline + ingestion pipeline
+- `orchestration/google_adk/factory.py` — ADK agents (custom RAG, hybrid, coordinator)
+
+Strategy selection is config-driven via `LibrarySettings` (pydantic-settings,
+env-var overridable).
 
 **Component swap points:**
 
@@ -123,12 +129,12 @@ Any component can also be injected directly via `create_librarian(embedder=...)`
 **Graph construction flow:**
 ```
 create_librarian(cfg)
-  → _build_llm(cfg)             → AnthropicLLM | GeminiLLM
-  → _build_history_llm(cfg)     → Haiku for condenser
-  → _build_embedder(cfg)        → MultilingualEmbedder | MiniLMEmbedder
-  → _build_retriever(cfg, emb)  → ChromaRetriever | OpenSearchRetriever | ...
-  → _build_reranker(cfg, llm)   → CrossEncoderReranker | LLMListwiseReranker
-  → _build_checkpointer(cfg)    → MemorySaver | SqliteSaver | PostgresSaver
+  → build_llm(cfg)             → AnthropicLLM | GeminiLLM
+  → build_history_llm(cfg)     → Haiku for condenser
+  → build_embedder(cfg)        → MultilingualEmbedder | MiniLMEmbedder
+  → build_retriever(cfg, emb)  → ChromaRetriever | OpenSearchRetriever | ...
+  → build_reranker(cfg, llm)   → CrossEncoderReranker | LLMListwiseReranker
+  → build_checkpointer(cfg)    → MemorySaver | SqliteSaver | PostgresSaver
   → build_graph(all components) → CompiledStateGraph
 ```
 
