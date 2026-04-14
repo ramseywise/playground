@@ -1,8 +1,9 @@
-# Plan: Librarian RAG Upgrade — Multi-Query, Structured Output, Tool Abstraction
+# Plan: Librarian RAG Upgrade
 
 **Status:** Draft — awaiting review  
 **Scope:** `src/librarian/`, `src/orchestration/` — RAG-only (no agent autonomy expansion)  
-**Depends on:** [langgraph-adk-compatibility.md](langgraph-adk-compatibility.md) (partially overlapping — this plan supersedes the ADK tools rewrite in that doc)
+**Depends on:** [langgraph-adk-compatibility.md](langgraph-adk-compatibility.md) (partially overlapping — this plan supersedes the ADK tools rewrite in that doc)  
+**Consolidated from:** `librarian-rag-template.md` (merged 2026-04-14) — template architecture is now Phase 2 of this plan
 
 ---
 
@@ -29,7 +30,7 @@ The Librarian pipeline works but has gaps compared to production-grade RAG patte
 
 ---
 
-## Implementation Steps
+## Phase 1 — Practical Upgrades (shippable independently)
 
 ### Step 1 — `EnsembleRetriever` with fingerprint dedup
 
@@ -190,24 +191,81 @@ Align test/lint targets with the ADK-style conventions:
 
 ---
 
+## Phase 2 — Architecture (subgraphs, registry, evals)
+
+> Consolidated from `librarian-rag-template.md`. Phase 2 restructures the pipeline into
+> a supervisor multi-agent RAG system with swappable strategies. Phase 1 must be complete
+> first — Phase 2 builds on the EnsembleRetriever, RAGResponse, and BaseTool primitives.
+
+### Step 6 — Package scaffold under `src/agents/librarian/`
+
+Create module structure: `schemas/`, `ingestion/`, `retrieval/`, `reranker/`, `generation/`,
+`orchestration/subgraphs/`, `evals/`, `utils/`. Add `pyproject.toml` optional deps
+(`langgraph`, `langchain-core`, `langchain-anthropic`, `opensearch-py`, `sentence-transformers`,
+`ragas`, `deepeval`, `langfuse`). Stub `conftest.py` with `reset_registry` autouse fixture.
+
+### Step 7 — Schemas + LibrarySettings
+
+Pydantic models: `Chunk`, `ChunkMetadata`, `GradedChunk`, `RankedChunk`, `Intent` enum,
+`RetrievalResult`, `QueryPlan`, `LibrarianState` (TypedDict with `add_messages` reducer).
+`LibrarySettings` via pydantic-settings (embedding model, retrieval/reranker strategy,
+confidence threshold, langfuse config). Reuse `RAGResponse` from Phase 1 Step 2.
+
+### Step 8 — Ingestion module
+
+`Chunker` Protocol + `HtmlAwareChunker` (heading-boundary splitting, recursive fallback)
+and `ParentDocChunker` (parent/child linking for retrieval vs generation).
+
+### Step 9 — Retrieval module
+
+`Embedder` Protocol (E5 prefix enforcement), `Retriever` Protocol, `OpenSearchRetriever`
+(async, hybrid BM25 + k-NN), `InMemoryRetriever` (for tests), `MultilingualEmbedder`,
+`MockEmbedder`. Integrate with Phase 1's `EnsembleRetriever`.
+
+### Step 10 — Reranker + Generation modules
+
+Reranker: `CrossEncoderReranker` (ms-marco-MiniLM) + `LLMListwiseReranker` (Haiku).
+Generation: intent-specific system prompts, `build_prompt`, `call_llm`, `extract_citations`.
+Wire to Phase 1's `RAGResponse` structured output.
+
+### Step 11 — Query understanding + subgraphs
+
+`QueryAnalyzer` (rule-based intent classification, expansion, entity extraction) +
+`QueryRouter`. Three LangGraph subgraphs: retrieval (rewrite → expand → retrieve → grade →
+CRAG check), reranker (rerank → set_confidence), generation (prompt → LLM → citations).
+
+### Step 12 — Registry + supervisor graph
+
+Explicit strategy registry (no decorator magic). Supervisor graph wires subgraphs:
+`START → plan_node → [retrieve/direct/clarify] → subgraphs → confidence_gate → END`.
+Factory function `build_library_graph()` with DI for all components.
+
+### Step 13 — Eval suite
+
+`GoldenSample` model, tiered extraction (gold/silver/bronze), `evaluate_retrieval`
+(hit@k, MRR, failure clustering), `AnswerJudge` (Haiku LLM-as-judge: faithfulness,
+relevance, completeness), `generate_synthetic` with cost gate. deepeval integration.
+
+---
+
 ## Dependency Graph
 
 ```
-Step 1 (EnsembleRetriever)
-   │
-   ├──→ Step 3 (Tool abstraction — wraps EnsembleRetriever)
-   │       │
-   │       └──→ Step 3b (ADK + LangGraph adapters)
-   │
-   └──→ Step 2 (RAGResponse — independent of Step 3)
+Phase 1:
+  Step 4 (Config) — can start first, unblocks clean constructors
+  Step 1 (EnsembleRetriever) — after Step 4
+    ├──→ Step 2 (RAGResponse — independent of Step 3)
+    └──→ Step 3 (Tool abstraction → ADK + LangGraph adapters)
+  Step 5 (CI) — after Steps 1-4
 
-Step 4 (Config) — can start in parallel with Step 1
-Step 5 (CI) — after Steps 1-4
+Phase 2 (after Phase 1 complete):
+  Step 6 (Scaffold) → Step 7 (Schemas) → Step 8 (Ingestion) → Step 9 (Retrieval)
+    → Step 10 (Reranker + Generation) → Step 11 (Query understanding + subgraphs)
+    → Step 12 (Registry + supervisor) → Step 13 (Evals)
 ```
 
-**Recommended order:** Step 4 → Step 1 → Step 2 → Step 3 → Step 5
-
-Start with Step 4 (config cleanup) because it unblocks clean constructors for Steps 1-3. Step 2 (structured output) is independent and can run in parallel with Step 3 once Step 1 is done.
+**Phase 1 order:** Step 4 → Step 1 → Step 2 → Step 3 → Step 5
+**Phase 2 order:** Sequential, Steps 6–13. Each builds on the previous.
 
 ---
 
@@ -224,9 +282,17 @@ Start with Step 4 (config cleanup) because it unblocks clean constructors for St
 
 ## Acceptance Criteria
 
+### Phase 1
 - [ ] `EnsembleRetriever.retrieve(["q1", "q2"])` returns deduped, score-filtered `GradedChunks` — unit test with `MockEmbedder` + `InMemoryRetriever`
 - [ ] `RAGResponse` validates generator output; fallback path tested with malformed JSON
 - [ ] `RetrieverTool` has explicit `input_schema` / `output_schema`; both ADK and LangGraph use it
 - [ ] Zero hardcoded threshold/tuning constants in `src/librarian/` or `src/orchestration/` — all flow from `LibrarySettings`
 - [ ] `uv run pytest tests/librarian/ tests/orchestration/` passes
 - [ ] Parity test confirms LangGraph and ADK produce equivalent retrieval results
+
+### Phase 2
+- [ ] Supervisor graph routes correctly: retrieve/direct/clarify paths all tested
+- [ ] CRAG retry fires once then stops (off-by-one covered)
+- [ ] Registry swaps strategies via env var; autouse fixture isolates tests
+- [ ] Eval suite: hit@k, MRR computed correctly; LLM-as-judge with mocked calls
+- [ ] All tests pass without Docker, API keys, or model downloads

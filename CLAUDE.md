@@ -16,7 +16,7 @@ tests/                # Mirrors src/agents/ structure
 obsidian/             # Curated knowledge corpus (vault output)
 ```
 
-> **Current state**: Package restructure in progress. See `.claude/docs/plans/agent_platform_unification.md` for the active plan.
+> **Current state**: See `.claude/docs/plans/` for active plans and `.claude/docs/plans/backlog/` for deferred work.
 
 ## Stack
 
