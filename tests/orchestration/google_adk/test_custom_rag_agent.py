@@ -29,7 +29,7 @@ def _cfg() -> LibrarySettings:
 
 def test_create_custom_rag_agent_returns_agent() -> None:
     """create_custom_rag_agent should return an ADK Agent with tools wired."""
-    from orchestration.adk.custom_rag_agent import create_custom_rag_agent
+    from orchestration.google_adk.custom_rag_agent import create_custom_rag_agent
 
     mock_retriever = MagicMock()
     mock_embedder = MagicMock()
@@ -49,7 +49,7 @@ def test_create_custom_rag_agent_returns_agent() -> None:
 
 def test_create_custom_rag_agent_custom_model() -> None:
     """Agent should accept a custom model name."""
-    from orchestration.adk.custom_rag_agent import create_custom_rag_agent
+    from orchestration.google_adk.custom_rag_agent import create_custom_rag_agent
 
     agent = create_custom_rag_agent(
         _cfg(),
@@ -64,7 +64,7 @@ def test_create_custom_rag_agent_custom_model() -> None:
 
 def test_create_custom_rag_agent_has_instruction() -> None:
     """Agent should have retrieval instructions."""
-    from orchestration.adk.custom_rag_agent import create_custom_rag_agent
+    from orchestration.google_adk.custom_rag_agent import create_custom_rag_agent
 
     agent = create_custom_rag_agent(
         _cfg(),
@@ -82,13 +82,13 @@ def test_create_custom_rag_agent_has_instruction() -> None:
 
 def test_create_custom_rag_agent_configures_tools() -> None:
     """Creating the agent should call configure_tools with the provided components."""
-    from orchestration.adk.custom_rag_agent import create_custom_rag_agent
+    from orchestration.google_adk.custom_rag_agent import create_custom_rag_agent
 
     mock_retriever = MagicMock()
     mock_embedder = MagicMock()
     mock_reranker = MagicMock()
 
-    with patch("orchestration.adk.custom_rag_agent.configure_tools") as mock_configure:
+    with patch("orchestration.google_adk.custom_rag_agent.configure_tools") as mock_configure:
         create_custom_rag_agent(
             _cfg(),
             retriever=mock_retriever,

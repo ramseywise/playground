@@ -697,7 +697,7 @@ async def _run_adk_bedrock_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via ADK-wrapped Bedrock KB agent."""
-    from orchestration.adk.bedrock_agent import BedrockKBAgent
+    from orchestration.google_adk.bedrock_agent import BedrockKBAgent
 
     agent = BedrockKBAgent(cfg)
     query_results: list[QueryResult] = []
@@ -772,7 +772,7 @@ async def _run_adk_custom_rag_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via ADK agent with custom RAG tools (Gemini 2.0 Flash)."""
-    from orchestration.adk.custom_rag_agent import (
+    from orchestration.google_adk.custom_rag_agent import (
         create_custom_rag_agent,
         run_custom_rag_query,
     )
@@ -857,7 +857,7 @@ async def _run_adk_hybrid_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via ADK-wrapped full LangGraph pipeline."""
-    from orchestration.adk.hybrid_agent import LibrarianADKAgent
+    from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
     from orchestration.factory import create_librarian
 
     graph = create_librarian(cfg)
