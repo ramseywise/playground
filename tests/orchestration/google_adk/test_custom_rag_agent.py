@@ -81,7 +81,7 @@ def test_create_custom_rag_agent_has_instruction() -> None:
 
 
 def test_create_custom_rag_agent_configures_tools() -> None:
-    """Creating the agent should call configure_tools with the provided components."""
+    """Creating the agent should call configure_tools with agent objects."""
     from orchestration.google_adk.custom_rag_agent import create_custom_rag_agent
 
     mock_retriever = MagicMock()
@@ -96,9 +96,9 @@ def test_create_custom_rag_agent_configures_tools() -> None:
             reranker=mock_reranker,
         )
 
-        mock_configure.assert_called_once_with(
-            retriever=mock_retriever,
-            embedder=mock_embedder,
-            reranker=mock_reranker,
-            condenser_llm=None,
-        )
+        mock_configure.assert_called_once()
+        call_kwargs = mock_configure.call_args.kwargs
+        assert "retriever_agent" in call_kwargs
+        assert "reranker_agent" in call_kwargs
+        # condenser_agent should be None when no condenser_llm is provided
+        assert call_kwargs["condenser_agent"] is None
