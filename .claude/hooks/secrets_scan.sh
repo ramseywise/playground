@@ -1,42 +1,37 @@
 #!/usr/bin/env bash
-# PreToolUse hook for Write|Edit — blocks files containing secret patterns
-# Scoped to src/ and scripts/ — skips .claude/, tests/, .env files
+# PreToolUse hook for Write|Edit — blocks writes containing secrets.
+# Scans new content for API keys, tokens, and credentials.
 
-path=$(echo "$CLAUDE_TOOL_INPUT" | jq -r '.file_path // empty')
-[ -z "$path" ] && exit 0
+source "$(dirname "$0")/lib.sh"
 
-# Only scan source and script files
-echo "$path" | grep -qE '/(src|scripts)/.*\.(py|sh|yaml|yml|toml|json)$' || exit 0
-
-# For Edit, check the new_string; for Write, check content
-content=$(echo "$CLAUDE_TOOL_INPUT" | jq -r '.new_string // .content // empty')
+content=$(claude_content)
 [ -z "$content" ] && exit 0
 
 issues=""
 
-# Anthropic API key pattern
-echo "$content" | grep -qE 'sk-ant-[a-zA-Z0-9]{20,}' && issues="$issues  [secret] Anthropic API key (sk-ant-*)\n"
+# AWS keys
+echo "$content" | grep -qE 'AKIA[0-9A-Z]{16}' && issues="$issues  AWS access key detected\n"
 
-# Google AI API key pattern
-echo "$content" | grep -qE 'AIza[a-zA-Z0-9_-]{35}' && issues="$issues  [secret] Google API key (AIza*)\n"
+# Generic API keys / tokens (long hex or base64 strings assigned to key-like vars)
+echo "$content" | grep -qiE '(api_key|api_secret|secret_key|auth_token|access_token)\s*=\s*["'"'"'][A-Za-z0-9+/=_-]{20,}["'"'"']' && issues="$issues  Possible API key/token in assignment\n"
 
-# AWS access key
-echo "$content" | grep -qE 'AKIA[A-Z0-9]{16}' && issues="$issues  [secret] AWS access key (AKIA*)\n"
+# Anthropic keys
+echo "$content" | grep -qE 'sk-ant-[A-Za-z0-9_-]{20,}' && issues="$issues  Anthropic API key detected\n"
+
+# OpenAI keys
+echo "$content" | grep -qE 'sk-[A-Za-z0-9]{20,}' && issues="$issues  OpenAI-style API key detected\n"
 
 # GitHub tokens
-echo "$content" | grep -qE 'gh[ps]_[a-zA-Z0-9]{36,}' && issues="$issues  [secret] GitHub token (ghp_/ghs_*)\n"
+echo "$content" | grep -qE '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}' && issues="$issues  GitHub token detected\n"
 
-# Replicate API token
-echo "$content" | grep -qE 'r8_[a-zA-Z0-9]{20,}' && issues="$issues  [secret] Replicate API token (r8_*)\n"
+# Private keys
+echo "$content" | grep -qE 'BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY' && issues="$issues  Private key detected\n"
 
-# Generic hardcoded api_key assignment with actual value (not empty or env ref)
-echo "$content" | grep -qE 'api_key\s*=\s*"[a-zA-Z0-9_-]{20,}"' && issues="$issues  [secret] hardcoded api_key value\n"
-
-# Langfuse / observability keys
-echo "$content" | grep -qE 'pk-lf-[a-zA-Z0-9]{20,}|sk-lf-[a-zA-Z0-9]{20,}' && issues="$issues  [secret] Langfuse key\n"
+# Generic password assignments
+echo "$content" | grep -qiE '(password|passwd|pwd)\s*=\s*["'"'"'][^"'"'"']{8,}["'"'"']' && issues="$issues  Hardcoded password detected\n"
 
 if [ -n "$issues" ]; then
-  printf "Secrets detected — do not write keys to source files:\n%b" "$issues" >&2
+  printf "Secrets scan blocked this write:\n%b\nMove secrets to .env and reference via settings.\n" "$issues" >&2
   exit 2
 fi
 
