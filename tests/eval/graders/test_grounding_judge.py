@@ -15,8 +15,10 @@ class TestHappyPath:
             "claims_grounded": 3,
             "claims_hallucinated": 0,
             "claims_unverifiable": 0,
+            "claims_parametric": 0,
             "grounding_ratio": 1.0,
             "has_hallucination": 0.0,
+            "parametric_override": 0.0,
             "is_correct": True,
             "score": 1.0,
             "reasoning": "All claims supported by context.",
@@ -26,7 +28,7 @@ class TestHappyPath:
 
         assert result.is_correct is True
         assert result.score == 1.0
-        assert result.grader_type == "grounding_judge"
+        assert result.grader_type == "grounding"
 
 
 class TestDimensions:
@@ -37,8 +39,10 @@ class TestDimensions:
             "claims_grounded": 4,
             "claims_hallucinated": 0,
             "claims_unverifiable": 1,
+            "claims_parametric": 0,
             "grounding_ratio": 0.8,
             "has_hallucination": 0.0,
+            "parametric_override": 0.0,
             "is_correct": True,
             "score": 0.8,
             "reasoning": "One unverifiable claim.",
@@ -46,7 +50,13 @@ class TestDimensions:
         judge = GroundingJudge(mock_llm)
         result = await judge.grade(make_task())
 
-        expected_dims = {"claims_made", "claims_grounded", "grounding_ratio", "has_hallucination"}
+        expected_dims = {
+            "claims_made",
+            "claims_grounded",
+            "grounding_ratio",
+            "has_hallucination",
+            "parametric_override",
+        }
         assert expected_dims.issubset(set(result.dimensions.keys()))
 
 
@@ -59,8 +69,10 @@ class TestHallucinationBlocksCorrectness:
             "claims_grounded": 4,
             "claims_hallucinated": 1,
             "claims_unverifiable": 0,
+            "claims_parametric": 0,
             "grounding_ratio": 0.8,
             "has_hallucination": 1.0,
+            "parametric_override": 0.0,
             "is_correct": False,
             "score": 0.8,
             "reasoning": "One hallucinated claim about pricing.",
@@ -70,6 +82,49 @@ class TestHallucinationBlocksCorrectness:
 
         assert result.is_correct is False
         assert result.dimensions["has_hallucination"] == 1.0
+
+
+class TestParametricOverride:
+    @pytest.mark.asyncio()
+    async def test_at_threshold(self, mock_llm, make_task):
+        """parametric_override == 0.2 is the boundary — should pass."""
+        mock_llm.generate.return_value = json.dumps({
+            "claims_made": 5,
+            "claims_grounded": 4,
+            "claims_hallucinated": 0,
+            "claims_unverifiable": 0,
+            "claims_parametric": 1,
+            "grounding_ratio": 0.8,
+            "has_hallucination": 0.0,
+            "parametric_override": 0.2,
+            "is_correct": True,
+            "score": 0.8,
+            "reasoning": "Borderline — one minor parametric claim.",
+        })
+        judge = GroundingJudge(mock_llm)
+        result = await judge.grade(make_task())
+        assert result.is_correct is True
+
+    @pytest.mark.asyncio()
+    async def test_above_threshold(self, mock_llm, make_task):
+        """parametric_override > 0.2 — should fail."""
+        mock_llm.generate.return_value = json.dumps({
+            "claims_made": 5,
+            "claims_grounded": 3,
+            "claims_hallucinated": 0,
+            "claims_unverifiable": 0,
+            "claims_parametric": 2,
+            "grounding_ratio": 0.6,
+            "has_hallucination": 0.0,
+            "parametric_override": 0.4,
+            "is_correct": False,
+            "score": 0.6,
+            "reasoning": "Two claims from parametric knowledge.",
+        })
+        judge = GroundingJudge(mock_llm)
+        result = await judge.grade(make_task())
+        assert result.is_correct is False
+        assert result.dimensions["parametric_override"] == 0.4
 
 
 class TestParseFailure:
@@ -92,8 +147,10 @@ class TestBoundary:
             "claims_grounded": 3,
             "claims_hallucinated": 0,
             "claims_unverifiable": 2,
+            "claims_parametric": 0,
             "grounding_ratio": 0.6,
             "has_hallucination": 0.0,
+            "parametric_override": 0.0,
             "is_correct": False,
             "score": 0.6,
             "reasoning": "Two unverifiable claims.",
@@ -111,8 +168,10 @@ class TestEmptyResponse:
             "claims_grounded": 0,
             "claims_hallucinated": 0,
             "claims_unverifiable": 0,
+            "claims_parametric": 0,
             "grounding_ratio": 0.0,
             "has_hallucination": 0.0,
+            "parametric_override": 0.0,
             "is_correct": False,
             "score": 0.0,
             "reasoning": "No claims to verify.",

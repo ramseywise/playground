@@ -31,7 +31,6 @@ import asyncio
 import json
 import sys
 import time
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -39,6 +38,7 @@ from typing import Any
 import structlog
 
 from eval.loaders import load_golden_from_jsonl
+from eval.models import ExperimentResult, FailureClusterSummary, QueryResult
 from eval.variants import VARIANTS
 from librarian.config import LibrarySettings, settings
 from librarian.schemas.chunks import Chunk, ChunkMetadata
@@ -47,57 +47,6 @@ from librarian.tasks.models import GoldenSample, RetrievalMetrics
 from librarian.tasks.tracing import FailureCluster, FailureClusterer
 
 log = structlog.get_logger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Result types
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class QueryResult:
-    """Result of evaluating a single query against a variant."""
-
-    query_id: str
-    query: str
-    hit: bool
-    reciprocal_rank: float
-    retrieved_urls: list[str]
-    expected_url: str
-    latency_ms: float
-    trace_id: str = ""
-    answer: str = ""  # populated by bedrock-live; empty for mock variants
-
-
-@dataclass
-class ExperimentResult:
-    """Aggregate result of running a variant experiment."""
-
-    variant_name: str
-    dataset_name: str
-    run_name: str
-    hit_rate: float = 0.0
-    mrr: float = 0.0
-    n_queries: int = 0
-    n_hits: int = 0
-    avg_latency_ms: float = 0.0
-    query_results: list[QueryResult] = field(default_factory=list)
-    failure_clusters: list[FailureCluster] = field(default_factory=list)
-    config_snapshot: dict[str, Any] = field(default_factory=dict)
-
-    def summary_dict(self) -> dict[str, Any]:
-        return {
-            "variant": self.variant_name,
-            "run_name": self.run_name,
-            "hit_rate": round(self.hit_rate, 3),
-            "mrr": round(self.mrr, 3),
-            "n_queries": self.n_queries,
-            "n_hits": self.n_hits,
-            "avg_latency_ms": round(self.avg_latency_ms, 1),
-            "failure_types": [
-                f"{c.failure_type}×{c.count}" for c in self.failure_clusters
-            ],
-        }
 
 
 # ---------------------------------------------------------------------------
@@ -380,7 +329,14 @@ def _aggregate_results(
         n_hits=hits,
         avg_latency_ms=avg_latency,
         query_results=query_results,
-        failure_clusters=clusters,
+        failure_clusters=[
+            FailureClusterSummary(
+                failure_type=c.failure_type,
+                count=c.count,
+                common_patterns=c.common_patterns,
+            )
+            for c in clusters
+        ],
         config_snapshot=config_snapshot,
     )
 
@@ -523,7 +479,14 @@ async def _run_bedrock_experiment(
         n_hits=hits,
         avg_latency_ms=avg_latency,
         query_results=query_results,
-        failure_clusters=clusters,
+        failure_clusters=[
+            FailureClusterSummary(
+                failure_type=c.failure_type,
+                count=c.count,
+                common_patterns=c.common_patterns,
+            )
+            for c in clusters
+        ],
         config_snapshot={
             "retrieval_strategy": "bedrock",
             "kb_id": cfg.bedrock_knowledge_base_id,
@@ -662,7 +625,14 @@ async def _run_google_adk_experiment(
         n_hits=hits,
         avg_latency_ms=avg_latency,
         query_results=query_results,
-        failure_clusters=clusters,
+        failure_clusters=[
+            FailureClusterSummary(
+                failure_type=c.failure_type,
+                count=c.count,
+                common_patterns=c.common_patterns,
+            )
+            for c in clusters
+        ],
         config_snapshot={
             "retrieval_strategy": "google_adk",
             "google_project_id": cfg.google_project_id,
@@ -1107,7 +1077,14 @@ async def run_variant_experiment(
         n_hits=hits,
         avg_latency_ms=avg_latency,
         query_results=query_results,
-        failure_clusters=clusters,
+        failure_clusters=[
+            FailureClusterSummary(
+                failure_type=c.failure_type,
+                count=c.count,
+                common_patterns=c.common_patterns,
+            )
+            for c in clusters
+        ],
         config_snapshot={
             "embedding_model": cfg.embedding_model,
             "embedding_provider": cfg.embedding_provider,

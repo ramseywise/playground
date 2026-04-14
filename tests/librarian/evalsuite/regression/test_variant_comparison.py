@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import pytest
 
-from eval.metrics.retrieval_eval import evaluate_retrieval
+from eval.metrics.retrieval import evaluate_retrieval
 from eval.variants import VARIANTS
 from librarian.schemas.chunks import Chunk
 from librarian.schemas.retrieval import RetrievalResult

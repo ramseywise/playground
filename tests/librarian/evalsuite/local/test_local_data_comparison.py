@@ -30,7 +30,7 @@ from pathlib import Path
 import pytest
 
 from eval.loaders import load_golden_from_jsonl
-from eval.metrics.retrieval_eval import evaluate_retrieval
+from eval.metrics.retrieval import evaluate_retrieval
 from eval.variants import VARIANTS
 from librarian.schemas.retrieval import RetrievalResult
 from librarian.tasks.models import GoldenSample, RetrievalMetrics

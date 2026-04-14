@@ -113,3 +113,67 @@ class EvalReport(BaseModel):
     by_difficulty: list[CategoryBreakdown] = Field(default_factory=list)
     by_grader: list[CategoryBreakdown] = Field(default_factory=list)
     failure_clusters: list[dict[str, Any]] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Experiment / dashboard shared types
+# ---------------------------------------------------------------------------
+
+
+class QueryResult(BaseModel):
+    """Per-query result for a variant experiment.
+
+    Shared by ``experiment.py`` and ``dashboard_data.py`` to avoid
+    parallel model hierarchies.
+    """
+
+    query_id: str
+    query: str
+    hit: bool
+    reciprocal_rank: float
+    retrieved_urls: list[str] = Field(default_factory=list)
+    expected_url: str = ""
+    latency_ms: float = 0.0
+    trace_id: str = ""
+    answer: str = ""
+
+
+class FailureClusterSummary(BaseModel):
+    """Failure cluster summary for experiment reports and dashboards."""
+
+    failure_type: str
+    count: int
+    common_patterns: list[str] = Field(default_factory=list)
+
+
+class ExperimentResult(BaseModel):
+    """Aggregate result of running a variant experiment.
+
+    Shared by ``experiment.py`` and ``dashboard_data.py``.
+    """
+
+    variant_name: str
+    dataset_name: str = ""
+    run_name: str = ""
+    hit_rate: float = 0.0
+    mrr: float = 0.0
+    n_queries: int = 0
+    n_hits: int = 0
+    avg_latency_ms: float = 0.0
+    query_results: list[QueryResult] = Field(default_factory=list)
+    failure_clusters: list[FailureClusterSummary] = Field(default_factory=list)
+    config_snapshot: dict[str, Any] = Field(default_factory=dict)
+
+    def summary_dict(self) -> dict[str, Any]:
+        return {
+            "variant": self.variant_name,
+            "run_name": self.run_name,
+            "hit_rate": round(self.hit_rate, 3),
+            "mrr": round(self.mrr, 3),
+            "n_queries": self.n_queries,
+            "n_hits": self.n_hits,
+            "avg_latency_ms": round(self.avg_latency_ms, 1),
+            "failure_types": [
+                f"{c.failure_type}\u00d7{c.count}" for c in self.failure_clusters
+            ],
+        }

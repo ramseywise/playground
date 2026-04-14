@@ -1,7 +1,8 @@
-"""EvalRunner — orchestrates tasks + graders into an EvalReport.
+"""EvalRunner — orchestrates harnesses + per-stage metrics.
 
-Central entry point for running evaluations.  Supports both capability
-and regression pipelines with configurable grader sets.
+Central entry point for running evaluations.  Composes the capability
+and regression harnesses with optional per-stage metric collection
+(retrieval, reranker, confidence gate).
 """
 
 from __future__ import annotations
@@ -10,13 +11,16 @@ from typing import Any
 
 import structlog
 
-from eval.models import EvalReport, EvalRunConfig, EvalTask
-from eval.pipelines.capability import run_capability_eval
-from eval.pipelines.regression import (
+from eval.harnesses.capability import run_capability_eval
+from eval.harnesses.regression import (
     RegressionThresholds,
-    RetrieveFn,
     run_regression_eval,
 )
+from eval.metrics._shared import RetrieveFn
+from eval.metrics.confidence import GateMetrics, evaluate_gate
+from eval.metrics.reranker import RerankerMetrics, evaluate_reranker
+from eval.models import EvalReport, EvalRunConfig, EvalTask
+from librarian.schemas.chunks import GradedChunk, RankedChunk
 from librarian.tasks.tracing import FailureClusterer
 
 log = structlog.get_logger(__name__)
@@ -24,6 +28,9 @@ log = structlog.get_logger(__name__)
 
 class EvalRunner:
     """Configurable evaluation orchestrator.
+
+    Composes harnesses (capability, regression) with optional per-stage
+    metrics (reranker quality, confidence gate calibration).
 
     Args:
         graders: List of grader instances implementing the Grader protocol.
@@ -43,7 +50,7 @@ class EvalRunner:
         self._clusterer = clusterer
 
     async def run_capability(self, tasks: list[EvalTask]) -> EvalReport:
-        """Run capability evaluation pipeline."""
+        """Run capability evaluation harness."""
         log.info(
             "runner.capability.start",
             n_tasks=len(tasks),
@@ -65,7 +72,7 @@ class EvalRunner:
         url_extractor: Any | None = None,
         thresholds: RegressionThresholds | None = None,
     ) -> EvalReport:
-        """Run regression evaluation pipeline."""
+        """Run regression evaluation harness."""
         log.info("runner.regression.start", n_tasks=len(tasks), k=k)
         return await run_regression_eval(
             tasks,
@@ -76,3 +83,20 @@ class EvalRunner:
             config=self._config,
             clusterer=self._clusterer,
         )
+
+    @staticmethod
+    def evaluate_reranker(
+        queries: list[tuple[list[GradedChunk], list[RankedChunk], set[str]]],
+        k: int = 5,
+    ) -> RerankerMetrics:
+        """Evaluate reranker quality across multiple queries."""
+        return evaluate_reranker(queries, k=k)
+
+    @staticmethod
+    def evaluate_gate(
+        scores: list[float],
+        truths: list[bool],
+        threshold: float = 0.3,
+    ) -> GateMetrics:
+        """Evaluate confidence gate calibration."""
+        return evaluate_gate(scores, truths, threshold)

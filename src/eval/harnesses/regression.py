@@ -1,10 +1,10 @@
-"""Regression evaluation pipeline.
+"""Regression evaluation harness.
 
-Runs golden traces through retrieval, computes hit_rate@k and MRR,
-compares against threshold floors, and optionally populates a snippet
-store for FAQ bypass.
+Runs golden traces through retrieval, computes hit_rate@k and MRR via
+the shared metrics core, compares against threshold floors, and wraps
+results into an ``EvalReport``.
 
-Flow: golden tasks -> retrieve_fn -> hit/MRR metrics -> threshold check -> EvalReport
+Flow: golden tasks -> retrieve_fn -> shared hit/MRR core -> threshold check -> EvalReport
 """
 
 from __future__ import annotations
@@ -14,6 +14,12 @@ from typing import Any
 
 import structlog
 
+from eval.metrics._shared import (
+    RetrieveFn,
+    aggregate_hit_rate,
+    aggregate_mrr,
+    compute_retrieval_hits,
+)
 from eval.models import (
     CategoryBreakdown,
     EvalReport,
@@ -25,7 +31,13 @@ from librarian.tasks.tracing import FailureClusterer, PipelineTracer
 
 log = structlog.get_logger(__name__)
 
-RetrieveFn = Callable[[str], Coroutine[Any, Any, list[Any]]]
+
+def _default_url_extractor(result: Any) -> str:
+    """Default URL extractor — assumes librarian-style RetrievalResult."""
+    try:
+        return result.chunk.metadata.url
+    except AttributeError:
+        return str(result)
 
 
 class RegressionThresholds:
@@ -76,54 +88,44 @@ async def run_regression_eval(
     clusterer = clusterer or FailureClusterer()
     url_fn = url_extractor or _default_url_extractor
 
+    hits = await compute_retrieval_hits(
+        tasks,
+        retrieve_fn,
+        k,
+        id_fn=lambda t: t.id,
+        query_fn=lambda t: t.query,
+        expected_url_fn=lambda t: t.metadata.get("expected_doc_url", t.expected_answer),
+        url_extractor=url_fn,
+    )
+
+    # Trace failures for clustering
     tracer = PipelineTracer()
-    hits: list[int] = []
-    reciprocal_ranks: list[float] = []
     results: list[GraderResult] = []
-
-    for task in tasks:
-        trace = tracer.create_trace(task.id, task.query)
-        retrieved = await retrieve_fn(task.query)
-
-        expected_url = task.metadata.get("expected_doc_url", task.expected_answer)
-        urls = [url_fn(r) for r in retrieved[:k]]
-
-        hit = expected_url in urls
-        hits.append(int(hit))
-
-        rr = next(
-            (1.0 / (i + 1) for i, u in enumerate(urls) if u == expected_url),
-            0.0,
-        )
-        reciprocal_ranks.append(rr)
-
-        trace.status = "success" if hit else "failure"
-        trace.confidence = rr
-        if not hit:
+    for h in hits:
+        trace = tracer.create_trace(h.task_id, h.query)
+        trace.status = "success" if h.hit else "failure"
+        trace.confidence = h.reciprocal_rank
+        if not h.hit:
             trace.failure_reason = "expected_doc_not_in_top_k"
 
         results.append(
             GraderResult(
-                task_id=task.id,
+                task_id=h.task_id,
                 grader_type="retrieval_regression",
-                is_correct=hit,
-                score=rr,
-                reasoning=f"hit={'yes' if hit else 'no'}, rr={rr:.3f}",
-                dimensions={"reciprocal_rank": rr},
+                is_correct=h.hit,
+                score=h.reciprocal_rank,
+                reasoning=f"hit={'yes' if h.hit else 'no'}, rr={h.reciprocal_rank:.3f}",
+                dimensions={"reciprocal_rank": h.reciprocal_rank},
             )
         )
 
     n = len(tasks)
-    hit_rate = sum(hits) / n
-    mrr = sum(reciprocal_ranks) / n
+    hit_rate = aggregate_hit_rate(hits)
+    mrr = aggregate_mrr(hits)
 
     clusters = clusterer.cluster_failures(tracer.get_failure_traces())
 
     log.info("regression.done", hit_rate=hit_rate, mrr=mrr, k=k, n=n)
-
-    meets_thresholds = (
-        hit_rate >= thresholds.hit_rate_floor and mrr >= thresholds.mrr_floor
-    )
 
     return EvalReport(
         run_id=config.run_name or "regression_eval",
@@ -132,7 +134,7 @@ async def run_regression_eval(
         pass_rate=hit_rate,
         avg_score=mrr,
         n_tasks=n,
-        n_passed=sum(hits),
+        n_passed=sum(1 for h in hits if h.hit),
         by_category=[
             CategoryBreakdown(
                 category="hit_rate@k",
@@ -152,11 +154,3 @@ async def run_regression_eval(
             for c in clusters
         ],
     )
-
-
-def _default_url_extractor(result: Any) -> str:
-    """Default URL extractor — assumes librarian-style RetrievalResult."""
-    try:
-        return result.chunk.metadata.url
-    except AttributeError:
-        return str(result)
