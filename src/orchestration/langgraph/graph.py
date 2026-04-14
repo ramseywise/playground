@@ -172,7 +172,8 @@ def build_graph(
     cache_strategy: str = "",
     retrieval_k: int = 10,
     reranker_top_k: int = 3,
-    confidence_threshold: float = 0.3,
+    relevance_threshold: float = 0.1,
+    confidence_threshold: float = 0.4,
     max_crag_retries: int = 1,
     max_query_variants: int = 3,
     checkpointer: BaseCheckpointSaver | None = None,
@@ -192,6 +193,7 @@ def build_graph(
         retriever=retriever,
         embedder=embedder,
         top_k=retrieval_k,
+        relevance_threshold=relevance_threshold,
         cache=cache,
         cache_strategy=cache_strategy,
     )

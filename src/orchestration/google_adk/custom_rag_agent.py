@@ -14,13 +14,13 @@ from typing import Any
 
 from google.adk.agents import Agent
 
-from orchestration.adk.callbacks import (
+from orchestration.google_adk.callbacks import (
     after_agent,
     after_tool,
     before_agent,
     before_tool,
 )
-from orchestration.adk.tools import (
+from orchestration.google_adk.tools import (
     analyze_query,
     condense_query,
     configure_tools,

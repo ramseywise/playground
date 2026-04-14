@@ -45,7 +45,7 @@ def _make_ctx(query: str, session_id: str = "sess-123") -> InvocationContext:
 @pytest.mark.asyncio
 async def test_hybrid_agent_calls_graph_ainvoke() -> None:
     """Agent should call graph.ainvoke with the query and thread_id."""
-    from orchestration.adk.hybrid_agent import LibrarianADKAgent
+    from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
 
     mock_graph = MagicMock()
     mock_graph.ainvoke = AsyncMock(
@@ -78,7 +78,7 @@ async def test_hybrid_agent_calls_graph_ainvoke() -> None:
 @pytest.mark.asyncio
 async def test_hybrid_agent_passes_messages() -> None:
     """Agent should extract conversation history from ADK session events."""
-    from orchestration.adk.hybrid_agent import LibrarianADKAgent
+    from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
 
     mock_graph = MagicMock()
     mock_graph.ainvoke = AsyncMock(return_value={"response": "follow-up answer"})
@@ -123,7 +123,7 @@ async def test_hybrid_agent_passes_messages() -> None:
 @pytest.mark.asyncio
 async def test_hybrid_agent_handles_empty_response() -> None:
     """Agent should handle empty graph response gracefully."""
-    from orchestration.adk.hybrid_agent import LibrarianADKAgent
+    from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
 
     mock_graph = MagicMock()
     mock_graph.ainvoke = AsyncMock(return_value={"response": ""})
@@ -141,7 +141,7 @@ async def test_hybrid_agent_handles_empty_response() -> None:
 
 def test_hybrid_agent_name_and_description() -> None:
     """Agent should have correct name and description."""
-    from orchestration.adk.hybrid_agent import LibrarianADKAgent
+    from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
 
     agent = LibrarianADKAgent(graph=MagicMock())
     assert agent.name == "librarian_hybrid"
@@ -157,7 +157,7 @@ def test_coordinator_has_both_sub_agents() -> None:
     """Coordinator should have both sub-agents wired."""
     from google.adk.agents import Agent
 
-    from orchestration.adk.coordinator import create_coordinator
+    from orchestration.google_adk.coordinator import create_coordinator
 
     mock_librarian = Agent(
         model="gemini-2.0-flash",
