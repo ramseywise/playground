@@ -4,6 +4,7 @@ Last updated: 2026-04-14
 
 ## Ready to Execute
 - [terraform-restructure](plans/terraform-restructure.md) — Terraform modular restructure (2 stacks, modules, CI/CD)
+- [github-cicd-pipeline](plans/github-cicd-pipeline.md) — CI/CD workflows + deploy (blocked on GH App `workflows` permission)
 - [ts-copilot-upgrades](plans/ts-copilot-upgrades.md) — TypeScript copilot service upgrades
 
 ## Draft Plans (awaiting review)
