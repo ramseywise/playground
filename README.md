@@ -137,16 +137,10 @@ cp .env.example .env
 # BEDROCK_MODEL_ARN=arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-6-20251001-v2:0
 # BEDROCK_REGION=us-east-1
 
-# 2a. Next.js comparison app (side-by-side A/B view)
-cd frontend/web && npm install && npm run dev
-# → http://localhost:3000 — select "both" to see Librarian and Bedrock side by side
-
-# 2b. Or Streamlit playground (radio-button backend selector)
+# 2. Streamlit chat playground (supports all backends + side-by-side comparison)
 uv run streamlit run frontend/librarian_chat.py
-# → http://localhost:8501 — toggle between "Python RAG (Librarian)" and "AWS Bedrock KB"
+# → http://localhost:8501 — select any backend or compare multiple side by side
 ```
-
-The Next.js comparison view shows both responses in a 2-column grid with per-backend latency badges, citations, and confidence scores.
 
 ### Experiment runner (LangFuse dashboard)
 

@@ -11,7 +11,14 @@ class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4000)
     session_id: str | None = None
     conversation_id: str | None = None  # legacy alias — prefer session_id
-    backend: Literal["librarian", "bedrock", "google_adk"] = "librarian"
+    backend: Literal[
+        "librarian",
+        "bedrock",
+        "google_adk",
+        "adk_bedrock",
+        "adk_custom_rag",
+        "adk_hybrid",
+    ] = "librarian"
 
 
 class ChatResponse(BaseModel):
@@ -41,6 +48,21 @@ class ErrorResponse(BaseModel):
     trace_id: str = ""
     agent: str = "librarian"
     detail: str = ""
+
+
+class BackendInfo(BaseModel):
+    """Describes a single backend's availability and capabilities."""
+
+    id: str
+    label: str
+    available: bool
+    streaming: bool = False
+
+
+class BackendsResponse(BaseModel):
+    """Response from the /backends discovery endpoint."""
+
+    backends: list[BackendInfo]
 
 
 class IngestRequest(BaseModel):
