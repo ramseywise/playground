@@ -57,6 +57,18 @@ class TestTriageRouting:
         d = self.svc.decide("hello", backend="google_adk")
         assert d.route == "google_adk"
 
+    def test_adk_bedrock_bypasses_classification(self) -> None:
+        d = self.svc.decide("hello", backend="adk_bedrock")
+        assert d.route == "adk_bedrock"
+
+    def test_adk_custom_rag_bypasses_classification(self) -> None:
+        d = self.svc.decide("hello", backend="adk_custom_rag")
+        assert d.route == "adk_custom_rag"
+
+    def test_adk_hybrid_bypasses_classification(self) -> None:
+        d = self.svc.decide("hello", backend="adk_hybrid")
+        assert d.route == "adk_hybrid"
+
     def test_thanks_routes_direct(self) -> None:
         d = self.svc.decide("thank you for your help")
         assert d.route == "direct"

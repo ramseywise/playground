@@ -158,5 +158,15 @@ def get_triage() -> TriageService:
     return _triage
 
 
+def is_adk_available() -> bool:
+    """Return True when google.adk is importable (ADK sub-variants possible)."""
+    try:
+        import google.adk  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
 def get_settings() -> LibrarySettings:
     return _settings

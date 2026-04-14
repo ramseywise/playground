@@ -198,6 +198,94 @@ class TestEscalationSignal:
         assert data["confidence_score"] == 0.15
 
 
+class TestBackendsEndpoint:
+    def test_backends_returns_all_variants(self, client: TestClient) -> None:
+        resp = client.get("/api/v1/backends")
+        assert resp.status_code == 200
+        data = resp.json()
+        ids = [b["id"] for b in data["backends"]]
+        assert "librarian" in ids
+        assert "bedrock" in ids
+        assert "google_adk" in ids
+        assert "adk_bedrock" in ids
+        assert "adk_custom_rag" in ids
+        assert "adk_hybrid" in ids
+
+    def test_backends_librarian_available_when_graph_ready(
+        self, client: TestClient
+    ) -> None:
+        resp = client.get("/api/v1/backends")
+        data = resp.json()
+        librarian = next(b for b in data["backends"] if b["id"] == "librarian")
+        assert librarian["available"] is True
+        assert librarian["streaming"] is True
+
+    def test_backends_bedrock_unavailable_when_not_configured(
+        self, client: TestClient
+    ) -> None:
+        resp = client.get("/api/v1/backends")
+        data = resp.json()
+        bedrock = next(b for b in data["backends"] if b["id"] == "bedrock")
+        assert bedrock["available"] is False
+        assert bedrock["streaming"] is False
+
+    def test_backends_bedrock_available_when_configured(
+        self, client: TestClient
+    ) -> None:
+        deps._bedrock_client = AsyncMock()
+        try:
+            resp = client.get("/api/v1/backends")
+            data = resp.json()
+            bedrock = next(b for b in data["backends"] if b["id"] == "bedrock")
+            assert bedrock["available"] is True
+        finally:
+            deps._bedrock_client = None
+
+    def test_backends_has_labels(self, client: TestClient) -> None:
+        resp = client.get("/api/v1/backends")
+        data = resp.json()
+        for backend in data["backends"]:
+            assert "label" in backend
+            assert len(backend["label"]) > 0
+
+
+class TestChatBackendRouting:
+    def test_chat_rejects_invalid_backend(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/v1/chat", json={"query": "test", "backend": "invalid"}
+        )
+        assert resp.status_code == 422
+
+    def test_chat_accepts_adk_bedrock_backend(self, client: TestClient) -> None:
+        """adk_bedrock is accepted by Pydantic but returns 503 when not configured."""
+        resp = client.post(
+            "/api/v1/chat", json={"query": "test", "backend": "adk_bedrock"}
+        )
+        # 503 because google-adk may not be installed, or bedrock not configured
+        assert resp.status_code in (200, 502, 503)
+
+    def test_chat_accepts_adk_custom_rag_backend(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/v1/chat", json={"query": "test", "backend": "adk_custom_rag"}
+        )
+        assert resp.status_code in (200, 502, 503)
+
+    def test_chat_accepts_adk_hybrid_backend(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/v1/chat", json={"query": "test", "backend": "adk_hybrid"}
+        )
+        assert resp.status_code in (200, 502, 503)
+
+    def test_stream_rejects_adk_backends(self, client: TestClient) -> None:
+        for backend in ("adk_bedrock", "adk_custom_rag", "adk_hybrid"):
+            resp = client.post(
+                "/api/v1/chat/stream",
+                json={"query": "test", "backend": backend},
+            )
+            assert resp.status_code == 400
+            assert "not supported" in resp.json()["detail"]
+
+
 class TestLangfuseConfig:
     """Verify Langfuse config is passed to graph invocations."""
 

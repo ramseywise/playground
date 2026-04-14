@@ -19,8 +19,14 @@ from interfaces.api.deps import (
     get_pipeline,
     get_settings,
     get_triage,
+    is_adk_available,
+    is_bedrock_available,
+    is_google_adk_available,
+    is_graph_ready,
 )
 from interfaces.api.models import (
+    BackendInfo,
+    BackendsResponse,
     ChatRequest,
     ChatResponse,
     ErrorResponse,
@@ -50,6 +56,60 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+_BACKEND_LABELS: dict[str, str] = {
+    "librarian": "Custom RAG (LangGraph CRAG)",
+    "bedrock": "AWS Bedrock KB",
+    "google_adk": "Google Gemini + Vertex AI Search",
+    "adk_bedrock": "ADK + Bedrock KB",
+    "adk_custom_rag": "ADK + Custom RAG (Gemini)",
+    "adk_hybrid": "ADK + LangGraph Hybrid",
+}
+
+
+@router.get("/backends", response_model=BackendsResponse)
+async def backends() -> BackendsResponse:
+    """Return which backends are configured and available."""
+    adk = is_adk_available()
+    bedrock = is_bedrock_available()
+    google = is_google_adk_available()
+    graph = is_graph_ready()
+
+    items = [
+        BackendInfo(
+            id="librarian",
+            label=_BACKEND_LABELS["librarian"],
+            available=graph,
+            streaming=True,
+        ),
+        BackendInfo(
+            id="bedrock",
+            label=_BACKEND_LABELS["bedrock"],
+            available=bedrock,
+        ),
+        BackendInfo(
+            id="google_adk",
+            label=_BACKEND_LABELS["google_adk"],
+            available=google,
+        ),
+        BackendInfo(
+            id="adk_bedrock",
+            label=_BACKEND_LABELS["adk_bedrock"],
+            available=adk and bedrock,
+        ),
+        BackendInfo(
+            id="adk_custom_rag",
+            label=_BACKEND_LABELS["adk_custom_rag"],
+            available=adk and graph,
+        ),
+        BackendInfo(
+            id="adk_hybrid",
+            label=_BACKEND_LABELS["adk_hybrid"],
+            available=adk and graph,
+        ),
+    ]
+    return BackendsResponse(backends=items)
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
     """Non-streaming chat: triage → librarian graph, Bedrock KB, or direct response."""
@@ -59,6 +119,12 @@ async def chat(req: ChatRequest) -> ChatResponse | JSONResponse:
         return await _chat_bedrock(req)
     if decision.route == "google_adk":
         return await _chat_google_adk(req)
+    if decision.route == "adk_bedrock":
+        return await _chat_adk_bedrock(req)
+    if decision.route == "adk_custom_rag":
+        return await _chat_adk_custom_rag(req)
+    if decision.route == "adk_hybrid":
+        return await _chat_adk_hybrid(req)
     if decision.route in ("escalation", "direct"):
         return ChatResponse(
             response=decision.response or "",
@@ -163,6 +229,148 @@ async def _chat_google_adk(req: ChatRequest) -> ChatResponse | JSONResponse:
     )
 
 
+async def _chat_adk_bedrock(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Call Bedrock KB through the ADK agent wrapper."""
+    if not is_adk_available():
+        return _error_response(503, "google-adk not installed")
+
+    client = get_bedrock_client()
+    if client is None:
+        return _error_response(
+            503,
+            "Bedrock KB not configured",
+            detail="Set BEDROCK_KNOWLEDGE_BASE_ID and BEDROCK_MODEL_ARN in .env",
+        )
+
+    log.info("api.chat.adk_bedrock", query=req.query[:80], session_id=req.session_id)
+
+    try:
+        from orchestration.google_adk.bedrock_agent import BedrockKBAgent
+
+        cfg = get_settings()
+        agent = BedrockKBAgent(cfg)
+
+        from eval.experiment import _build_adk_context, _extract_urls_from_adk_events
+
+        ctx, _ = _build_adk_context(req.query, req.session_id or str(uuid.uuid4()))
+        events = [e async for e in agent._run_async_impl(ctx)]
+
+        response_text = ""
+        if events and events[0].content and events[0].content.parts:
+            response_text = events[0].content.parts[0].text or ""
+
+        citations: list[dict[str, str]] = []
+        for url in _extract_urls_from_adk_events(events):
+            citations.append({"url": url, "title": url.split("/")[-1]})
+
+    except Exception:
+        log.exception("api.chat.adk_bedrock.error")
+        return _error_response(502, "ADK Bedrock error")
+
+    return ChatResponse(
+        response=response_text,
+        citations=citations,
+        confidence_score=0.0,
+        intent="adk_bedrock",
+        trace_id=_trace_id(),
+        backend="adk_bedrock",
+    )
+
+
+async def _chat_adk_custom_rag(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Call the ADK custom RAG agent (Gemini 2.0 Flash + tool-calling)."""
+    if not is_adk_available():
+        return _error_response(503, "google-adk not installed")
+
+    log.info("api.chat.adk_custom_rag", query=req.query[:80], session_id=req.session_id)
+
+    try:
+        from orchestration.google_adk.custom_rag_agent import (
+            create_custom_rag_agent,
+            run_custom_rag_query,
+        )
+        from orchestration.factory import _build_embedder, _build_reranker, _build_retriever
+        from clients.llm import AnthropicLLM
+
+        cfg = get_settings()
+        embedder = _build_embedder(cfg)
+        retriever = _build_retriever(cfg, embedder)
+        llm = AnthropicLLM(
+            model=cfg.anthropic_model_sonnet, api_key=cfg.anthropic_api_key
+        )
+        reranker = _build_reranker(cfg, llm)
+        agent = create_custom_rag_agent(
+            cfg, retriever=retriever, embedder=embedder, reranker=reranker
+        )
+
+        result = await run_custom_rag_query(
+            agent,
+            req.query,
+            session_id=req.session_id or str(uuid.uuid4()),
+        )
+
+        response_text = result.get("response", "")
+        citations: list[dict[str, str]] = []
+        from eval.experiment import _extract_urls_from_adk_events
+
+        for url in _extract_urls_from_adk_events(result.get("events", [])):
+            citations.append({"url": url, "title": url.split("/")[-1]})
+
+    except Exception:
+        log.exception("api.chat.adk_custom_rag.error")
+        return _error_response(502, "ADK Custom RAG error")
+
+    return ChatResponse(
+        response=response_text,
+        citations=citations,
+        confidence_score=0.0,
+        intent="adk_custom_rag",
+        trace_id=_trace_id(),
+        backend="adk_custom_rag",
+    )
+
+
+async def _chat_adk_hybrid(req: ChatRequest) -> ChatResponse | JSONResponse:
+    """Call the ADK-wrapped LangGraph CRAG pipeline."""
+    if not is_adk_available():
+        return _error_response(503, "google-adk not installed")
+
+    log.info("api.chat.adk_hybrid", query=req.query[:80], session_id=req.session_id)
+
+    try:
+        from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
+
+        graph = get_graph()
+        cfg = get_settings()
+        agent = LibrarianADKAgent(graph=graph, cfg=cfg)
+
+        from eval.experiment import _build_adk_context, _extract_urls_from_adk_events
+
+        ctx, _ = _build_adk_context(req.query, req.session_id or str(uuid.uuid4()))
+        events = [e async for e in agent._run_async_impl(ctx)]
+
+        response_text = ""
+        if events and events[0].content and events[0].content.parts:
+            response_text = events[0].content.parts[0].text or ""
+
+        citations: list[dict[str, str]] = []
+        for url in _extract_urls_from_adk_events(events):
+            citations.append({"url": url, "title": url.split("/")[-1]})
+
+    except Exception:
+        log.exception("api.chat.adk_hybrid.error")
+        return _error_response(502, "ADK Hybrid error")
+
+    return ChatResponse(
+        response=response_text,
+        citations=citations,
+        confidence_score=0.0,
+        intent="adk_hybrid",
+        trace_id=_trace_id(),
+        backend="adk_hybrid",
+    )
+
+
 async def _stream_chat(
     req: ChatRequest, timeout: float
 ) -> AsyncGenerator[dict[str, Any], None]:
@@ -255,7 +463,13 @@ async def chat_stream(req: ChatRequest) -> EventSourceResponse:
 
         return EventSourceResponse(triage_events())
 
-    if decision.route in ("bedrock", "google_adk"):
+    if decision.route in (
+        "bedrock",
+        "google_adk",
+        "adk_bedrock",
+        "adk_custom_rag",
+        "adk_hybrid",
+    ):
         return JSONResponse(
             status_code=400,
             content={
