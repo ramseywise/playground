@@ -204,13 +204,11 @@ def _mock_graph() -> Any:
 def client(_mock_graph: Any) -> TestClient:
     """TestClient with both graph and bedrock mocks."""
     deps._graph = _mock_graph
-    deps._generation_sg = AsyncMock()
     deps._pipeline = AsyncMock()
     deps._bedrock_client = _make_mock_bedrock_client()
     deps._triage = TriageService()
     yield TestClient(app, raise_server_exceptions=True)
     deps._graph = None
-    deps._generation_sg = None
     deps._pipeline = None
     deps._bedrock_client = None
     deps._triage = None

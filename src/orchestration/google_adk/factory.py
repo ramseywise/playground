@@ -11,13 +11,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from orchestration.components import (
-    build_embedder,
-    build_history_llm,
-    build_llm,
-    build_reranker,
-    build_retriever,
-)
 from orchestration.factory import create_agents
 from librarian.config import LibrarySettings, settings as _default_settings
 from core.logging import get_logger
@@ -51,10 +44,13 @@ def create_custom_rag(
 
     cfg = cfg or _default_settings
 
-    resolved_llm = condenser_llm or build_history_llm(cfg)
-    resolved_embedder = embedder or build_embedder(cfg)
-    resolved_retriever = retriever or build_retriever(cfg, resolved_embedder)
-    resolved_reranker = reranker or build_reranker(cfg, build_llm(cfg))
+    retriever_agent, reranker_agent, _, condenser_agent = create_agents(
+        cfg,
+        embedder=embedder,
+        retriever=retriever,
+        reranker=reranker,
+        history_llm=condenser_llm,
+    )
 
     log.info(
         "adk.factory.custom_rag",
@@ -65,10 +61,10 @@ def create_custom_rag(
 
     return create_custom_rag_agent(
         cfg,
-        retriever=resolved_retriever,
-        embedder=resolved_embedder,
-        reranker=resolved_reranker,
-        condenser_llm=resolved_llm,
+        retriever=retriever_agent._retriever,
+        embedder=retriever_agent._embedder,
+        reranker=reranker_agent._reranker,
+        condenser_llm=condenser_agent._llm,
         model=model,
     )
 

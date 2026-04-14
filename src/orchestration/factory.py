@@ -146,28 +146,21 @@ def create_librarian(
         snippet_retriever=snippet_retriever is not None,
     )
 
-    resolved_llm = llm or build_llm(cfg)
-    resolved_history_llm = history_llm or build_history_llm(cfg)
-    resolved_embedder = embedder or build_embedder(cfg)
-    resolved_retriever = retriever or build_retriever(cfg, resolved_embedder)
-    resolved_reranker = reranker or build_reranker(cfg, resolved_llm)
-    resolved_history_condenser = CondenserAgent(llm=resolved_history_llm)
-    resolved_checkpointer = build_checkpointer(cfg)
-    retrieval_cache = (
-        RetrievalCache(max_size=cfg.cache_max_size, ttl_seconds=cfg.cache_ttl_seconds)
-        if cfg.cache_enabled
-        else None
+    retriever_agent, reranker_agent, generator_agent, condenser_agent = create_agents(
+        cfg, llm=llm, history_llm=history_llm, embedder=embedder,
+        retriever=retriever, reranker=reranker,
     )
+    resolved_checkpointer = build_checkpointer(cfg)
 
     return build_graph(
-        retriever=resolved_retriever,
-        embedder=resolved_embedder,
-        reranker=resolved_reranker,
-        llm=resolved_llm,
-        history_llm=resolved_history_llm,
-        history_condenser=resolved_history_condenser,
+        retriever=retriever_agent._retriever,
+        embedder=retriever_agent._embedder,
+        reranker=reranker_agent._reranker,
+        llm=generator_agent._llm,
+        history_llm=condenser_agent._llm,
+        history_condenser=condenser_agent,
         snippet_retriever=snippet_retriever,
-        cache=retrieval_cache,
+        cache=retriever_agent._cache,
         cache_strategy=cfg.retrieval_strategy,
         retrieval_k=cfg.retrieval_k,
         reranker_top_k=cfg.reranker_top_k,

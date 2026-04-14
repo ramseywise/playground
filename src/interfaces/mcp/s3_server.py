@@ -6,10 +6,10 @@ from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 from librarian.config import LibrarySettings, settings as _default_settings
-from core.logging import get_logger
+from core.logging import configure_logging, get_logger
 
 log = get_logger(__name__)
 
@@ -140,51 +140,66 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
             ),
         ]
 
+    def _validate_s3_key(key: str) -> None:
+        """Raise ValueError if key does not start with the configured raw prefix."""
+        if not key.startswith(settings.s3_raw_prefix):
+            msg = f"Key '{key}' must start with prefix '{settings.s3_raw_prefix}'"
+            raise ValueError(msg)
+
     @server.call_tool()
-    async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+    async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent] | CallToolResult:
         import json
 
-        if name == "list_documents":
-            prefix = arguments.get("prefix", settings.s3_raw_prefix)
-            objects = client.list_objects(prefix)
-            return [TextContent(type="text", text=json.dumps(objects, default=str))]
+        try:
+            if name == "list_documents":
+                prefix = arguments.get("prefix", settings.s3_raw_prefix)
+                objects = client.list_objects(prefix)
+                return [TextContent(type="text", text=json.dumps(objects, default=str))]
 
-        if name == "get_document":
-            content = client.get_object(arguments["key"])
-            return [TextContent(type="text", text=content)]
+            if name == "get_document":
+                _validate_s3_key(arguments["key"])
+                content = client.get_object(arguments["key"])
+                return [TextContent(type="text", text=content)]
 
-        if name == "upload_document":
-            client.put_object(arguments["key"], arguments["content"])
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps({"status": "uploaded", "key": arguments["key"]}),
+            if name == "upload_document":
+                client.put_object(arguments["key"], arguments["content"])
+                return [
+                    TextContent(
+                        type="text",
+                        text=json.dumps({"status": "uploaded", "key": arguments["key"]}),
+                    )
+                ]
+
+            if name == "trigger_ingestion":
+                _validate_s3_key(arguments["key"])
+                pipeline = _get_pipeline()
+                result = await pipeline.ingest_s3_object(
+                    bucket=settings.s3_bucket,
+                    key=arguments["key"],
+                    region=settings.s3_region,
                 )
-            ]
+                return [
+                    TextContent(
+                        type="text",
+                        text=json.dumps(
+                            {
+                                "doc_id": result.doc_id,
+                                "chunk_count": result.chunk_count,
+                                "snippet_count": result.snippet_count,
+                                "skipped": result.skipped,
+                            }
+                        ),
+                    )
+                ]
 
-        if name == "trigger_ingestion":
-            pipeline = _get_pipeline()
-            result = await pipeline.ingest_s3_object(
-                bucket=settings.s3_bucket,
-                key=arguments["key"],
-                region=settings.s3_region,
+            msg = f"Unknown tool: {name}"
+            raise ValueError(msg)
+        except Exception as exc:
+            log.exception("s3_mcp.tool_error", tool=name)
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"Tool '{name}' failed: {exc}")],
+                isError=True,
             )
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps(
-                        {
-                            "doc_id": result.doc_id,
-                            "chunk_count": result.chunk_count,
-                            "snippet_count": result.snippet_count,
-                            "skipped": result.skipped,
-                        }
-                    ),
-                )
-            ]
-
-        msg = f"Unknown tool: {name}"
-        raise ValueError(msg)
 
     return server
 
@@ -194,6 +209,7 @@ def main() -> None:
     import asyncio
 
     async def _run() -> None:
+        configure_logging()
         server = create_server()
         async with stdio_server() as (read_stream, write_stream):
             await server.run(

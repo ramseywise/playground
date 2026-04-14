@@ -2,32 +2,35 @@
 
 from __future__ import annotations
 
+from fastapi import Header, HTTPException
 from langgraph.graph.state import CompiledStateGraph
 
 from orchestration.factory import create_librarian, warm_up_embedder
-from orchestration.langgraph.nodes.generation import GeneratorAgent
 from clients.bedrock_KB import BedrockKBClient
 from clients.google_vertex import GoogleRAGClient
 from librarian.ingestion.pipeline import IngestionPipeline
 from librarian.config import LibrarySettings, settings as _default_settings
 from interfaces.api.triage import TriageService
-from clients.llm import AnthropicLLM
 from core.logging import get_logger
 
 log = get_logger(__name__)
 
 _graph: CompiledStateGraph | None = None
-_generation_sg: GeneratorAgent | None = None
 _pipeline: IngestionPipeline | None = None
 _bedrock_client: BedrockKBClient | None = None
 _google_adk_client: GoogleRAGClient | None = None
 _triage: TriageService | None = None
 _settings: LibrarySettings = _default_settings
 
+# ADK agent singletons — initialised lazily via init_adk_agents()
+_adk_bedrock_agent: object | None = None
+_adk_custom_rag_agent: object | None = None
+_adk_hybrid_agent: object | None = None
+
 
 def init_graph(cfg: LibrarySettings | None = None) -> None:
     """Initialise the graph singleton. Called once at app startup."""
-    global _graph, _generation_sg, _bedrock_client, _google_adk_client, _settings  # noqa: PLW0603
+    global _graph, _bedrock_client, _google_adk_client, _settings  # noqa: PLW0603
     _settings = cfg or _default_settings
 
     log.info("api.deps.init_graph", retrieval=_settings.retrieval_strategy)
@@ -36,15 +39,6 @@ def init_graph(cfg: LibrarySettings | None = None) -> None:
     # Warm up the embedding model so the first request doesn't pay cold-start cost.
     # _MODEL_CACHE is process-wide — the graph's embedder will find the model hot.
     warm_up_embedder(_settings)
-
-    llm = AnthropicLLM(
-        model=_settings.anthropic_model_sonnet,
-        api_key=_settings.anthropic_api_key,
-    )
-    _generation_sg = GeneratorAgent(
-        llm=llm,
-        confidence_threshold=_settings.confidence_threshold,
-    )
 
     # Bedrock KB client — optional, only if configured
     if _settings.bedrock_knowledge_base_id:
@@ -83,18 +77,6 @@ def get_graph() -> CompiledStateGraph:
         msg = "Graph not initialised — call init_graph() first"
         raise RuntimeError(msg)
     return _graph
-
-
-def get_generator_agent() -> GeneratorAgent:
-    """Return the generator agent for streaming."""
-    if _generation_sg is None:
-        msg = "Generator agent not initialised — call init_graph() first"
-        raise RuntimeError(msg)
-    return _generation_sg
-
-
-# Backward-compatible alias
-get_generation_subgraph = get_generator_agent
 
 
 def init_pipeline(cfg: LibrarySettings | None = None) -> None:
@@ -168,5 +150,71 @@ def is_adk_available() -> bool:
         return False
 
 
+def init_adk_agents() -> None:
+    """Initialise ADK agent singletons. Called once at app startup (after init_graph)."""
+    global _adk_bedrock_agent, _adk_custom_rag_agent, _adk_hybrid_agent  # noqa: PLW0603
+
+    if not is_adk_available():
+        log.info("api.deps.adk_agents.skipped", reason="google-adk not installed")
+        return
+
+    try:
+        from orchestration.google_adk.bedrock_agent import BedrockKBAgent
+
+        if _bedrock_client is not None:
+            _adk_bedrock_agent = BedrockKBAgent(_settings)
+            log.info("api.deps.adk_bedrock_agent.init")
+    except Exception:
+        log.warning("api.deps.adk_bedrock_agent.init_failed", exc_info=True)
+
+    try:
+        from orchestration.google_adk.factory import create_custom_rag
+
+        if _graph is not None:
+            _adk_custom_rag_agent = create_custom_rag(_settings)
+            log.info("api.deps.adk_custom_rag_agent.init")
+    except Exception:
+        log.warning("api.deps.adk_custom_rag_agent.init_failed", exc_info=True)
+
+    try:
+        from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
+
+        if _graph is not None:
+            _adk_hybrid_agent = LibrarianADKAgent(graph=_graph, cfg=_settings)
+            log.info("api.deps.adk_hybrid_agent.init")
+    except Exception:
+        log.warning("api.deps.adk_hybrid_agent.init_failed", exc_info=True)
+
+
+def get_adk_bedrock_agent() -> object | None:
+    """Return the ADK Bedrock agent singleton, or None."""
+    return _adk_bedrock_agent
+
+
+def get_adk_custom_rag_agent() -> object | None:
+    """Return the ADK custom RAG agent singleton, or None."""
+    return _adk_custom_rag_agent
+
+
+def get_adk_hybrid_agent() -> object | None:
+    """Return the ADK hybrid agent singleton, or None."""
+    return _adk_hybrid_agent
+
+
 def get_settings() -> LibrarySettings:
     return _settings
+
+
+async def verify_api_key(
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """Reject requests without a valid API key.
+
+    When ``settings.api_key`` is empty (default), auth is disabled
+    for local development convenience.
+    """
+    configured_key = _settings.api_key
+    if not configured_key:
+        return  # auth disabled
+    if x_api_key != configured_key:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")

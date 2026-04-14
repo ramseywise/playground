@@ -246,12 +246,10 @@ def _mock_graph() -> Any:
 @pytest.fixture()
 def client(_mock_graph: Any) -> TestClient:
     deps._graph = _mock_graph
-    deps._generation_sg = AsyncMock()
     deps._pipeline = AsyncMock()
     deps._triage = TriageService()
     yield TestClient(app, raise_server_exceptions=True)
     deps._graph = None
-    deps._generation_sg = None
     deps._pipeline = None
     deps._triage = None
 

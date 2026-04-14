@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Literal
-
 from pydantic import BaseModel, Field, model_validator
+
+from interfaces.api.backends import BackendLiteral
 
 
 class ChatRequest(BaseModel):
@@ -11,14 +11,7 @@ class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4000)
     session_id: str | None = None
     conversation_id: str | None = None  # legacy alias — prefer session_id
-    backend: Literal[
-        "librarian",
-        "bedrock",
-        "google_adk",
-        "adk_bedrock",
-        "adk_custom_rag",
-        "adk_hybrid",
-    ] = "librarian"
+    backend: BackendLiteral = "librarian"
 
 
 class ChatResponse(BaseModel):
@@ -32,13 +25,6 @@ class ChatResponse(BaseModel):
     intent: str
     trace_id: str = ""
     backend: str = "librarian"
-
-
-class StreamEvent(BaseModel):
-    """Single SSE event payload."""
-
-    event: Literal["status", "token", "done", "error"]
-    data: Any
 
 
 class ErrorResponse(BaseModel):
@@ -65,12 +51,21 @@ class BackendsResponse(BaseModel):
     backends: list[BackendInfo]
 
 
+class InlineDocument(BaseModel):
+    """Structured inline document payload for the /ingest endpoint."""
+
+    text: str = Field(..., min_length=1, description="Document body text")
+    url: str = Field("", description="Source URL")
+    title: str = Field("", description="Document title")
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+
 class IngestRequest(BaseModel):
     """Ingestion trigger request — provide exactly one source."""
 
-    s3_key: str | None = Field(None, description="S3 object key to ingest")
-    s3_prefix: str | None = Field(None, description="S3 prefix for batch ingestion")
-    document: dict[str, str] | None = Field(None, description="Inline document dict")
+    s3_key: str | None = Field(None, description="S3 object key to ingest", pattern=r"^raw/")
+    s3_prefix: str | None = Field(None, description="S3 prefix for batch ingestion", pattern=r"^raw/")
+    document: InlineDocument | None = Field(None, description="Inline document")
 
     @model_validator(mode="after")
     def _require_one_source(self) -> IngestRequest:
