@@ -17,6 +17,7 @@ from librarian.plan.analyzer import QueryAnalyzer
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever
 from librarian.schemas.chunks import GradedChunk
+from librarian.tools.retriever_tool import RetrieverTool
 from core.logging import get_logger
 
 log = get_logger(__name__)
@@ -40,6 +41,7 @@ class ToolDeps:
     reranker: Reranker
     condenser_llm: LLMClient | None = None
     analyzer: QueryAnalyzer | None = None
+    retriever_tool: RetrieverTool | None = None
 
 
 _deps: ToolDeps | None = None
@@ -52,6 +54,7 @@ def configure_tools(
     *,
     condenser_llm: LLMClient | None = None,
     analyzer: QueryAnalyzer | None = None,
+    retriever_tool: RetrieverTool | None = None,
 ) -> ToolDeps:
     """Inject retrieval components into the tool functions.
 
@@ -67,6 +70,7 @@ def configure_tools(
         reranker=reranker,
         condenser_llm=condenser_llm,
         analyzer=analyzer or QueryAnalyzer(),
+        retriever_tool=retriever_tool,
     )
     log.info("adk.tools.configured")
     return _deps
@@ -114,6 +118,16 @@ async def search_knowledge_base(
 
     log.info("adk.tool.search", query=query[:80], k=num_results)
 
+    # Delegate to RetrieverTool if an EnsembleRetriever is available
+    if deps.retriever_tool is not None:
+        from librarian.tools.retriever_tool import RetrieverToolInput
+
+        tool_input = RetrieverToolInput(queries=[query], num_results=num_results)
+        output = await deps.retriever_tool.run(tool_input)
+        log.info("adk.tool.search.done", query=query[:80], result_count=output.total)
+        return output.model_dump()
+
+    # Legacy path — direct retriever call
     query_vector = await deps.embedder.aembed_query(query)
     raw_results = await deps.retriever.search(
         query_text=query,

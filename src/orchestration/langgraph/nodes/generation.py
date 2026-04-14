@@ -7,8 +7,10 @@ from clients.llm import LLMClient
 from librarian.generation.generator import (
     build_prompt,
     call_llm,
+    call_llm_structured,
     extract_citations,
 )
+from librarian.schemas.queries import Intent
 from librarian.schemas.state import LibrarianState
 from core.logging import get_logger
 
@@ -41,12 +43,24 @@ class GeneratorAgent:
 
     async def run(self, state: LibrarianState) -> dict[str, Any]:
         reranked = list(state.get("reranked_chunks") or [])
+        intent = state.get("intent", Intent.LOOKUP.value)
+        direct_intents = {Intent.CONVERSATIONAL.value, Intent.OUT_OF_SCOPE.value}
 
         system, messages = build_prompt(state, reranked)
-        citations = extract_citations(reranked)
 
         try:
-            response_text = await call_llm(self._llm, system, messages)
+            if intent not in direct_intents and reranked:
+                response_model = await call_llm_structured(
+                    self._llm, system, messages, reranked,
+                )
+                response_text = response_model.answer
+                citations = [
+                    {"url": c.url, "title": c.title} for c in response_model.citations
+                ]
+            else:
+                response_text = await call_llm(self._llm, system, messages)
+                citations = extract_citations(reranked)
+                response_model = None
         except Exception as exc:
             log.error(
                 "generation.subgraph.llm_error",
@@ -58,17 +72,23 @@ class GeneratorAgent:
                 "I found relevant sources but encountered an error generating "
                 "the response. Please try again."
             )
+            citations = extract_citations(reranked)
+            response_model = None
 
         log.info(
             "generation.subgraph.done",
             response_chars=len(response_text),
             citation_count=len(citations),
+            structured=response_model is not None,
         )
 
-        return {
+        result: dict[str, Any] = {
             "response": response_text,
             "citations": citations,
         }
+        if response_model is not None:
+            result["response_model"] = response_model
+        return result
 
     async def run_stream(self, state: LibrarianState) -> AsyncIterator[dict[str, Any]]:
         """Stream generation: yield token chunks, then final metadata.
