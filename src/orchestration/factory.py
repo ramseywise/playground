@@ -25,6 +25,9 @@ from orchestration.components import (
 )
 from orchestration.langgraph.graph import build_graph
 from orchestration.langgraph.history import CondenserAgent
+from orchestration.langgraph.nodes.reranker import RerankerAgent
+from orchestration.langgraph.nodes.retrieval import RetrieverAgent
+from orchestration.langgraph.nodes.generation import GeneratorAgent
 from librarian.retrieval.base import Embedder, Retriever
 from librarian.reranker.base import Reranker
 from librarian.retrieval.cache import RetrievalCache
@@ -41,6 +44,7 @@ log = get_logger(__name__)
 # Re-export warm_up_embedder so existing callers of orchestration.factory
 # continue to work without changing their imports.
 __all__ = [
+    "create_agents",
     "create_ingestion_pipeline",
     "create_librarian",
     "warm_up_embedder",
@@ -50,6 +54,64 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Public factories
 # ---------------------------------------------------------------------------
+
+
+def create_agents(
+    cfg: LibrarySettings | None = None,
+    *,
+    llm: LLMClient | None = None,
+    history_llm: LLMClient | None = None,
+    embedder: Embedder | None = None,
+    retriever: Retriever | None = None,
+    reranker: Reranker | None = None,
+) -> tuple[RetrieverAgent, RerankerAgent, GeneratorAgent, CondenserAgent]:
+    """Build the canonical set of RAG agents from config.
+
+    Returns a tuple of (retriever_agent, reranker_agent, generator_agent,
+    condenser_agent). Use this to share agent objects across LangGraph and
+    ADK orchestration.
+    """
+    cfg = cfg or _default_settings
+
+    resolved_llm = llm or build_llm(cfg)
+    resolved_history_llm = history_llm or build_history_llm(cfg)
+    resolved_embedder = embedder or build_embedder(cfg)
+    resolved_retriever = retriever or build_retriever(cfg, resolved_embedder)
+    resolved_reranker = reranker or build_reranker(cfg, resolved_llm)
+
+    retrieval_cache = (
+        RetrievalCache(max_size=cfg.cache_max_size, ttl_seconds=cfg.cache_ttl_seconds)
+        if cfg.cache_enabled
+        else None
+    )
+
+    retriever_agent = RetrieverAgent(
+        retriever=resolved_retriever,
+        embedder=resolved_embedder,
+        top_k=cfg.retrieval_k,
+        relevance_threshold=cfg.relevance_threshold,
+        cache=retrieval_cache,
+        cache_strategy=cfg.retrieval_strategy,
+    )
+    reranker_agent = RerankerAgent(
+        reranker=resolved_reranker,
+        top_k=cfg.reranker_top_k,
+    )
+    generator_agent = GeneratorAgent(
+        llm=resolved_llm,
+        confidence_threshold=cfg.confidence_threshold,
+    )
+    condenser_agent = CondenserAgent(llm=resolved_history_llm)
+
+    log.info(
+        "factory.create_agents",
+        retrieval_strategy=cfg.retrieval_strategy,
+        reranker_strategy=cfg.reranker_strategy,
+        retrieval_k=cfg.retrieval_k,
+        reranker_top_k=cfg.reranker_top_k,
+    )
+
+    return retriever_agent, reranker_agent, generator_agent, condenser_agent
 
 
 def create_librarian(

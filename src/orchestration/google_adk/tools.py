@@ -3,6 +3,8 @@
 These are plain async Python functions with type hints and docstrings.
 ADK auto-wraps them as ``FunctionTool`` when passed to an ``Agent``.
 
+Tool functions are thin adapters over the canonical LangGraph agent
+objects (``RetrieverAgent``, ``RerankerAgent``, ``CondenserAgent``).
 Components are injected via ``configure_tools()`` at startup into a
 module-level ``ToolDeps`` container (not bare globals).
 """
@@ -12,11 +14,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from clients.llm import LLMClient
 from librarian.plan.analyzer import QueryAnalyzer
-from librarian.reranker.base import Reranker
-from librarian.retrieval.base import Embedder, Retriever
 from librarian.schemas.chunks import GradedChunk
+from librarian.schemas.state import LibrarianState
+from orchestration.langgraph.history import CondenserAgent
+from orchestration.langgraph.nodes.reranker import RerankerAgent
+from orchestration.langgraph.nodes.retrieval import RetrieverAgent
 from core.logging import get_logger
 
 log = get_logger(__name__)
@@ -31,29 +34,28 @@ log = get_logger(__name__)
 class ToolDeps:
     """Injected dependencies for ADK tool functions.
 
+    Holds canonical agent objects shared with the LangGraph pipeline.
     Using a container instead of bare module globals for testability
     and thread-safety.
     """
 
-    retriever: Retriever
-    embedder: Embedder
-    reranker: Reranker
-    condenser_llm: LLMClient | None = None
-    analyzer: QueryAnalyzer | None = None
+    retriever_agent: RetrieverAgent
+    reranker_agent: RerankerAgent
+    condenser_agent: CondenserAgent | None
+    analyzer: QueryAnalyzer
 
 
 _deps: ToolDeps | None = None
 
 
 def configure_tools(
-    retriever: Retriever,
-    embedder: Embedder,
-    reranker: Reranker,
+    retriever_agent: RetrieverAgent,
+    reranker_agent: RerankerAgent,
+    condenser_agent: CondenserAgent | None = None,
     *,
-    condenser_llm: LLMClient | None = None,
     analyzer: QueryAnalyzer | None = None,
 ) -> ToolDeps:
-    """Inject retrieval components into the tool functions.
+    """Inject agent objects into the tool functions.
 
     Must be called before any tool function is invoked (typically at
     application startup or test setup).
@@ -62,10 +64,9 @@ def configure_tools(
     """
     global _deps  # noqa: PLW0603
     _deps = ToolDeps(
-        retriever=retriever,
-        embedder=embedder,
-        reranker=reranker,
-        condenser_llm=condenser_llm,
+        retriever_agent=retriever_agent,
+        reranker_agent=reranker_agent,
+        condenser_agent=condenser_agent,
         analyzer=analyzer or QueryAnalyzer(),
     )
     log.info("adk.tools.configured")
@@ -83,10 +84,6 @@ def _get_deps() -> ToolDeps:
     return _deps
 
 
-# Keep backward-compat alias for existing tests
-_check_configured = _get_deps
-
-
 # ---------------------------------------------------------------------------
 # Tool: search_knowledge_base
 # ---------------------------------------------------------------------------
@@ -100,6 +97,8 @@ async def search_knowledge_base(
 
     Uses hybrid search (vector similarity + BM25 keyword matching) over
     the curated document corpus. Returns ranked passages with metadata.
+    Delegates to ``RetrieverAgent.run()`` — gaining caching, dedup, and
+    relevance grading for free.
 
     Args:
         query: The search query — a natural language question or topic.
@@ -114,22 +113,19 @@ async def search_knowledge_base(
 
     log.info("adk.tool.search", query=query[:80], k=num_results)
 
-    query_vector = await deps.embedder.aembed_query(query)
-    raw_results = await deps.retriever.search(
-        query_text=query,
-        query_vector=query_vector,
-        k=num_results,
-    )
+    state: LibrarianState = {"query": query, "standalone_query": query}
+    result = await deps.retriever_agent.run(state)
+    graded = result["graded_chunks"]
 
     results = [
         {
-            "text": r.chunk.text,
-            "url": r.chunk.metadata.url,
-            "title": r.chunk.metadata.title,
-            "score": round(r.score, 4),
-            "chunk_id": r.chunk.id,
+            "text": g.chunk.text,
+            "url": g.chunk.metadata.url,
+            "title": g.chunk.metadata.title,
+            "score": round(g.score, 4),
+            "chunk_id": g.chunk.id,
         }
-        for r in raw_results
+        for g in graded[:num_results]
     ]
 
     log.info("adk.tool.search.done", query=query[:80], result_count=len(results))
@@ -153,8 +149,8 @@ async def rerank_results(
     """Re-rank passages by relevance to the query using a cross-encoder model.
 
     Takes passages from search_knowledge_base and re-scores them with a
-    more accurate (but slower) cross-encoder model. Use this when initial
-    search results seem noisy or you need high-precision answers.
+    more accurate (but slower) cross-encoder model. Delegates to
+    ``RerankerAgent.run()``.
 
     Args:
         query: The original user question.
@@ -170,9 +166,48 @@ async def rerank_results(
 
     log.info("adk.tool.rerank", query=query[:80], n_passages=len(passages), top_k=top_k)
 
+    graded_chunks = _passages_to_graded_chunks(passages)
+
+    state: LibrarianState = {
+        "query": query,
+        "standalone_query": query,
+        "graded_chunks": graded_chunks,
+    }
+    result = await deps.reranker_agent.run(state)
+    reranked = result["reranked_chunks"]
+
+    results = [
+        {
+            "text": r.chunk.text,
+            "url": r.chunk.metadata.url,
+            "title": r.chunk.metadata.title,
+            "relevance_score": round(r.relevance_score, 4),
+            "rank": r.rank,
+            "chunk_id": r.chunk.id,
+        }
+        for r in reranked
+    ]
+
+    confidence = round(result["confidence_score"], 4)
+
+    log.info(
+        "adk.tool.rerank.done",
+        query=query[:80],
+        result_count=len(results),
+        confidence=confidence,
+    )
+
+    return {
+        "results": results,
+        "confidence": confidence,
+    }
+
+
+def _passages_to_graded_chunks(passages: list[dict[str, Any]]) -> list[GradedChunk]:
+    """Convert raw passage dicts (from search_knowledge_base output) to GradedChunks."""
     from librarian.schemas.chunks import Chunk, ChunkMetadata
 
-    graded_chunks = []
+    graded_chunks: list[GradedChunk] = []
     for p in passages:
         chunk = Chunk(
             id=p.get("chunk_id", "unknown"),
@@ -186,34 +221,7 @@ async def rerank_results(
         graded_chunks.append(
             GradedChunk(chunk=chunk, score=float(p.get("score", 0.5)), relevant=True)
         )
-
-    ranked = await deps.reranker.rerank(query, graded_chunks, top_k=top_k)
-
-    results = [
-        {
-            "text": r.chunk.text,
-            "url": r.chunk.metadata.url,
-            "title": r.chunk.metadata.title,
-            "relevance_score": round(r.relevance_score, 4),
-            "rank": r.rank,
-            "chunk_id": r.chunk.id,
-        }
-        for r in ranked
-    ]
-
-    confidence = max((r.relevance_score for r in ranked), default=0.0)
-
-    log.info(
-        "adk.tool.rerank.done",
-        query=query[:80],
-        result_count=len(results),
-        confidence=round(confidence, 4),
-    )
-
-    return {
-        "results": results,
-        "confidence": round(confidence, 4),
-    }
+    return graded_chunks
 
 
 # ---------------------------------------------------------------------------
@@ -286,8 +294,8 @@ async def condense_query(
 
     Use this when the user's message references previous conversation context
     (e.g. "what about that one?", "how does it compare?", "tell me more").
-    The tool uses a lightweight LLM to resolve coreferences and produce a
-    self-contained query that can be used for search.
+    Delegates to ``CondenserAgent.condense()`` — the same system prompt and
+    logic used by the LangGraph pipeline.
 
     Args:
         query: The user's latest message (may contain coreferences).
@@ -299,17 +307,17 @@ async def condense_query(
         - standalone_query: the rewritten self-contained query
         - was_rewritten: whether the query was actually changed
     """
-    deps = _get_deps()
-
     # No history or only one prior message (no multi-turn context to resolve)
     # — aligns with CondenserAgent which checks len(messages) <= 1
     if not conversation_history or len(conversation_history) < 2:
         return {"standalone_query": query, "was_rewritten": False}
 
-    if deps.condenser_llm is None:
+    deps = _get_deps()
+
+    if deps.condenser_agent is None:
         log.warning(
-            "adk.tool.condense.no_llm",
-            msg="condenser_llm not configured, passing through",
+            "adk.tool.condense.no_agent",
+            msg="condenser_agent not configured, passing through",
         )
         return {"standalone_query": query, "was_rewritten": False}
 
@@ -317,13 +325,9 @@ async def condense_query(
         "adk.tool.condense", query=query[:80], history_len=len(conversation_history)
     )
 
-    system_prompt = (
-        "Rewrite the user's latest message as a standalone query using the full "
-        "conversation context. Return only the rewritten query."
-    )
-
-    standalone = await deps.condenser_llm.generate(system_prompt, conversation_history)
-    standalone = standalone.strip() or query
+    state: LibrarianState = {"query": query, "messages": conversation_history}
+    result = await deps.condenser_agent.condense(state)
+    standalone = result["standalone_query"]
     was_rewritten = standalone != query
 
     log.info(
