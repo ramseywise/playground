@@ -18,10 +18,15 @@ Create a feature branch and commit current changes.
 
 1. `git status` — if tree is clean, stop
 2. Create/switch to branch: `git checkout -b feature/<slug>`
-3. List files to stage (`git diff --name-only` + `git diff --cached --name-only`)
-4. Skip: `.env`, `*.pem`, `models/*.pkl`, files >10 MB
-5. Show file list → ask **"Stage these files and commit? (y/n)"**
-6. Commit message: `$ARGUMENTS` if provided, else derive from diff — imperative mood, under 72 chars, `type: description (LIN-{id})` if Linear ID present
+3. `git branch --show-current` — extract ticket ID (e.g. `LIN-123` from `feature/LIN-123-desc`)
+4. List files to stage (`git diff --name-only` + `git diff --cached --name-only`)
+5. Skip: `.env`, `*.pem`, `models/*.pkl`, files >10 MB
+6. Show file list → ask **"Stage these files and commit? (y/n)"**
+7. Commit message in **Conventional Commits** format:
+   - `<type>(<ticket>): <description>` — e.g. `feat(LIN-123): add invoice export`
+   - Types: `feat`, `fix`, `chore`, `refactor`, `docs`, `style`, `test`, `perf`, `ci`, `build`
+   - If `$ARGUMENTS` provided, use as description; infer type from diff
+   - If no ticket ID in branch, omit parenthetical: `feat: add invoice export`
 
 ## Safety
 

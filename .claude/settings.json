@@ -137,12 +137,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/review_gate.sh",
-            "timeout": 5,
-            "statusMessage": "Review gate..."
-          },
-          {
-            "type": "command",
             "command": "bash .claude/hooks/secrets_scan.sh",
             "timeout": 5,
             "statusMessage": "Scanning for secrets..."

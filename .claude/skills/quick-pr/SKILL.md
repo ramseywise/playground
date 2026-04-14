@@ -19,8 +19,40 @@ End-to-end PR flow for the current working tree.
 
 ## PR conventions
 
-- Title: under 60 chars, imperative mood. If branch is `feature/lin-{id}-*`, title is `LIN-{id} description`
-- Body: What (user perspective), Why (problem solved), How (non-obvious decisions only), Testing (tests + manual validation), Checklist
+- Title: Conventional Commits format, under 60 chars. Extract ticket from branch: `feat(LIN-123): description`
+- Body follows `.github/pull_request_template.md`:
+
+```markdown
+## Overview
+[Derive from diff: what this PR accomplishes and why]
+
+## Related Issue(s)
+- [Auto-fill from branch name: LIN-{id}, or prompt user]
+
+## Changes Made
+[Summarize from `git diff --stat` and commit messages]
+
+## Impact
+- [x] [Infer: Low/Medium/High from scope of changes]
+
+## Priority
+- [x] [Infer: Low/Medium/High from context]
+
+## Testing
+- [x] [Check applicable: unit/integration tests from test output]
+- [ ] Manual testing performed
+
+## Type of Change
+- [x] [Infer from diff: New feature / Bug fix / Refactoring / Documentation update]
+
+## Documentation
+- [Check if docs were modified in diff]
+
+## Deployment Considerations
+- [Check if infra/ files were modified in diff]
+```
+
+Auto-fill what you can infer from the diff and test results. Leave unchecked boxes for the user to verify.
 
 ## Conflict resolution
 

@@ -1,0 +1,90 @@
+name: Deploy to ECS
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      image-uri:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      image-uri:
+        description: "ECR image URI to deploy"
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Environment gate
+        run: echo "Deployment approved for ${{ inputs.environment }}"
+
+  deploy:
+    needs: gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/infrastructure_as_code/librarian_api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[format('{0}_AWS_ROLE_ARN', inputs.environment)] }}
+          aws-region: eu-west-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.5"
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform apply (ECS image update)
+        run: |
+          terraform apply \
+            -var-file=environments/${{ inputs.environment }}.tfvars \
+            -var="container_image=${{ inputs.image-uri }}" \
+            -auto-approve \
+            -target=module.ecs
+
+      - name: Wait for ECS service stable
+        run: |
+          aws ecs wait services-stable \
+            --cluster librarian-${{ inputs.environment }} \
+            --services librarian-${{ inputs.environment }}-api \
+            --region eu-west-1
+        timeout-minutes: 10
+
+      - name: Health check
+        run: |
+          ALB_DNS=$(terraform output -raw alb_dns_name)
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://${ALB_DNS}/health" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i: status=$STATUS, retrying..."
+            sleep 5
+          done
+          echo "::error::Health check failed after 10 attempts"
+          exit 1
