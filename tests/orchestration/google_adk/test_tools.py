@@ -8,7 +8,7 @@ import pytest
 
 from librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk, RankedChunk
 from librarian.schemas.retrieval import RetrievalResult
-from orchestration.adk.tools import (
+from orchestration.google_adk.tools import (
     ToolDeps,
     _get_deps,
     analyze_query,
@@ -58,7 +58,7 @@ def _make_ranked_chunk(
 
 def test_get_deps_raises_when_not_configured() -> None:
     """Tools must raise if configure_tools() was never called."""
-    import orchestration.adk.tools as tools_mod
+    import orchestration.google_adk.tools as tools_mod
 
     tools_mod._deps = None
     with pytest.raises(RuntimeError, match="not configured"):

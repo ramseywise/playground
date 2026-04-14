@@ -304,6 +304,7 @@ def create_librarian(
         cache_strategy=cfg.retrieval_strategy,
         retrieval_k=cfg.retrieval_k,
         reranker_top_k=cfg.reranker_top_k,
+        relevance_threshold=cfg.relevance_threshold,
         confidence_threshold=cfg.confidence_threshold,
         max_crag_retries=cfg.max_crag_retries,
         max_query_variants=cfg.max_query_variants,

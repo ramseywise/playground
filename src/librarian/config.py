@@ -58,6 +58,7 @@ class LibrarySettings(BaseSettings):
     cache_enabled: bool = True
     cache_max_size: int = 256
     cache_ttl_seconds: int = 300
+    rrf_k: int = 60  # RRF smoothing constant (Cormack et al. 2009)
     bm25_weight: float = 0.3  # hybrid search BM25 blend
     vector_weight: float = 0.7  # hybrid search vector blend
     trace_lookup_k: int = 5  # golden trace lookup count

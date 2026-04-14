@@ -62,11 +62,11 @@ async def test_bedrock_agent_emits_event(
     mock_bedrock_response: BedrockKBResponse,
 ) -> None:
     """Agent should yield an Event with the Bedrock response text."""
-    with patch("orchestration.adk.bedrock_agent.BedrockKBClient") as MockClient:
+    with patch("orchestration.google_adk.bedrock_agent.BedrockKBClient") as MockClient:
         mock_client = MockClient.return_value
         mock_client.aquery = AsyncMock(return_value=mock_bedrock_response)
 
-        from orchestration.adk.bedrock_agent import BedrockKBAgent
+        from orchestration.google_adk.bedrock_agent import BedrockKBAgent
         from librarian.config import LibrarySettings
 
         cfg = LibrarySettings(
@@ -95,11 +95,11 @@ async def test_bedrock_agent_passes_session_id(
     mock_bedrock_response: BedrockKBResponse,
 ) -> None:
     """Agent should pass session ID from ADK context to Bedrock."""
-    with patch("orchestration.adk.bedrock_agent.BedrockKBClient") as MockClient:
+    with patch("orchestration.google_adk.bedrock_agent.BedrockKBClient") as MockClient:
         mock_client = MockClient.return_value
         mock_client.aquery = AsyncMock(return_value=mock_bedrock_response)
 
-        from orchestration.adk.bedrock_agent import BedrockKBAgent
+        from orchestration.google_adk.bedrock_agent import BedrockKBAgent
         from librarian.config import LibrarySettings
 
         cfg = LibrarySettings(
@@ -124,11 +124,11 @@ async def test_bedrock_agent_extracts_latest_user_message() -> None:
     """Agent should use the last user message, not the first."""
     resp = BedrockKBResponse(response="answer", citations=[], session_id="s1")
 
-    with patch("orchestration.adk.bedrock_agent.BedrockKBClient") as MockClient:
+    with patch("orchestration.google_adk.bedrock_agent.BedrockKBClient") as MockClient:
         mock_client = MockClient.return_value
         mock_client.aquery = AsyncMock(return_value=resp)
 
-        from orchestration.adk.bedrock_agent import BedrockKBAgent
+        from orchestration.google_adk.bedrock_agent import BedrockKBAgent
         from librarian.config import LibrarySettings
 
         cfg = LibrarySettings(
@@ -175,8 +175,8 @@ async def test_bedrock_agent_extracts_latest_user_message() -> None:
 @pytest.mark.asyncio
 async def test_bedrock_agent_name_and_description() -> None:
     """Agent should have correct name and description."""
-    with patch("orchestration.adk.bedrock_agent.BedrockKBClient"):
-        from orchestration.adk.bedrock_agent import BedrockKBAgent
+    with patch("orchestration.google_adk.bedrock_agent.BedrockKBClient"):
+        from orchestration.google_adk.bedrock_agent import BedrockKBAgent
         from librarian.config import LibrarySettings
 
         cfg = LibrarySettings(

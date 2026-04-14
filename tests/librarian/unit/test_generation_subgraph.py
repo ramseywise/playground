@@ -4,10 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from orchestration.langgraph.nodes.generation import (
-    DEFAULT_CONFIDENCE_GATE,
-    GeneratorAgent,
-)
+from orchestration.langgraph.nodes.generation import GeneratorAgent
 
 # Backward-compatible alias used in test names below
 GenerationSubgraph = GeneratorAgent
@@ -39,7 +36,7 @@ def _state(**kwargs: object) -> LibrarianState:
 
 
 def _subgraph(
-    response: str = "the answer", threshold: float = DEFAULT_CONFIDENCE_GATE
+    response: str = "the answer", threshold: float = 0.4
 ) -> GenerationSubgraph:
     llm = MagicMock()
     llm.generate = AsyncMock(return_value=response)
@@ -174,5 +171,8 @@ def test_confidence_gate_both_keys_always_present() -> None:
         assert "fallback_requested" in result
 
 
-def test_default_confidence_gate_constant() -> None:
-    assert DEFAULT_CONFIDENCE_GATE == 0.3
+def test_default_confidence_threshold_matches_config() -> None:
+    from librarian.config import settings
+
+    agent = GeneratorAgent(llm=MagicMock())
+    assert agent._threshold == settings.confidence_threshold

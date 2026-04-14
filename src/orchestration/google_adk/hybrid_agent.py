@@ -19,7 +19,7 @@ from google.genai import types
 from langgraph.graph.state import CompiledStateGraph
 
 from librarian.config import LibrarySettings
-from orchestration.adk.utils import extract_latest_query, extract_messages
+from orchestration.google_adk.utils import extract_latest_query, extract_messages
 from core.logging import get_logger
 
 log = get_logger(__name__)

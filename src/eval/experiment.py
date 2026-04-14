@@ -376,7 +376,7 @@ async def _run_bedrock_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via real Bedrock KB API (RetrieveAndGenerate)."""
-    from playground.src.clients.bedrock_KB import BedrockKBClient
+    from clients.bedrock_KB import BedrockKBClient
 
     client = BedrockKBClient(cfg)
     clusterer = FailureClusterer()
@@ -667,7 +667,7 @@ async def _run_adk_bedrock_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via ADK-wrapped Bedrock KB agent."""
-    from orchestration.adk.bedrock_agent import BedrockKBAgent
+    from orchestration.google_adk.bedrock_agent import BedrockKBAgent
 
     agent = BedrockKBAgent(cfg)
     query_results: list[QueryResult] = []
@@ -742,12 +742,12 @@ async def _run_adk_custom_rag_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via ADK agent with custom RAG tools (Gemini 2.0 Flash)."""
-    from orchestration.adk.custom_rag_agent import (
+    from orchestration.google_adk.custom_rag_agent import (
         create_custom_rag_agent,
         run_custom_rag_query,
     )
     from orchestration.factory import _build_embedder, _build_reranker, _build_retriever
-    from playground.src.clients.llm import AnthropicLLM
+    from clients.llm import AnthropicLLM
 
     embedder = _build_embedder(cfg)
     retriever = _build_retriever(cfg, embedder)
@@ -827,7 +827,7 @@ async def _run_adk_hybrid_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via ADK-wrapped full LangGraph pipeline."""
-    from orchestration.adk.hybrid_agent import LibrarianADKAgent
+    from orchestration.google_adk.hybrid_agent import LibrarianADKAgent
     from orchestration.factory import create_librarian
 
     graph = create_librarian(cfg)

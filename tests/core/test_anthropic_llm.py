@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from core.clients.llm import AnthropicLLM, LLMClient, LLMClientSync
+from clients.llm import AnthropicLLM, LLMClient, LLMClientSync
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class TestAnthropicRetry:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="ok")]
 
-        with patch("core.clients.llm.anthropic.AsyncAnthropic") as mock_cls:
+        with patch("clients.llm.anthropic.AsyncAnthropic") as mock_cls:
             mock_client = AsyncMock()
             mock_client.messages.create = AsyncMock(return_value=mock_response)
             mock_cls.return_value = mock_client
@@ -59,7 +59,7 @@ class TestAnthropicRetry:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="ok")]
 
-        with patch("core.clients.llm.anthropic.Anthropic") as mock_cls:
+        with patch("clients.llm.anthropic.Anthropic") as mock_cls:
             mock_client = MagicMock()
             mock_client.messages.create = MagicMock(return_value=mock_response)
             mock_cls.return_value = mock_client
@@ -76,7 +76,7 @@ class TestAnthropicRetry:
     @pytest.mark.asyncio
     async def test_stream_client_created_with_max_retries(self) -> None:
         """AsyncAnthropic for streaming is also created with max_retries=3."""
-        with patch("core.clients.llm.anthropic.AsyncAnthropic") as mock_cls:
+        with patch("clients.llm.anthropic.AsyncAnthropic") as mock_cls:
             # Build a mock async context manager for messages.stream
             mock_stream_cm = AsyncMock()
             mock_stream_cm.__aenter__ = AsyncMock()

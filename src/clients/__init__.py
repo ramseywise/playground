@@ -6,7 +6,7 @@ Each client takes a ``LibrarySettings`` and exposes ``query()`` / ``aquery()``.
 
 from __future__ import annotations
 
-from playground.src.clients.bedrock_KB import BedrockKBClient, BedrockKBResponse
+from clients.bedrock_KB import BedrockKBClient, BedrockKBResponse
 from clients.google_vertex import GoogleRAGClient, GoogleRAGResponse
 
 __all__ = [

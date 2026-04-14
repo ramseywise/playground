@@ -18,7 +18,7 @@ from eval.models import EvalTask
 from librarian.tasks.extract import make_task_id
 
 if TYPE_CHECKING:
-    from playground.src.clients.llm import LLMClientSync
+    from clients.llm import LLMClientSync
 
 log = structlog.get_logger(__name__)
 
