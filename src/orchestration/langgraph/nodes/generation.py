@@ -3,13 +3,12 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable, Coroutine
 from typing import Any
 
-from core.clients.llm import LLMClient
+from clients.llm import LLMClient
 from librarian.generation.generator import (
     build_prompt,
     call_llm,
     extract_citations,
 )
-from librarian.generation.prompts import get_system_prompt
 from librarian.schemas.state import LibrarianState
 from core.logging import get_logger
 
@@ -145,6 +144,3 @@ class GeneratorAgent:
 
         return gate
 
-
-# Backward-compatible alias
-GenerationSubgraph = GeneratorAgent

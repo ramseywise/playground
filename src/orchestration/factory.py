@@ -25,7 +25,7 @@ from core.logging import get_logger
 if TYPE_CHECKING:
     from langgraph.checkpoint.base import BaseCheckpointSaver
 
-    from core.clients.llm import LLMClient
+    from clients.llm import LLMClient
     from librarian.ingestion.pipeline import IngestionPipeline
 
 log = get_logger(__name__)
@@ -216,11 +216,11 @@ def _build_reranker(cfg: LibrarySettings, llm: LLMClient) -> Reranker:
 
 def _build_llm(cfg: LibrarySettings) -> LLMClient:
     if cfg.llm_provider == "gemini":
-        from core.clients.llm import GeminiLLM
+        from clients.llm import GeminiLLM
 
         return GeminiLLM(model=cfg.model_gemini, api_key=cfg.gemini_api_key)
 
-    from core.clients.llm import AnthropicLLM
+    from clients.llm import AnthropicLLM
 
     return AnthropicLLM(
         model=cfg.anthropic_model_sonnet,
@@ -230,11 +230,11 @@ def _build_llm(cfg: LibrarySettings) -> LLMClient:
 
 def _build_history_llm(cfg: LibrarySettings) -> LLMClient:
     if cfg.llm_provider == "gemini":
-        from core.clients.llm import GeminiLLM
+        from clients.llm import GeminiLLM
 
         return GeminiLLM(model=cfg.model_gemini, api_key=cfg.gemini_api_key)
 
-    from core.clients.llm import AnthropicLLM
+    from clients.llm import AnthropicLLM
 
     return AnthropicLLM(
         model=cfg.anthropic_model_haiku,

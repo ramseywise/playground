@@ -306,14 +306,14 @@ async def test_graph_multi_turn_sets_standalone_query() -> None:
     mock_history_llm = MagicMock()
     mock_history_llm.generate = AsyncMock(return_value="the auth flow in Python?")
 
-    from orchestration.langgraph.history import HistoryCondenser
+    from orchestration.langgraph.history import CondenserAgent
 
     graph = build_graph(
         retriever=mock_retriever,
         embedder=mock_embedder,
         reranker=mock_reranker,
         llm=mock_llm,
-        history_condenser=HistoryCondenser(llm=mock_history_llm),
+        history_condenser=CondenserAgent(llm=mock_history_llm),
     )
     result = await graph.ainvoke(
         {

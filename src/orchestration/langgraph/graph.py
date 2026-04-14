@@ -32,7 +32,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from core.clients.llm import LLMClient
+from clients.llm import LLMClient
 from orchestration.langgraph.query_understanding import (
     QueryAnalyzer,
 )

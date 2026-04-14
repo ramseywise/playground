@@ -167,7 +167,3 @@ class RetrieverAgent:
             return await self.run(state)
 
         return retrieve
-
-
-# Backward-compatible alias
-RetrievalSubgraph = RetrieverAgent

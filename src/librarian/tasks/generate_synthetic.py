@@ -122,7 +122,7 @@ def generate_from_chunks(
             "Estimated cost: ~$0.002–0.005 per sample with Haiku."
         )
 
-    from core.client import create_client
+    from playground.src.clients.claude_client import create_client
 
     client = create_client()
     target = chunks[:n] if n is not None else chunks

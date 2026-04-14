@@ -90,7 +90,7 @@ class AnswerJudge:
         model: str = "",
         max_context_chars: int = 3000,
     ) -> None:
-        from core.client import create_client
+        from playground.src.clients.claude_client import create_client
 
         self._client = create_client()
         self._model = model or _settings.model_haiku
@@ -220,7 +220,7 @@ class ClosedBookBaseline:
     )
 
     def __init__(self, model: str = "") -> None:
-        from core.client import create_client
+        from playground.src.clients.claude_client import create_client
 
         self._client = create_client()
         self._model = model or _settings.model_haiku

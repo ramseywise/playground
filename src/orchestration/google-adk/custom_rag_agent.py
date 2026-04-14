@@ -31,7 +31,7 @@ from orchestration.adk.tools import (
 from librarian.config import LibrarySettings
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever
-from core.clients.llm import LLMClient
+from clients.llm import LLMClient
 from core.logging import get_logger
 
 log = get_logger(__name__)

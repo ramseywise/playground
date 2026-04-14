@@ -15,7 +15,7 @@ from core.parsing.json import strip_json_fences
 from eval.models import EvalTask, GraderResult
 
 if TYPE_CHECKING:
-    from core.clients.llm import LLMClient
+    from playground.src.clients.llm import LLMClient
 
 _PADDING_SYSTEM = """\
 You are a conciseness evaluator for a customer support AI.

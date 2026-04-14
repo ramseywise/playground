@@ -15,7 +15,7 @@ from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
 from google.genai import types
 
-from clients.bedrock import BedrockKBClient
+from playground.src.clients.bedrock_KB import BedrockKBClient
 from librarian.config import LibrarySettings
 from orchestration.adk.utils import extract_latest_query
 from core.logging import get_logger

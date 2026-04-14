@@ -96,7 +96,3 @@ class RerankerAgent:
             return await self.run(state)
 
         return rerank
-
-
-# Backward-compatible alias
-RerankerSubgraph = RerankerAgent

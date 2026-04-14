@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Coroutine
 from typing import Any
 
-from core.clients.llm import LLMClient
+from clients.llm import LLMClient
 from librarian.schemas.state import LibrarianState
 from core.logging import get_logger
 
@@ -68,6 +68,3 @@ class CondenserAgent:
 
         return condense
 
-
-# Backward-compatible alias
-HistoryCondenser = CondenserAgent

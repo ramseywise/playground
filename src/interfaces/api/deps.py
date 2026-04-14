@@ -6,7 +6,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from librarian.factory import create_librarian, warm_up_embedder
 from orchestration.langgraph.nodes.generation import GeneratorAgent
-from clients.bedrock import BedrockKBClient
+from playground.src.clients.bedrock_KB import BedrockKBClient
 from clients.google_vertex import GoogleRAGClient
 from librarian.ingestion.pipeline import IngestionPipeline
 from librarian.config import LibrarySettings, settings as _default_settings

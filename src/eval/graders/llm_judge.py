@@ -14,7 +14,7 @@ from core.parsing.json import strip_json_fences
 from eval.models import EvalTask, GraderResult
 
 if TYPE_CHECKING:
-    from core.clients.llm import LLMClient
+    from playground.src.clients.llm import LLMClient
 
 
 class LLMJudge:
