@@ -285,23 +285,11 @@ async def _chat_adk_custom_rag(req: ChatRequest) -> ChatResponse | JSONResponse:
     log.info("api.chat.adk_custom_rag", query=req.query[:80], session_id=req.session_id)
 
     try:
-        from orchestration.google_adk.custom_rag_agent import (
-            create_custom_rag_agent,
-            run_custom_rag_query,
-        )
-        from orchestration.factory import _build_embedder, _build_reranker, _build_retriever
-        from clients.llm import AnthropicLLM
+        from orchestration.google_adk.custom_rag_agent import run_custom_rag_query
+        from orchestration.google_adk.factory import create_custom_rag
 
         cfg = get_settings()
-        embedder = _build_embedder(cfg)
-        retriever = _build_retriever(cfg, embedder)
-        llm = AnthropicLLM(
-            model=cfg.anthropic_model_sonnet, api_key=cfg.anthropic_api_key
-        )
-        reranker = _build_reranker(cfg, llm)
-        agent = create_custom_rag_agent(
-            cfg, retriever=retriever, embedder=embedder, reranker=reranker
-        )
+        agent = create_custom_rag(cfg)
 
         result = await run_custom_rag_query(
             agent,

@@ -60,8 +60,8 @@ def test_create_returns_compiled_graph() -> None:
 
 
 def test_create_injected_components_not_rebuilt() -> None:
-    """Injected components bypass _build_* — _build_llm must not be called."""
-    with patch("orchestration.factory._build_llm") as mock_build_llm:
+    """Injected components bypass build_* — build_llm must not be called."""
+    with patch("orchestration.factory.build_llm") as mock_build_llm:
         create_librarian(
             cfg=_cfg(),
             llm=_mock_llm(),
@@ -73,7 +73,7 @@ def test_create_injected_components_not_rebuilt() -> None:
 
 
 def test_create_embedder_not_rebuilt_when_injected() -> None:
-    with patch("orchestration.factory._build_embedder") as mock_build:
+    with patch("orchestration.factory.build_embedder") as mock_build:
         create_librarian(
             cfg=_cfg(),
             llm=_mock_llm(),
@@ -85,7 +85,7 @@ def test_create_embedder_not_rebuilt_when_injected() -> None:
 
 
 def test_create_retriever_not_rebuilt_when_injected() -> None:
-    with patch("orchestration.factory._build_retriever") as mock_build:
+    with patch("orchestration.factory.build_retriever") as mock_build:
         create_librarian(
             cfg=_cfg(),
             llm=_mock_llm(),
@@ -103,7 +103,7 @@ def test_create_retriever_not_rebuilt_when_injected() -> None:
 
 def test_create_inmemory_strategy_used() -> None:
     with patch(
-        "orchestration.factory._build_retriever",
+        "orchestration.factory.build_retriever",
         wraps=lambda cfg, emb: InMemoryRetriever(),
     ) as mock_build:
         create_librarian(
@@ -116,7 +116,7 @@ def test_create_inmemory_strategy_used() -> None:
 
 
 def test_create_llm_listwise_reranker_strategy() -> None:
-    with patch("orchestration.factory._build_reranker") as mock_build:
+    with patch("orchestration.factory.build_reranker") as mock_build:
         mock_build.return_value = _mock_reranker()
         create_librarian(
             cfg=_cfg(reranker_strategy="llm_listwise"),
@@ -167,12 +167,12 @@ async def test_create_confidence_threshold_propagated() -> None:
 
 
 # ---------------------------------------------------------------------------
-# warm_up_embedder — Step 1: embedder warm-up
+# warm_up_embedder
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# _build_checkpointer — Step 2: LangGraph checkpointer
+# build_checkpointer
 # ---------------------------------------------------------------------------
 
 
@@ -194,7 +194,7 @@ def test_default_checkpoint_backend_is_memory() -> None:
 def test_checkpointer_sqlite_raises_without_package() -> None:
     """Requesting sqlite backend without package raises ImportError."""
     with patch(
-        "orchestration.factory._build_checkpointer",
+        "orchestration.factory.build_checkpointer",
         side_effect=ImportError("langgraph-checkpoint-sqlite is required"),
     ):
         with pytest.raises(ImportError, match="langgraph-checkpoint-sqlite"):
@@ -209,10 +209,10 @@ def test_checkpointer_sqlite_raises_without_package() -> None:
 
 def test_checkpointer_postgres_raises_without_url() -> None:
     """Requesting postgres backend without a URL raises ValueError."""
-    from orchestration.factory import _build_checkpointer
+    from orchestration.components import build_checkpointer
 
     with pytest.raises((ImportError, ValueError)):
-        _build_checkpointer(_cfg(checkpoint_backend="postgres"))
+        build_checkpointer(_cfg(checkpoint_backend="postgres"))
 
 
 @pytest.mark.asyncio
@@ -230,7 +230,7 @@ async def test_graph_with_checkpointer_requires_thread_id() -> None:
 
 
 # ---------------------------------------------------------------------------
-# warm_up_embedder — Step 1: embedder warm-up
+# warm_up_embedder
 # ---------------------------------------------------------------------------
 
 
@@ -240,7 +240,7 @@ def test_warm_up_embedder_calls_embed_query() -> None:
     mock_embedder.embed_query.return_value = [0.1] * 64
 
     with patch(
-        "orchestration.factory._build_embedder", return_value=mock_embedder
+        "orchestration.components.build_embedder", return_value=mock_embedder
     ) as mock_build:
         cfg = _cfg(embedding_model="test-warmup-model")
         warm_up_embedder(cfg)
@@ -254,20 +254,20 @@ async def test_create_default_cfg_uses_module_settings() -> None:
     """Passing cfg=None uses the module-level settings singleton."""
     with (
         patch(
-            "orchestration.factory._build_llm", return_value=_mock_llm()
+            "orchestration.factory.build_llm", return_value=_mock_llm()
         ) as mock_llm_build,
         patch(
-            "orchestration.factory._build_history_llm", return_value=_mock_llm()
+            "orchestration.factory.build_history_llm", return_value=_mock_llm()
         ) as mock_history_llm_build,
         patch(
-            "orchestration.factory._build_embedder",
+            "orchestration.factory.build_embedder",
             return_value=MockEmbedder(dim=64),
         ),
         patch(
-            "orchestration.factory._build_retriever",
+            "orchestration.factory.build_retriever",
             return_value=InMemoryRetriever(),
         ),
-        patch("orchestration.factory._build_reranker", return_value=_mock_reranker()),
+        patch("orchestration.factory.build_reranker", return_value=_mock_reranker()),
     ):
         create_librarian()  # cfg=None
         mock_llm_build.assert_called_once()

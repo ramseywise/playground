@@ -27,7 +27,7 @@ class TestGetGraph:
         cfg = MagicMock()
 
         with patch(
-            "librarian.factory.create_librarian",
+            "orchestration.factory.create_librarian",
             return_value=mock_graph,
         ) as mock_create:
             result = librarian_server._get_graph(cfg)
@@ -50,7 +50,7 @@ class TestGetPipeline:
         cfg = MagicMock()
 
         with patch(
-            "librarian.factory.create_ingestion_pipeline",
+            "orchestration.factory.create_ingestion_pipeline",
             return_value=mock_pipeline,
         ) as mock_create:
             result = librarian_server._get_pipeline(cfg)

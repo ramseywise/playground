@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from librarian.tasks.models import GoldenSample
-from librarian.factory import create_librarian
+from orchestration.factory import create_librarian
 from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
 from librarian.config import LibrarySettings

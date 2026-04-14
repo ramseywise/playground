@@ -54,7 +54,9 @@ class S3Client:
             key = f"{self._cfg.s3_raw_prefix}{key}"
         client = self._get_client()
         client.put_object(
-            Bucket=self._cfg.s3_bucket, Key=key, Body=content.encode("utf-8"),
+            Bucket=self._cfg.s3_bucket,
+            Key=key,
+            Body=content.encode("utf-8"),
         )
         log.info("s3_mcp.put", key=key)
 
@@ -70,7 +72,7 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
     def _get_pipeline() -> Any:
         nonlocal _pipeline
         if _pipeline is None:
-            from librarian.factory import create_ingestion_pipeline
+            from orchestration.factory import create_ingestion_pipeline
 
             _pipeline = create_ingestion_pipeline(settings)
             log.info("s3_mcp.pipeline.init")
@@ -110,8 +112,14 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "key": {"type": "string", "description": "Object key (auto-prefixed with raw/ if needed)"},
-                        "content": {"type": "string", "description": "Document content"},
+                        "key": {
+                            "type": "string",
+                            "description": "Object key (auto-prefixed with raw/ if needed)",
+                        },
+                        "content": {
+                            "type": "string",
+                            "description": "Document content",
+                        },
                     },
                     "required": ["key", "content"],
                 },
@@ -122,7 +130,10 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "key": {"type": "string", "description": "S3 object key to ingest"},
+                        "key": {
+                            "type": "string",
+                            "description": "S3 object key to ingest",
+                        },
                     },
                     "required": ["key"],
                 },
@@ -144,7 +155,12 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
 
         if name == "upload_document":
             client.put_object(arguments["key"], arguments["content"])
-            return [TextContent(type="text", text=json.dumps({"status": "uploaded", "key": arguments["key"]}))]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"status": "uploaded", "key": arguments["key"]}),
+                )
+            ]
 
         if name == "trigger_ingestion":
             pipeline = _get_pipeline()
@@ -153,15 +169,19 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
                 key=arguments["key"],
                 region=settings.s3_region,
             )
-            return [TextContent(
-                type="text",
-                text=json.dumps({
-                    "doc_id": result.doc_id,
-                    "chunk_count": result.chunk_count,
-                    "snippet_count": result.snippet_count,
-                    "skipped": result.skipped,
-                }),
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "doc_id": result.doc_id,
+                            "chunk_count": result.chunk_count,
+                            "snippet_count": result.snippet_count,
+                            "skipped": result.skipped,
+                        }
+                    ),
+                )
+            ]
 
         msg = f"Unknown tool: {name}"
         raise ValueError(msg)
@@ -177,7 +197,9 @@ def main() -> None:
         server = create_server()
         async with stdio_server() as (read_stream, write_stream):
             await server.run(
-                read_stream, write_stream, server.create_initialization_options(),
+                read_stream,
+                write_stream,
+                server.create_initialization_options(),
             )
 
     asyncio.run(_run())

@@ -25,7 +25,7 @@ _settings: LibrarySettings = _default_settings
 def _get_graph(cfg: LibrarySettings) -> Any:
     global _graph  # noqa: PLW0603
     if _graph is None:
-        from librarian.factory import create_librarian
+        from orchestration.factory import create_librarian
 
         _graph = create_librarian(cfg)
         log.info("librarian_mcp.graph.init")
@@ -35,7 +35,7 @@ def _get_graph(cfg: LibrarySettings) -> Any:
 def _get_pipeline(cfg: LibrarySettings) -> Any:
     global _pipeline  # noqa: PLW0603
     if _pipeline is None:
-        from librarian.factory import create_ingestion_pipeline
+        from orchestration.factory import create_ingestion_pipeline
 
         _pipeline = create_ingestion_pipeline(cfg)
         log.info("librarian_mcp.pipeline.init")
@@ -78,7 +78,10 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
                 inputSchema={
                     "type": "object",
                     "properties": {
-                        "document": {"type": "string", "description": "JSON string of the document dict (must include 'text' key)"},
+                        "document": {
+                            "type": "string",
+                            "description": "JSON string of the document dict (must include 'text' key)",
+                        },
                     },
                     "required": ["document"],
                 },
@@ -100,47 +103,66 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         if name == "search":
             graph = _get_graph(settings)
-            result = await graph.ainvoke({"query": arguments["query"]}, config=_langfuse_config())
-            chunks = result.get("reranked_chunks") or result.get("retrieved_chunks") or []
+            result = await graph.ainvoke(
+                {"query": arguments["query"]}, config=_langfuse_config()
+            )
+            chunks = (
+                result.get("reranked_chunks") or result.get("retrieved_chunks") or []
+            )
             return [TextContent(type="text", text=json.dumps(chunks, default=str))]
 
         if name == "chat":
             graph = _get_graph(settings)
-            result = await graph.ainvoke({"query": arguments["query"]}, config=_langfuse_config())
-            return [TextContent(
-                type="text",
-                text=json.dumps({
-                    "response": result.get("response", ""),
-                    "citations": result.get("citations", []),
-                    "confidence_score": result.get("confidence_score", 0.0),
-                    "intent": result.get("intent", ""),
-                }, default=str),
-            )]
+            result = await graph.ainvoke(
+                {"query": arguments["query"]}, config=_langfuse_config()
+            )
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "response": result.get("response", ""),
+                            "citations": result.get("citations", []),
+                            "confidence_score": result.get("confidence_score", 0.0),
+                            "intent": result.get("intent", ""),
+                        },
+                        default=str,
+                    ),
+                )
+            ]
 
         if name == "ingest":
             pipeline = _get_pipeline(settings)
             doc = json.loads(arguments["document"])
             r = await pipeline.ingest_document(doc)
-            return [TextContent(
-                type="text",
-                text=json.dumps({
-                    "doc_id": r.doc_id,
-                    "chunk_count": r.chunk_count,
-                    "snippet_count": r.snippet_count,
-                    "skipped": r.skipped,
-                }),
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "doc_id": r.doc_id,
+                            "chunk_count": r.chunk_count,
+                            "snippet_count": r.snippet_count,
+                            "skipped": r.skipped,
+                        }
+                    ),
+                )
+            ]
 
         if name == "get_status":
-            return [TextContent(
-                type="text",
-                text=json.dumps({
-                    "model": settings.anthropic_model_sonnet,
-                    "retrieval_strategy": settings.retrieval_strategy,
-                    "confidence_threshold": settings.confidence_threshold,
-                    "s3_bucket": settings.s3_bucket,
-                }),
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "model": settings.anthropic_model_sonnet,
+                            "retrieval_strategy": settings.retrieval_strategy,
+                            "confidence_threshold": settings.confidence_threshold,
+                            "s3_bucket": settings.s3_bucket,
+                        }
+                    ),
+                )
+            ]
 
         msg = f"Unknown tool: {name}"
         raise ValueError(msg)
@@ -156,7 +178,9 @@ def main() -> None:
         server = create_server()
         async with stdio_server() as (read_stream, write_stream):
             await server.run(
-                read_stream, write_stream, server.create_initialization_options(),
+                read_stream,
+                write_stream,
+                server.create_initialization_options(),
             )
 
     asyncio.run(_run())

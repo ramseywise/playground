@@ -33,9 +33,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from clients.llm import LLMClient
-from orchestration.langgraph.query_understanding import (
-    QueryAnalyzer,
-)
+from librarian.plan.analyzer import QueryAnalyzer
 from orchestration.langgraph.history import CondenserAgent
 from orchestration.langgraph.nodes.generation import GeneratorAgent
 from orchestration.langgraph.nodes.reranker import RerankerAgent
