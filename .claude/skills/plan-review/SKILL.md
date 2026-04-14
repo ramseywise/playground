@@ -73,6 +73,6 @@ Check the active plan against its research:
 Output: `Verdict: [ ] Execute-ready | [ ] Needs iteration — [N] blockers`
 Flag issues as **BLOCKER** / **QUESTION** / **NOTE**.
 
-If execute-ready: suggest `/compact` then `/execute-plan`.
+If execute-ready: suggest `/compact-session` then `/execute-plan`.
 
 **Next step**: `/plan-review review` to verify, then `/execute-plan` to implement.

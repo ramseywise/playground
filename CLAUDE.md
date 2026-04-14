@@ -94,10 +94,6 @@ All standards below are enforced via `settings.json` hooks where applicable — 
 - Ask before running: costly API calls, large file/model loads, or anything >30s
 - Prefer `--dry-run`, targeted `pytest -k`, and subsampled data for validation
 
-### Review gate
-
-A PreToolUse hook gates source file edits (outside `.claude/` and `tests/`). When blocked: show before/after code block → wait for user confirmation → `touch .claude/.edit_ok` → retry.
-
 ### Output conventions
 
 - **Confidence**: High / Medium / Low on findings and assumptions
@@ -116,7 +112,7 @@ All phase artifacts live in `{project}/.claude/docs/` and are gitignored.
 | 1a. Iterate | `/research-review review\|refine\|argue` | (updates research file) |
 | 2. Plan | `/plan-review <name>` | `.claude/docs/plans/<name>.md` |
 | 2a. Iterate | `/plan-review review\|refine` | (updates plan file) |
-| — | `/compact` | — ← **saves artifacts + checkpoint + commits before compacting** |
+| — | `/compact-session` | — ← **saves artifacts + checkpoint + commits before compacting** |
 | 3. Execute | `/execute-plan` | `.claude/docs/CHANGELOG.md` (append per step when used) |
 | 4. Review | `/code-review <name>` | `.claude/docs/reviews/<name>.md` + PR |
 
@@ -124,7 +120,30 @@ All phase artifacts live in `.claude/docs/` — do NOT create them at the projec
 
 All skills run **directly in the current conversation** — no subagents for pipeline phases.
 
-Ad-hoc: `/code-debug`, `/plan-refactor`. Utilities: `/claude-insights`, `/compact`. Planning: `/design-sprint`, `/scope-initiative`. Git: `/quick-commit`, `/quick-pr`.
+Ad-hoc: `/code-debug`, `/plan-refactor`. Utilities: `/claude-insights`, `/compact-session`. Planning: `/design-sprint`, `/scope-initiative`. Git: `/quick-commit`, `/quick-pr`.
+
+## Commit Convention
+
+**Conventional Commits** format — always extract ticket ID from branch name:
+
+```
+<type>(<ticket>): <description>
+```
+
+Types: `feat`, `fix`, `chore`, `refactor`, `docs`, `style`, `test`, `perf`, `ci`, `build`
+
+Extract ticket from branch: `feature/LIN-123-desc` → `LIN-123`, `cord/fix-thing-LIN-456` → `LIN-456`
+
+```
+feat(LIN-123): add invoice export functionality
+fix(LIN-123): resolve null pointer in payment flow
+chore(LIN-123): update dependencies
+```
+
+Rules:
+1. Always include type prefix and ticket ID
+2. Lowercase, imperative mood, no trailing period
+3. Run `git branch --show-current` to extract ticket ID before composing
 
 ## Issue Tracking
 
@@ -145,16 +164,16 @@ Linear ↔ GitHub integration is active. See `~/.claude/CLAUDE.md` for full conv
 
 ## Context Management
 
-- Run `/compact` when context is getting noisy (often around 40%) — do not rely on auto-compaction
-  - `/compact` is a custom skill: it saves active artifacts, writes a mid-session checkpoint note, commits + pushes, then calls the built-in compact with a seed prompt
+- Run `/compact-session` when context is getting noisy (often around 40%) — do not rely on auto-compaction
+  - `/compact-session` is a custom skill: it saves active artifacts, writes a mid-session checkpoint note, commits + pushes, then calls the built-in `/compact` with a seed prompt
   - This means compaction is always safe — work is committed to git before context is discarded
 - Run `/clear` when switching to an unrelated task (no checkpoint needed — no work to save)
-- Between execute steps: `/compact` handles the seed prompt automatically from the checkpoint
+- Between execute steps: `/compact-session` handles the seed prompt automatically from the checkpoint
 - **Do not spawn subagents or use Skill tool for research/plan/execute phases** — do the work directly in the main context so the user can follow and interject. Use Write/WebSearch/Read tools directly.
 
 ### Session metadata convention
 
-Per-session files live in `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Run `/compact` to write one — at end of session it stops; mid-session it checkpoints and continues.
+Per-session files live in `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Run `/compact-session` to write one — at end of session it stops; mid-session it checkpoints and continues.
 
 Contents: position, metadata (duration, tools, files), gotchas, friction signals, attribution notes, open questions, skill candidates, session insights, next session prompt.
 

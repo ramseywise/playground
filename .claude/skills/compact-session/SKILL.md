@@ -1,13 +1,13 @@
 ---
-name: compact
+name: compact-session
 description: "Session checkpoint: save artifacts, write session note, memory decisions, commit + push + PR. Mid-session: compact and continue. End of session: stop."
 disable-model-invocation: true
 ---
 
 Preserve all in-flight work before compacting or ending a session. Detect mode from context:
 
-- **Mid-session** (`/compact` with work remaining): steps 1–4, then compact with seed prompt
-- **End of session** (`/compact` at a natural stopping point): steps 1–5, then stop
+- **Mid-session** (`/compact-session` with work remaining): steps 1–4, then compact with seed prompt
+- **End of session** (`/compact-session` at a natural stopping point): steps 1–5, then stop
 
 ---
 

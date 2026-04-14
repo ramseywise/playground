@@ -29,7 +29,7 @@ For each step in the plan:
    - Deviations: none | <description>
    ```
 6. **Mark done**: `Step N ✓ DONE — <date>` in plan file
-7. **Report**: step completion summary, suggest `/compact`, wait for user confirmation
+7. **Report**: step completion summary, suggest `/compact-session`, wait for user confirmation
 
 ## Hard stops — do not proceed if:
 

@@ -4,7 +4,7 @@ description: "Cartographer analysis: session notes are the canonical source for 
 disable-model-invocation: true
 ---
 
-Surface workflow improvements from session notes written by `/compact`. JSONL enriches when available but is not required.
+Surface workflow improvements from session notes written by `/compact-session`. JSONL enriches when available but is not required.
 
 If `$ARGUMENTS` is `skills-only`, skip to section 2.
 
@@ -14,11 +14,11 @@ Session notes are the canonical, portable source — they work on any machine (l
 
 | Layer | Path | Written by | Role |
 |-------|------|-----------|------|
-| Session notes | `.claude/sessions/*.md` | `/compact` | **Primary** — always write these |
+| Session notes | `.claude/sessions/*.md` | `/compact-session` | **Primary** — always write these |
 | Session JSONL | `~/.claude/projects/**/*.jsonl` | Claude Code (per machine) | **Enrichment** — quantitative stats when present |
 | Friction log | `.claude/friction-log.jsonl` | PostToolUse Bash hook | **Cron only** — local friction patterns |
 
-**Implication**: always end sessions with `/compact`. The HTML report is only as good as the notes you've written.
+**Implication**: always end sessions with `/compact-session`. The HTML report is only as good as the notes you've written.
 
 ---
 
