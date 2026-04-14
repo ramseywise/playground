@@ -20,54 +20,21 @@ from typing import Any
 
 import structlog
 
+from eval.models import ExperimentResult, FailureClusterSummary, QueryResult
 from librarian.config import settings
 
 log = structlog.get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Dashboard data models
+# Dashboard data model (wraps the shared experiment types)
 # ---------------------------------------------------------------------------
 
-
-@dataclass
-class QueryMetric:
-    """Per-query metrics for a single variant run."""
-
-    query_id: str
-    query: str
-    hit: bool
-    reciprocal_rank: float
-    retrieved_urls: list[str]
-    expected_url: str
-    latency_ms: float
-    trace_id: str = ""
-
-
-@dataclass
-class FailureClusterData:
-    """Failure cluster summary for the dashboard."""
-
-    failure_type: str
-    count: int
-    common_patterns: list[str] = field(default_factory=list)
-
-
-@dataclass
-class VariantResult:
-    """Dashboard-ready result for a single variant."""
-
-    variant_name: str
-    run_name: str
-    hit_rate: float
-    mrr: float
-    n_queries: int
-    n_hits: int
-    avg_latency_ms: float
-    dataset_name: str = ""
-    config_snapshot: dict[str, Any] = field(default_factory=dict)
-    query_results: list[QueryMetric] = field(default_factory=list)
-    failure_clusters: list[FailureClusterData] = field(default_factory=list)
+# Re-export shared types so existing dashboard consumers don't break.
+# Prefer importing from ``eval.models`` in new code.
+QueryMetric = QueryResult
+FailureClusterData = FailureClusterSummary
+VariantResult = ExperimentResult
 
 
 @dataclass
