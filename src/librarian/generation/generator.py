@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from playground.src.clients.llm import LLMClient
+from clients.llm import LLMClient
 from librarian.generation.prompts import get_system_prompt
 from librarian.schemas.chunks import RankedChunk
 from librarian.schemas.retrieval import Intent

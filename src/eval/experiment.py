@@ -420,7 +420,7 @@ async def _run_bedrock_experiment(
     lf: Any | None,
 ) -> ExperimentResult:
     """Run experiment via real Bedrock KB API (RetrieveAndGenerate)."""
-    from playground.src.clients.bedrock_KB import BedrockKBClient
+    from clients.bedrock_KB import BedrockKBClient
 
     client = BedrockKBClient(cfg)
     clusterer = FailureClusterer()
@@ -777,7 +777,7 @@ async def _run_adk_custom_rag_experiment(
         run_custom_rag_query,
     )
     from orchestration.factory import _build_embedder, _build_reranker, _build_retriever
-    from playground.src.clients.llm import AnthropicLLM
+    from clients.llm import AnthropicLLM
 
     embedder = _build_embedder(cfg)
     retriever = _build_retriever(cfg, embedder)
