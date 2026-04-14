@@ -18,6 +18,9 @@ from orchestration.google_adk.tools import (
     rerank_results,
     search_knowledge_base,
 )
+from orchestration.langgraph.history import CondenserAgent
+from orchestration.langgraph.nodes.reranker import RerankerAgent
+from orchestration.langgraph.nodes.retrieval import RetrieverAgent
 
 
 # ---------------------------------------------------------------------------
@@ -51,6 +54,50 @@ def _make_ranked_chunk(
     )
 
 
+def _make_retriever_agent(
+    *,
+    run_return: dict | None = None,
+) -> RetrieverAgent:
+    """Create a RetrieverAgent with mocked internals."""
+    agent = RetrieverAgent(retriever=MagicMock(), embedder=MagicMock())
+    agent.run = AsyncMock(return_value=run_return or {"graded_chunks": [], "retrieved_chunks": [], "query_variants": []})
+    return agent
+
+
+def _make_reranker_agent(
+    *,
+    run_return: dict | None = None,
+) -> RerankerAgent:
+    """Create a RerankerAgent with mocked internals."""
+    agent = RerankerAgent(reranker=MagicMock())
+    agent.run = AsyncMock(return_value=run_return or {"reranked_chunks": [], "confidence_score": 0.0})
+    return agent
+
+
+def _make_condenser_agent(
+    *,
+    condense_return: dict | None = None,
+) -> CondenserAgent:
+    """Create a CondenserAgent with mocked internals."""
+    agent = CondenserAgent(llm=MagicMock())
+    agent.condense = AsyncMock(return_value=condense_return or {"standalone_query": ""})
+    return agent
+
+
+def _configure_defaults(
+    *,
+    retriever_agent: RetrieverAgent | None = None,
+    reranker_agent: RerankerAgent | None = None,
+    condenser_agent: CondenserAgent | None = None,
+) -> ToolDeps:
+    """Configure tools with default mocked agents."""
+    return configure_tools(
+        retriever_agent=retriever_agent or _make_retriever_agent(),
+        reranker_agent=reranker_agent or _make_reranker_agent(),
+        condenser_agent=condenser_agent,
+    )
+
+
 # ---------------------------------------------------------------------------
 # configure_tools
 # ---------------------------------------------------------------------------
@@ -66,25 +113,16 @@ def test_get_deps_raises_when_not_configured() -> None:
 
 
 def test_configure_tools_returns_deps() -> None:
-    deps = configure_tools(
-        retriever=MagicMock(),
-        embedder=MagicMock(),
-        reranker=MagicMock(),
-    )
+    deps = _configure_defaults()
     assert isinstance(deps, ToolDeps)
-    assert deps.retriever is not None
+    assert deps.retriever_agent is not None
     assert deps.analyzer is not None  # auto-created
 
 
-def test_configure_tools_accepts_condenser_llm() -> None:
-    mock_llm = MagicMock()
-    deps = configure_tools(
-        retriever=MagicMock(),
-        embedder=MagicMock(),
-        reranker=MagicMock(),
-        condenser_llm=mock_llm,
-    )
-    assert deps.condenser_llm is mock_llm
+def test_configure_tools_accepts_condenser_agent() -> None:
+    condenser = _make_condenser_agent()
+    deps = _configure_defaults(condenser_agent=condenser)
+    assert deps.condenser_agent is condenser
 
 
 # ---------------------------------------------------------------------------
@@ -94,22 +132,14 @@ def test_configure_tools_accepts_condenser_llm() -> None:
 
 @pytest.mark.asyncio
 async def test_search_knowledge_base_returns_results() -> None:
-    mock_embedder = MagicMock()
-    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
-
-    mock_retriever = MagicMock()
-    mock_retriever.search = AsyncMock(
-        return_value=[
-            _make_retrieval_result("c1", "First passage about auth.", 0.95),
-            _make_retrieval_result("c2", "Second passage about billing.", 0.72),
-        ]
+    graded = [
+        GradedChunk(chunk=_make_chunk("c1", "First passage about auth."), score=0.95, relevant=True),
+        GradedChunk(chunk=_make_chunk("c2", "Second passage about billing."), score=0.72, relevant=True),
+    ]
+    retriever_agent = _make_retriever_agent(
+        run_return={"graded_chunks": graded, "retrieved_chunks": [], "query_variants": ["what is authentication?"]},
     )
-
-    configure_tools(
-        retriever=mock_retriever,
-        embedder=mock_embedder,
-        reranker=MagicMock(),
-    )
+    _configure_defaults(retriever_agent=retriever_agent)
 
     result = await search_knowledge_base("what is authentication?", num_results=5)
 
@@ -117,24 +147,23 @@ async def test_search_knowledge_base_returns_results() -> None:
     assert len(result["results"]) == 2
     assert result["results"][0]["chunk_id"] == "c1"
     assert result["results"][0]["score"] == 0.95
-
-    mock_embedder.aembed_query.assert_awaited_once_with("what is authentication?")
-    mock_retriever.search.assert_awaited_once()
+    retriever_agent.run.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-async def test_search_knowledge_base_passes_k() -> None:
-    mock_embedder = MagicMock()
-    mock_embedder.aembed_query = AsyncMock(return_value=[0.1] * 64)
-    mock_retriever = MagicMock()
-    mock_retriever.search = AsyncMock(return_value=[])
-
-    configure_tools(
-        retriever=mock_retriever, embedder=mock_embedder, reranker=MagicMock()
+async def test_search_knowledge_base_respects_num_results() -> None:
+    graded = [
+        GradedChunk(chunk=_make_chunk(f"c{i}", f"Passage {i}"), score=0.9 - i * 0.1, relevant=True)
+        for i in range(5)
+    ]
+    retriever_agent = _make_retriever_agent(
+        run_return={"graded_chunks": graded, "retrieved_chunks": [], "query_variants": ["test"]},
     )
+    _configure_defaults(retriever_agent=retriever_agent)
 
-    await search_knowledge_base("test query", num_results=20)
-    assert mock_retriever.search.call_args.kwargs["k"] == 20
+    result = await search_knowledge_base("test query", num_results=2)
+    assert len(result["results"]) == 2
+    assert result["total"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -144,31 +173,18 @@ async def test_search_knowledge_base_passes_k() -> None:
 
 @pytest.mark.asyncio
 async def test_rerank_results_returns_ranked() -> None:
-    mock_reranker = MagicMock()
-    mock_reranker.rerank = AsyncMock(
-        return_value=[
-            _make_ranked_chunk("c2", "Billing info", 0.92, 1),
-            _make_ranked_chunk("c1", "Auth info", 0.71, 2),
-        ]
+    reranked = [
+        _make_ranked_chunk("c2", "Billing info", 0.92, 1),
+        _make_ranked_chunk("c1", "Auth info", 0.71, 2),
+    ]
+    reranker_agent = _make_reranker_agent(
+        run_return={"reranked_chunks": reranked, "confidence_score": 0.92},
     )
-
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=mock_reranker)
+    _configure_defaults(reranker_agent=reranker_agent)
 
     passages = [
-        {
-            "text": "Auth info",
-            "chunk_id": "c1",
-            "url": "https://a.com",
-            "title": "A",
-            "score": "0.8",
-        },
-        {
-            "text": "Billing info",
-            "chunk_id": "c2",
-            "url": "https://b.com",
-            "title": "B",
-            "score": "0.7",
-        },
+        {"text": "Auth info", "chunk_id": "c1", "url": "https://a.com", "title": "A", "score": "0.8"},
+        {"text": "Billing info", "chunk_id": "c2", "url": "https://b.com", "title": "B", "score": "0.7"},
     ]
 
     result = await rerank_results("what is billing?", passages, top_k=2)
@@ -176,15 +192,15 @@ async def test_rerank_results_returns_ranked() -> None:
     assert len(result["results"]) == 2
     assert result["results"][0]["rank"] == 1
     assert result["confidence"] == 0.92
-    mock_reranker.rerank.assert_awaited_once()
+    reranker_agent.run.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_rerank_results_empty_returns_zero_confidence() -> None:
-    mock_reranker = MagicMock()
-    mock_reranker.rerank = AsyncMock(return_value=[])
-
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=mock_reranker)
+    reranker_agent = _make_reranker_agent(
+        run_return={"reranked_chunks": [], "confidence_score": 0.0},
+    )
+    _configure_defaults(reranker_agent=reranker_agent)
 
     result = await rerank_results("test", [], top_k=3)
     assert result["results"] == []
@@ -197,7 +213,7 @@ async def test_rerank_results_empty_returns_zero_confidence() -> None:
 
 
 def test_analyze_query_returns_intent_and_entities() -> None:
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+    _configure_defaults()
 
     result = analyze_query("how does OAuth2 compare to SAML for authentication?")
 
@@ -210,7 +226,7 @@ def test_analyze_query_returns_intent_and_entities() -> None:
 
 
 def test_analyze_query_simple_query() -> None:
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+    _configure_defaults()
 
     result = analyze_query("what is OAuth?")
     assert result["complexity"] in ("simple", "moderate")
@@ -224,7 +240,7 @@ def test_analyze_query_simple_query() -> None:
 @pytest.mark.asyncio
 async def test_condense_query_single_turn_passes_through() -> None:
     """Single-turn queries should not be rewritten."""
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+    _configure_defaults()
 
     result = await condense_query("what is OAuth?", [])
     assert result["standalone_query"] == "what is OAuth?"
@@ -232,14 +248,9 @@ async def test_condense_query_single_turn_passes_through() -> None:
 
 
 @pytest.mark.asyncio
-async def test_condense_query_no_llm_passes_through() -> None:
-    """Without condenser_llm configured, should pass through."""
-    configure_tools(
-        retriever=MagicMock(),
-        embedder=MagicMock(),
-        reranker=MagicMock(),
-        condenser_llm=None,
-    )
+async def test_condense_query_no_agent_passes_through() -> None:
+    """Without condenser_agent configured, should pass through."""
+    _configure_defaults(condenser_agent=None)
 
     history = [
         {"role": "user", "content": "what is OAuth?"},
@@ -252,19 +263,12 @@ async def test_condense_query_no_llm_passes_through() -> None:
 
 
 @pytest.mark.asyncio
-async def test_condense_query_rewrites_with_llm() -> None:
-    """With condenser_llm, should rewrite the query."""
-    mock_llm = MagicMock()
-    mock_llm.generate = AsyncMock(
-        return_value="How does SAML compare to OAuth for authentication?"
+async def test_condense_query_rewrites_with_agent() -> None:
+    """With condenser_agent, should rewrite the query."""
+    condenser = _make_condenser_agent(
+        condense_return={"standalone_query": "How does SAML compare to OAuth for authentication?"},
     )
-
-    configure_tools(
-        retriever=MagicMock(),
-        embedder=MagicMock(),
-        reranker=MagicMock(),
-        condenser_llm=mock_llm,
-    )
+    _configure_defaults(condenser_agent=condenser)
 
     history = [
         {"role": "user", "content": "what is OAuth?"},
@@ -277,7 +281,7 @@ async def test_condense_query_rewrites_with_llm() -> None:
         == "How does SAML compare to OAuth for authentication?"
     )
     assert result["was_rewritten"] is True
-    mock_llm.generate.assert_awaited_once()
+    condenser.condense.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +290,7 @@ async def test_condense_query_rewrites_with_llm() -> None:
 
 
 def test_escalate_out_of_scope() -> None:
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+    _configure_defaults()
 
     result = escalate(
         reason="out_of_scope",
@@ -300,7 +304,7 @@ def test_escalate_out_of_scope() -> None:
 
 
 def test_escalate_low_confidence() -> None:
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+    _configure_defaults()
 
     result = escalate(
         reason="low_confidence",
@@ -317,7 +321,7 @@ def test_escalate_low_confidence() -> None:
 
 
 def test_escalate_explicit_request() -> None:
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+    _configure_defaults()
 
     result = escalate(reason="explicit_request", query="let me talk to a human")
     assert result["escalated"] is True
@@ -326,7 +330,7 @@ def test_escalate_explicit_request() -> None:
 
 def test_escalate_unknown_reason_falls_back() -> None:
     """Unknown reason should use out_of_scope message as fallback."""
-    configure_tools(retriever=MagicMock(), embedder=MagicMock(), reranker=MagicMock())
+    _configure_defaults()
 
     result = escalate(reason="something_else", query="test")
     assert result["escalated"] is True

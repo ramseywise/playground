@@ -28,6 +28,9 @@ from orchestration.google_adk.tools import (
     rerank_results,
     search_knowledge_base,
 )
+from orchestration.langgraph.history import CondenserAgent
+from orchestration.langgraph.nodes.reranker import RerankerAgent
+from orchestration.langgraph.nodes.retrieval import RetrieverAgent
 from librarian.config import LibrarySettings
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever
@@ -83,6 +86,8 @@ def create_custom_rag_agent(
     reranker: Reranker,
     condenser_llm: LLMClient | None = None,
     model: str = _DEFAULT_MODEL,
+    top_k: int = 10,
+    reranker_top_k: int = 3,
 ) -> Agent:
     """Build an ADK Agent with the full custom RAG tool suite.
 
@@ -98,15 +103,20 @@ def create_custom_rag_agent(
         reranker: The reranking model (cross-encoder, LLM-listwise, etc.).
         condenser_llm: LLM for multi-turn query rewriting (e.g. Haiku). Optional.
         model: Gemini model name for the orchestrating agent.
+        top_k: Number of results for retrieval (default 10).
+        reranker_top_k: Number of top passages after reranking (default 3).
 
     Returns:
         A configured ADK Agent ready for ``Runner.run_async()``.
     """
+    retriever_agent = RetrieverAgent(retriever=retriever, embedder=embedder, top_k=top_k)
+    reranker_agent = RerankerAgent(reranker=reranker, top_k=reranker_top_k)
+    condenser_agent = CondenserAgent(llm=condenser_llm) if condenser_llm else None
+
     configure_tools(
-        retriever=retriever,
-        embedder=embedder,
-        reranker=reranker,
-        condenser_llm=condenser_llm,
+        retriever_agent=retriever_agent,
+        reranker_agent=reranker_agent,
+        condenser_agent=condenser_agent,
     )
 
     agent = Agent(

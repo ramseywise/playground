@@ -18,6 +18,7 @@ from orchestration.components import (
     build_reranker,
     build_retriever,
 )
+from orchestration.factory import create_agents
 from librarian.config import LibrarySettings, settings as _default_settings
 from core.logging import get_logger
 
@@ -43,8 +44,8 @@ def create_custom_rag(
 ) -> Agent:
     """Build an ADK custom RAG agent with full component DI.
 
-    Uses the same shared component builders as the LangGraph factory,
-    ensuring consistent configuration across orchestration options.
+    Uses ``create_agents()`` to build canonical agent objects shared with
+    the LangGraph pipeline, then wires them into ADK tool functions.
     """
     from orchestration.google_adk.custom_rag_agent import create_custom_rag_agent
 
