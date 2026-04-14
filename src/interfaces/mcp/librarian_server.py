@@ -8,11 +8,11 @@ from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 from librarian.config import LibrarySettings, settings as _default_settings
 from librarian.tracing import build_langfuse_handler, make_runnable_config
-from core.logging import get_logger
+from core.logging import configure_logging, get_logger
 
 log = get_logger(__name__)
 
@@ -100,72 +100,82 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
         return make_runnable_config(handler)
 
     @server.call_tool()
-    async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-        if name == "search":
-            graph = _get_graph(settings)
-            result = await graph.ainvoke(
-                {"query": arguments["query"]}, config=_langfuse_config()
-            )
-            chunks = (
-                result.get("reranked_chunks") or result.get("retrieved_chunks") or []
-            )
-            return [TextContent(type="text", text=json.dumps(chunks, default=str))]
-
-        if name == "chat":
-            graph = _get_graph(settings)
-            result = await graph.ainvoke(
-                {"query": arguments["query"]}, config=_langfuse_config()
-            )
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps(
-                        {
-                            "response": result.get("response", ""),
-                            "citations": result.get("citations", []),
-                            "confidence_score": result.get("confidence_score", 0.0),
-                            "intent": result.get("intent", ""),
-                        },
-                        default=str,
-                    ),
+    async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent] | CallToolResult:
+        try:
+            if name == "search":
+                graph = _get_graph(settings)
+                result = await graph.ainvoke(
+                    {"query": arguments["query"]}, config=_langfuse_config()
                 )
-            ]
-
-        if name == "ingest":
-            pipeline = _get_pipeline(settings)
-            doc = json.loads(arguments["document"])
-            r = await pipeline.ingest_document(doc)
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps(
-                        {
-                            "doc_id": r.doc_id,
-                            "chunk_count": r.chunk_count,
-                            "snippet_count": r.snippet_count,
-                            "skipped": r.skipped,
-                        }
-                    ),
+                chunks = (
+                    result.get("reranked_chunks") or result.get("retrieved_chunks") or []
                 )
-            ]
+                return [TextContent(type="text", text=json.dumps(chunks, default=str))]
 
-        if name == "get_status":
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps(
-                        {
-                            "model": settings.anthropic_model_sonnet,
-                            "retrieval_strategy": settings.retrieval_strategy,
-                            "confidence_threshold": settings.confidence_threshold,
-                            "s3_bucket": settings.s3_bucket,
-                        }
-                    ),
+            if name == "chat":
+                graph = _get_graph(settings)
+                result = await graph.ainvoke(
+                    {"query": arguments["query"]}, config=_langfuse_config()
                 )
-            ]
+                return [
+                    TextContent(
+                        type="text",
+                        text=json.dumps(
+                            {
+                                "response": result.get("response", ""),
+                                "citations": result.get("citations", []),
+                                "confidence_score": result.get("confidence_score", 0.0),
+                                "intent": result.get("intent", ""),
+                            },
+                            default=str,
+                        ),
+                    )
+                ]
 
-        msg = f"Unknown tool: {name}"
-        raise ValueError(msg)
+            if name == "ingest":
+                pipeline = _get_pipeline(settings)
+                doc = json.loads(arguments["document"])
+                if not isinstance(doc, dict) or not doc.get("text"):
+                    msg = "Document must be a JSON object with a non-empty 'text' field"
+                    raise ValueError(msg)
+                r = await pipeline.ingest_document(doc)
+                return [
+                    TextContent(
+                        type="text",
+                        text=json.dumps(
+                            {
+                                "doc_id": r.doc_id,
+                                "chunk_count": r.chunk_count,
+                                "snippet_count": r.snippet_count,
+                                "skipped": r.skipped,
+                            }
+                        ),
+                    )
+                ]
+
+            if name == "get_status":
+                return [
+                    TextContent(
+                        type="text",
+                        text=json.dumps(
+                            {
+                                "model": settings.anthropic_model_sonnet,
+                                "retrieval_strategy": settings.retrieval_strategy,
+                                "confidence_threshold": settings.confidence_threshold,
+                                "s3_bucket": settings.s3_bucket,
+                            }
+                        ),
+                    )
+                ]
+
+            msg = f"Unknown tool: {name}"
+            raise ValueError(msg)
+        except Exception as exc:
+            log.exception("librarian_mcp.tool_error", tool=name)
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"Tool '{name}' failed: {exc}")],
+                isError=True,
+            )
 
     return server
 
@@ -175,6 +185,7 @@ def main() -> None:
     import asyncio
 
     async def _run() -> None:
+        configure_logging()
         server = create_server()
         async with stdio_server() as (read_stream, write_stream):
             await server.run(

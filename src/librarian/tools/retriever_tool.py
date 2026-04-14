@@ -26,7 +26,7 @@ class RetrieverToolOutput(ToolOutput):
 class RetrieverTool:
     """Multi-query retrieval tool backed by ``EnsembleRetriever``.
 
-    Satisfies the ``BaseTool`` protocol.
+    Satisfies ``BaseTool[RetrieverToolInput, RetrieverToolOutput]``.
     """
 
     name = "search_knowledge_base"

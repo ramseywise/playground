@@ -73,12 +73,10 @@ def _mock_pipeline() -> Any:
 def client(_mock_graph: Any, _mock_pipeline: Any) -> TestClient:
     """TestClient with graph, pipeline, and triage mocks injected."""
     deps._graph = _mock_graph
-    deps._generation_sg = AsyncMock()
     deps._pipeline = _mock_pipeline
     deps._triage = TriageService()
     yield TestClient(app, raise_server_exceptions=True)
     deps._graph = None
-    deps._generation_sg = None
     deps._pipeline = None
     deps._triage = None
 

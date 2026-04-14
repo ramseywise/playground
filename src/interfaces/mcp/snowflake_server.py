@@ -7,10 +7,10 @@ from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import CallToolResult, TextContent, Tool
 
 from librarian.config import LibrarySettings, settings as _default_settings
-from core.logging import get_logger
+from core.logging import configure_logging, get_logger
 
 log = get_logger(__name__)
 
@@ -111,23 +111,30 @@ def create_server(cfg: LibrarySettings | None = None) -> Server:
         ]
 
     @server.call_tool()
-    async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+    async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent] | CallToolResult:
         import json
 
-        if name == "query_snowflake":
-            rows = client.execute(arguments["sql"])
-            return [TextContent(type="text", text=json.dumps(rows, default=str))]
+        try:
+            if name == "query_snowflake":
+                rows = client.execute(arguments["sql"])
+                return [TextContent(type="text", text=json.dumps(rows, default=str))]
 
-        if name == "list_tables":
-            tables = client.list_tables()
-            return [TextContent(type="text", text=json.dumps(tables))]
+            if name == "list_tables":
+                tables = client.list_tables()
+                return [TextContent(type="text", text=json.dumps(tables))]
 
-        if name == "describe_table":
-            schema = client.describe_table(arguments["table"])
-            return [TextContent(type="text", text=json.dumps(schema, default=str))]
+            if name == "describe_table":
+                schema = client.describe_table(arguments["table"])
+                return [TextContent(type="text", text=json.dumps(schema, default=str))]
 
-        msg = f"Unknown tool: {name}"
-        raise ValueError(msg)
+            msg = f"Unknown tool: {name}"
+            raise ValueError(msg)
+        except Exception as exc:
+            log.exception("snowflake_mcp.tool_error", tool=name)
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"Tool '{name}' failed: {exc}")],
+                isError=True,
+            )
 
     return server
 
@@ -137,6 +144,7 @@ def main() -> None:
     import asyncio
 
     async def _run() -> None:
+        configure_logging()
         server = create_server()
         async with stdio_server() as (read_stream, write_stream):
             await server.run(

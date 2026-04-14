@@ -28,7 +28,7 @@ class LLMClient(Protocol):
         self, system: str, messages: list[dict[str, str]], max_tokens: int = 4096
     ) -> str: ...
 
-    def stream(
+    async def stream(
         self, system: str, messages: list[dict[str, str]], max_tokens: int = 4096
     ) -> AsyncIterator[str]: ...
 
@@ -276,6 +276,37 @@ class GeminiLLM:
             output_chars=len(text),
         )
         return text
+
+    # -- streaming (LLMClient) ------------------------------------------------
+
+    async def stream(
+        self,
+        system: str,
+        messages: list[dict[str, str]],
+        max_tokens: int = 4096,
+    ) -> AsyncIterator[str]:
+        """Yield text chunks as they arrive from the Gemini streaming API."""
+        from google.genai import types  # type: ignore[import-untyped]
+
+        client = self._get_client()
+        config = types.GenerateContentConfig(
+            system_instruction=system,
+            max_output_tokens=max_tokens,
+        )
+        response_stream = await client.aio.models.generate_content_stream(
+            model=self._model,
+            contents=_to_gemini_contents(messages),
+            config=config,
+        )
+        async for chunk in response_stream:
+            try:
+                text = chunk.text or ""
+            except ValueError:
+                log.warning("llm.gemini.stream.safety_blocked", model=self._model)
+                return
+            if text:
+                yield text
+        log.debug("llm.gemini.stream.done", model=self._model)
 
     @property
     def model(self) -> str:

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from typing import Literal
 
 from pydantic import BaseModel
+
+from interfaces.api.backends import Route
 
 from core.logging import get_logger
 from librarian.plan.intent import classify_intent
@@ -53,18 +54,6 @@ def _build_conversational_reply(query_lower: str) -> str:
 # ---------------------------------------------------------------------------
 # Decision model
 # ---------------------------------------------------------------------------
-
-Route = Literal[
-    "librarian",
-    "bedrock",
-    "google_adk",
-    "adk_bedrock",
-    "adk_custom_rag",
-    "adk_hybrid",
-    "escalation",
-    "direct",
-]
-
 
 class TriageDecision(BaseModel):
     """Result of the triage classification."""

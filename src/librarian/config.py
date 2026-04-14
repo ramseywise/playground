@@ -67,6 +67,7 @@ class LibrarySettings(BaseSettings):
     )
 
     # API settings
+    api_key: str = ""  # when non-empty, all non-health endpoints require X-API-Key header
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     api_cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8501"]
