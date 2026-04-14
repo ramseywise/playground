@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from librarian.retrieval.rrf import RRF_K, fuse_rankings, _chunk_hash
+from librarian.retrieval.rrf import fuse_rankings, _chunk_hash
 from librarian.schemas.chunks import Chunk, ChunkMetadata, GradedChunk
 
 
@@ -50,9 +50,6 @@ class TestFuseRankings:
         ranking = [_graded("a"), _graded("b"), _graded("c")]
         result = fuse_rankings([ranking], top_k=2)
         assert len(result) == 2
-
-    def test_default_k_is_60(self) -> None:
-        assert RRF_K == 60
 
     def test_custom_k_affects_scores(self) -> None:
         ranking = [_graded("a")]

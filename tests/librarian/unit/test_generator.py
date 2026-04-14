@@ -8,10 +8,12 @@ import pytest
 from librarian.generation.generator import (
     build_prompt,
     call_llm,
+    call_llm_structured,
     extract_citations,
 )
 from librarian.generation.prompts import SYSTEM_PROMPTS, get_system_prompt
 from librarian.schemas.chunks import Chunk, ChunkMetadata, RankedChunk
+from librarian.schemas.response import RAGResponse
 from librarian.schemas.state import LibrarianState
 
 
@@ -218,3 +220,99 @@ def test_extract_citations_structure() -> None:
     chunks = [_ranked("https://x.com/doc", "Doc Title", "text", 1)]
     citations = extract_citations(chunks)
     assert citations[0] == {"url": "https://x.com/doc", "title": "Doc Title"}
+
+
+# ---------------------------------------------------------------------------
+# RAGResponse model
+# ---------------------------------------------------------------------------
+
+
+def test_rag_response_validates_valid_json() -> None:
+    raw = '{"answer": "yes", "citations": [], "confidence": "high"}'
+    r = RAGResponse.model_validate_json(raw)
+    assert r.answer == "yes"
+    assert r.confidence == "high"
+    assert r.citations == []
+    assert r.follow_up == ""
+
+
+def test_rag_response_with_citations() -> None:
+    raw = (
+        '{"answer": "42", "citations": [{"url": "https://a.com", "title": "A"}], '
+        '"confidence": "medium", "follow_up": "what about 43?"}'
+    )
+    r = RAGResponse.model_validate_json(raw)
+    assert len(r.citations) == 1
+    assert r.citations[0].url == "https://a.com"
+    assert r.follow_up == "what about 43?"
+
+
+def test_rag_response_rejects_invalid_confidence() -> None:
+    raw = '{"answer": "x", "citations": [], "confidence": "maybe"}'
+    with pytest.raises(Exception):
+        RAGResponse.model_validate_json(raw)
+
+
+# ---------------------------------------------------------------------------
+# call_llm_structured
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_call_llm_structured_parses_valid_json(mock_llm: MagicMock) -> None:
+    mock_llm.generate = AsyncMock(
+        return_value='{"answer": "the answer", "citations": [], "confidence": "high"}'
+    )
+    chunks = [_ranked("https://x.com", "T", "text", 1)]
+    result = await call_llm_structured(
+        mock_llm, "system", [{"role": "user", "content": "q"}], chunks
+    )
+    assert isinstance(result, RAGResponse)
+    assert result.answer == "the answer"
+    assert result.confidence == "high"
+
+
+@pytest.mark.asyncio
+async def test_call_llm_structured_strips_markdown_fences(mock_llm: MagicMock) -> None:
+    mock_llm.generate = AsyncMock(
+        return_value='```json\n{"answer": "fenced", "citations": [], "confidence": "low"}\n```'
+    )
+    chunks = [_ranked("https://x.com", "T", "text", 1)]
+    result = await call_llm_structured(
+        mock_llm, "system", [{"role": "user", "content": "q"}], chunks
+    )
+    assert result.answer == "fenced"
+
+
+@pytest.mark.asyncio
+async def test_call_llm_structured_fallback_on_invalid_json(
+    mock_llm: MagicMock,
+) -> None:
+    mock_llm.generate = AsyncMock(return_value="This is not JSON at all.")
+    chunks = [
+        _ranked("https://a.com", "A", "text", 1),
+        _ranked("https://b.com", "B", "text", 2),
+    ]
+    result = await call_llm_structured(
+        mock_llm, "system", [{"role": "user", "content": "q"}], chunks
+    )
+    assert isinstance(result, RAGResponse)
+    assert result.answer == "This is not JSON at all."
+    assert result.confidence == "low"
+    assert len(result.citations) == 2
+    assert result.citations[0].url == "https://a.com"
+
+
+@pytest.mark.asyncio
+async def test_call_llm_structured_fallback_deduplicates_citations(
+    mock_llm: MagicMock,
+) -> None:
+    mock_llm.generate = AsyncMock(return_value="not json")
+    chunks = [
+        _ranked("https://a.com", "A", "text1", 1),
+        _ranked("https://a.com", "A", "text2", 2),
+    ]
+    result = await call_llm_structured(
+        mock_llm, "system", [{"role": "user", "content": "q"}], chunks
+    )
+    assert len(result.citations) == 1

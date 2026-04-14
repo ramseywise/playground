@@ -14,14 +14,10 @@ from hashlib import sha256
 
 from librarian.schemas.chunks import Chunk, GradedChunk
 
-# Standard RRF smoothing constant (Cormack et al. 2009).
-RRF_K: int = 60
-
-
 def fuse_rankings(
     rankings: list[list[GradedChunk]],
     *,
-    k: int = RRF_K,
+    k: int = 60,
     top_k: int | None = None,
 ) -> list[GradedChunk]:
     """Fuse multiple ranked lists using Reciprocal Rank Fusion.

@@ -1,10 +1,34 @@
-.PHONY: setup typecheck eval-unit eval-regression eval-capability eval-compare eval-experiment
+.PHONY: setup lint typecheck test test-librarian test-core test-eval eval-unit eval-regression eval-capability eval-compare eval-experiment
 
 setup:
 	bash setup.sh
 
+# ── Lint & typecheck ─────────────────────────────────────────────────────────
+
+lint:
+	uv run ruff check src/ tests/
+	uv run ruff format --check src/ tests/
+
 typecheck:
 	uv run mypy src/agents/librarian src/core
+
+# ── Test targets ─────────────────────────────────────────────────────────────
+
+# All tests (excluding known-broken google_adk imports)
+test:
+	uv run pytest tests/librarian/ tests/core/ -v --ignore=tests/orchestration/google_adk/
+
+# Librarian unit tests only — fast, no external deps.
+test-librarian:
+	uv run pytest tests/librarian/unit/ -v
+
+# Core module tests.
+test-core:
+	uv run pytest tests/core/ -v
+
+# Eval suite (unit-level — no API calls).
+test-eval:
+	uv run pytest tests/eval/ -v
 
 # ── Eval tiers ────────────────────────────────────────────────────────────────
 

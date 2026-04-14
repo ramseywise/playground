@@ -17,6 +17,7 @@ from typing import Any
 from librarian.plan.analyzer import QueryAnalyzer
 from librarian.schemas.chunks import GradedChunk
 from librarian.schemas.state import LibrarianState
+from librarian.tools.retriever_tool import RetrieverTool
 from orchestration.langgraph.history import CondenserAgent
 from orchestration.langgraph.nodes.reranker import RerankerAgent
 from orchestration.langgraph.nodes.retrieval import RetrieverAgent
@@ -43,6 +44,7 @@ class ToolDeps:
     reranker_agent: RerankerAgent
     condenser_agent: CondenserAgent | None
     analyzer: QueryAnalyzer
+    retriever_tool: RetrieverTool | None = None
 
 
 _deps: ToolDeps | None = None
@@ -54,6 +56,7 @@ def configure_tools(
     condenser_agent: CondenserAgent | None = None,
     *,
     analyzer: QueryAnalyzer | None = None,
+    retriever_tool: RetrieverTool | None = None,
 ) -> ToolDeps:
     """Inject agent objects into the tool functions.
 
@@ -68,6 +71,7 @@ def configure_tools(
         reranker_agent=reranker_agent,
         condenser_agent=condenser_agent,
         analyzer=analyzer or QueryAnalyzer(),
+        retriever_tool=retriever_tool,
     )
     log.info("adk.tools.configured")
     return _deps
@@ -113,6 +117,16 @@ async def search_knowledge_base(
 
     log.info("adk.tool.search", query=query[:80], k=num_results)
 
+    # Prefer RetrieverTool (EnsembleRetriever-backed) when available
+    if deps.retriever_tool is not None:
+        from librarian.tools.retriever_tool import RetrieverToolInput
+
+        tool_input = RetrieverToolInput(queries=[query], num_results=num_results)
+        output = await deps.retriever_tool.run(tool_input)
+        log.info("adk.tool.search.done", query=query[:80], result_count=output.total)
+        return output.model_dump()
+
+    # Fall back to RetrieverAgent (caching, multi-query, grading)
     state: LibrarianState = {"query": query, "standalone_query": query}
     result = await deps.retriever_agent.run(state)
     graded = result["graded_chunks"]

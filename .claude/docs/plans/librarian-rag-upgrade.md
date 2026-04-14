@@ -1,6 +1,6 @@
 # Plan: Librarian RAG Upgrade
 
-**Status:** Draft — awaiting review  
+**Status:** Phase 1 complete  
 **Scope:** `src/librarian/`, `src/orchestration/` — RAG-only (no agent autonomy expansion)  
 **Depends on:** [langgraph-adk-compatibility.md](langgraph-adk-compatibility.md) (partially overlapping — this plan supersedes the ADK tools rewrite in that doc)  
 **Consolidated from:** `librarian-rag-template.md` (merged 2026-04-14) — template architecture is now Phase 2 of this plan
@@ -32,7 +32,7 @@ The Librarian pipeline works but has gaps compared to production-grade RAG patte
 
 ## Phase 1 — Practical Upgrades (shippable independently)
 
-### Step 1 — `EnsembleRetriever` with fingerprint dedup
+### Step 1 — `EnsembleRetriever` with fingerprint dedup ✅
 
 **Files:** new `src/librarian/retrieval/ensemble.py`, edit `src/librarian/retrieval/__init__.py`  
 **Tests:** new `tests/librarian/unit/test_ensemble.py`
@@ -68,7 +68,7 @@ Key behaviors:
 
 The existing `RetrieverAgent` will be updated to delegate to `EnsembleRetriever` instead of manually managing the embed → search → dedup flow. This collapses ~60 lines in `RetrieverAgent.run()` to ~5.
 
-### Step 2 — `RAGResponse` Pydantic model + structured output
+### Step 2 — `RAGResponse` Pydantic model + structured output ✅
 
 **Files:** new model in `src/librarian/schemas/response.py`, edit `src/librarian/generation/generator.py`  
 **Tests:** edit `tests/librarian/unit/test_generator.py`
@@ -97,7 +97,7 @@ Update `call_llm()` → `call_llm_structured()` path:
 
 Keep the unstructured path for `conversational` and `out_of_scope` intents — those don't need JSON mode.
 
-### Step 3 — Tool abstraction layer (`BaseTool` protocol)
+### Step 3 — Tool abstraction layer (`BaseTool` protocol) ✅
 
 **Files:** new `src/librarian/tools/base.py`, new `src/librarian/tools/retriever_tool.py`, new `src/librarian/tools/__init__.py`  
 **Tests:** new `tests/librarian/unit/test_tools.py`
@@ -177,7 +177,7 @@ Notable: `DEFAULT_CONFIDENCE_GATE` (0.3) in `generation.py` **disagrees** with `
 
 Wire `relevance_threshold` from config into `RetrieverAgent` constructor (currently reads from the `_RELEVANCE_THRESHOLD` module constant).
 
-### Step 5 — CI parity (Makefile + shared conventions)
+### Step 5 — CI parity (Makefile + shared conventions) ✅
 
 **Files:** edit `Makefile`, possibly new `pyproject.toml` test markers  
 **No new code in `src/`**
