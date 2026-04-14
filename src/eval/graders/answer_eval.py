@@ -90,9 +90,9 @@ class AnswerJudge:
         model: str = "",
         max_context_chars: int = 3000,
     ) -> None:
-        from playground.src.clients.claude_client import create_client
+        import anthropic
 
-        self._client = create_client()
+        self._client = anthropic.Anthropic()
         self._model = model or _settings.model_haiku
         self._max_context_chars = max_context_chars
 
@@ -220,9 +220,9 @@ class ClosedBookBaseline:
     )
 
     def __init__(self, model: str = "") -> None:
-        from playground.src.clients.claude_client import create_client
+        import anthropic
 
-        self._client = create_client()
+        self._client = anthropic.Anthropic()
         self._model = model or _settings.model_haiku
 
     def answer(self, question: str) -> str:

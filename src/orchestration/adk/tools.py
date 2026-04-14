@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from playground.src.clients.llm import LLMClient
+from clients.llm import LLMClient
 from librarian.plan.analyzer import QueryAnalyzer
 from librarian.reranker.base import Reranker
 from librarian.retrieval.base import Embedder, Retriever

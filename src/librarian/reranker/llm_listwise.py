@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from playground.src.clients.llm import LLMClient
+from clients.llm import LLMClient
 from librarian.schemas.chunks import GradedChunk, RankedChunk
 from core.logging import get_logger
 
