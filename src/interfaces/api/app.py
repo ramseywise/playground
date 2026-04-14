@@ -17,8 +17,7 @@ from interfaces.api.middleware import (
 )
 from interfaces.api.routes import router
 from librarian.config import LibrarySettings
-from core.logging import get_logger
-from core.config.logging import configure_logging
+from core.logging import configure_logging, get_logger
 
 log = get_logger(__name__)
 
