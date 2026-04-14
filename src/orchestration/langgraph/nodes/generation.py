@@ -14,10 +14,6 @@ from core.logging import get_logger
 
 log = get_logger(__name__)
 
-# Minimum confidence_score required to generate a response.
-# Below this threshold the graph should retry retrieval (CRAG loop).
-DEFAULT_CONFIDENCE_GATE = 0.3
-
 
 class GeneratorAgent:
     """Stateless node: build_prompt → call_llm → extract_citations.
@@ -38,7 +34,7 @@ class GeneratorAgent:
     def __init__(
         self,
         llm: LLMClient,
-        confidence_threshold: float = DEFAULT_CONFIDENCE_GATE,
+        confidence_threshold: float = 0.4,
     ) -> None:
         self._llm = llm
         self._threshold = confidence_threshold

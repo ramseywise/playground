@@ -6,12 +6,12 @@ from langgraph.graph.state import CompiledStateGraph
 
 from librarian.factory import create_librarian, warm_up_embedder
 from orchestration.langgraph.nodes.generation import GeneratorAgent
-from playground.src.clients.bedrock_KB import BedrockKBClient
+from clients.bedrock_KB import BedrockKBClient
 from clients.google_vertex import GoogleRAGClient
 from librarian.ingestion.pipeline import IngestionPipeline
 from librarian.config import LibrarySettings, settings as _default_settings
 from interfaces.api.triage import TriageService
-from core.llm import AnthropicLLM
+from clients.llm import AnthropicLLM
 from core.logging import get_logger
 
 log = get_logger(__name__)

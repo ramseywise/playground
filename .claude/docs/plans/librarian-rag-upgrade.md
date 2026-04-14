@@ -157,7 +157,7 @@ class RetrieverTool:
 
 This makes it trivial to wrap any tool for a new framework (LangGraph ToolNode, ADK FunctionTool, or a future Python agent SDK) without reimplementation.
 
-### Step 4 — Config-driven constants
+### Step 4 — Config-driven constants ✅
 
 **Files:** edit `src/librarian/config.py`, edit files referencing hardcoded values  
 **Tests:** edit existing config/factory tests

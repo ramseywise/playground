@@ -13,13 +13,10 @@ from core.logging import get_logger
 
 log = get_logger(__name__)
 
-# Chunk is relevant when its hybrid score clears this threshold.
-_RELEVANCE_THRESHOLD = 0.1
-
 
 def _grade_chunks(
     results: list[RetrievalResult],
-    threshold: float = _RELEVANCE_THRESHOLD,
+    threshold: float = 0.1,
 ) -> list[GradedChunk]:
     """Convert raw retrieval results to GradedChunks, deduplicating by chunk ID."""
     seen: set[str] = set()
@@ -55,7 +52,7 @@ class RetrieverAgent:
         retriever: Retriever,
         embedder: Embedder,
         top_k: int = 10,
-        relevance_threshold: float = _RELEVANCE_THRESHOLD,
+        relevance_threshold: float = 0.1,
         cache: RetrievalCache | None = None,
         cache_strategy: str = "",
     ) -> None:

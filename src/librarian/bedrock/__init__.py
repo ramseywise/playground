@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from clients.bedrock import BedrockKBClient, BedrockKBResponse
+from clients.bedrock_KB import BedrockKBClient, BedrockKBResponse
 
 __all__ = ["BedrockKBClient", "BedrockKBResponse"]
