@@ -138,7 +138,7 @@ cp .env.example .env
 # BEDROCK_REGION=us-east-1
 
 # 2. Streamlit chat playground (supports all backends + side-by-side comparison)
-uv run streamlit run frontend/librarian_chat.py
+uv run streamlit run frontend/streamlit/librarian_chat.py
 # → http://localhost:8501 — select any backend or compare multiple side by side
 ```
 

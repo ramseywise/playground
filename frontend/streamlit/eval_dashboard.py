@@ -8,7 +8,7 @@ Data sources (in priority order):
     2. Langfuse API (when LANGFUSE_ENABLED=true)
 
 Run:
-    streamlit run frontend/eval_dashboard.py
+    streamlit run frontend/streamlit/eval_dashboard.py
 """
 
 from __future__ import annotations
