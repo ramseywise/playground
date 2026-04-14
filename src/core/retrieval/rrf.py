@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 
-from core.schemas.chunks import Chunk, GradedChunk
+from librarian.schemas.chunks import Chunk, GradedChunk
 
 # Standard RRF smoothing constant (Cormack et al. 2009).
 RRF_K: int = 60

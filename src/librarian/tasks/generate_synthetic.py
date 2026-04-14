@@ -122,9 +122,9 @@ def generate_from_chunks(
             "Estimated cost: ~$0.002–0.005 per sample with Haiku."
         )
 
-    from playground.src.clients.claude_client import create_client
+    import anthropic
 
-    client = create_client()
+    client = anthropic.Anthropic()
     target = chunks[:n] if n is not None else chunks
     samples: list[GoldenSample] = []
 

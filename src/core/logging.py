@@ -6,6 +6,6 @@ This module re-exports ``get_logger`` for backward compatibility —
 
 from __future__ import annotations
 
-from core.config.logging import get_logger
+from core.config.logging import configure_logging, get_logger  # noqa: F401
 
-__all__ = ["get_logger"]
+__all__ = ["configure_logging", "get_logger"]

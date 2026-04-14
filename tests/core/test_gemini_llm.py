@@ -31,7 +31,7 @@ sys.modules.setdefault("google", _google_mod)
 sys.modules.setdefault("google.genai", _genai_mod)
 sys.modules.setdefault("google.genai.types", _genai_types)
 
-from core.clients.llm import GeminiLLM, LLMClient, LLMClientSync, _to_gemini_contents
+from clients.llm import GeminiLLM, LLMClient, LLMClientSync, _to_gemini_contents
 
 
 # ---------------------------------------------------------------------------
