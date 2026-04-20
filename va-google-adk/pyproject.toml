@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "va_google_adk"
+version = "0.1.0"
+description = "VA assistant — Google ADK (Python)"
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    "fastapi>=0.115.0",
+    "google-adk>=1.28.0",
+    "google-genai>=1.69.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.2.1",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["agents", "gateway", "shared"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "agents"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[dependency-groups]
+dev = [
+    "google-adk[eval]>=1.28.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
