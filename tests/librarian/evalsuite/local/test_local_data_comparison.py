@@ -33,7 +33,7 @@ from eval.loaders import load_golden_from_jsonl
 from eval.metrics.retrieval import evaluate_retrieval
 from eval.variants import VARIANTS
 from librarian.schemas.retrieval import RetrievalResult
-from librarian.tasks.models import GoldenSample, RetrievalMetrics
+from librarian.ingestion.tasks.models import GoldenSample, RetrievalMetrics
 from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
 

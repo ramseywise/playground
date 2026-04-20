@@ -20,7 +20,7 @@ from eval.experiment import (
 from eval.variants import VARIANTS
 from librarian.config import LibrarySettings
 from librarian.schemas.chunks import Chunk
-from librarian.tasks.models import GoldenSample
+from librarian.ingestion.tasks.models import GoldenSample
 from tests.librarian.evalsuite.conftest import CORPUS, GOLDEN
 
 

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 
-from librarian.tasks.models import GoldenSample
+from librarian.ingestion.tasks.models import GoldenSample
 from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
 from librarian.schemas.chunks import Chunk, ChunkMetadata

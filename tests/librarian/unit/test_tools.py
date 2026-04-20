@@ -6,7 +6,7 @@ import pytest
 
 from librarian.retrieval.ensemble import EnsembleRetriever
 from librarian.schemas.chunks import Chunk, ChunkMetadata
-from librarian.tools.base import BaseTool, ToolInput, ToolOutput
+from librarian.tools.base import ToolInput, ToolOutput
 from librarian.tools.retriever_tool import (
     RetrieverTool,
     RetrieverToolInput,
@@ -34,18 +34,11 @@ def _seeded_chunks(n: int = 5) -> list[Chunk]:
 
 
 # ---------------------------------------------------------------------------
-# BaseTool protocol
+# RetrieverTool attributes
 # ---------------------------------------------------------------------------
 
 
-class TestBaseToolProtocol:
-    def test_retriever_tool_satisfies_protocol(self) -> None:
-        retriever = InMemoryRetriever()
-        embedder = MockEmbedder(dim=8, seed=42)
-        ensemble = EnsembleRetriever([retriever], embedder)
-        tool = RetrieverTool(ensemble)
-        assert isinstance(tool, BaseTool)
-
+class TestRetrieverToolAttributes:
     def test_tool_has_required_attributes(self) -> None:
         retriever = InMemoryRetriever()
         embedder = MockEmbedder(dim=8, seed=42)

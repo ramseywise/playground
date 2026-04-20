@@ -14,7 +14,7 @@ from __future__ import annotations
 import pytest
 
 from eval.metrics.retrieval import evaluate_retrieval
-from librarian.tasks.models import GoldenSample, RetrievalMetrics
+from librarian.ingestion.tasks.models import GoldenSample, RetrievalMetrics
 from storage.vectordb.inmemory import InMemoryRetriever
 from tests.librarian.testing.mock_embedder import MockEmbedder
 from librarian.schemas.retrieval import RetrievalResult

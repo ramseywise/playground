@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from librarian.tasks.extract_golden import (
+from librarian.ingestion.tasks.extract_golden import (
     _make_query_id,
     extract_samples,
     filter_by_tier,
@@ -19,11 +19,11 @@ from librarian.tasks.extract_golden import (
     load_samples,
     save_samples,
 )
-from librarian.tasks.generate_synthetic import (
+from librarian.ingestion.tasks.generate_synthetic import (
     CONFIRM_EXPENSIVE_OPS,
     generate_from_chunks,
 )
-from librarian.tasks.models import GoldenSample
+from librarian.ingestion.tasks.models import GoldenSample
 
 
 # ---------------------------------------------------------------------------
