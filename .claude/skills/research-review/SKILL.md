@@ -1,6 +1,6 @@
 ---
 name: research-review
-description: "Phase 1. Review, iterate, and deepen research artifacts. Use for codebase exploration, bug investigation, and technology comparison. Writes to .claude/docs/research/<name>.md."
+description: "Phase 1. Review, iterate, and deepen research artifacts. Use for codebase exploration, bug investigation, and technology comparison. Writes to .claude/docs/in-progress/<name>/research.md."
 disable-model-invocation: true
 allowed-tools: Read Bash Grep Glob WebSearch Write
 ---
@@ -19,7 +19,7 @@ Reserved words: `review`, `refine`, `argue`. If no name provided, ask for one.
 
 ## Start mode
 
-Write to `.claude/docs/research/$NAME.md`. Update `## Active docs` in `.claude/docs/SESSION.md`.
+Write to `.claude/docs/in-progress/$NAME/research.md`. Update `## Active docs` in `.claude/docs/SESSION.md`.
 
 ### Constraints
 

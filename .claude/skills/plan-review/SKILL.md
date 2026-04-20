@@ -1,6 +1,6 @@
 ---
 name: plan-review
-description: "Phase 2. Review, iterate, and refine implementation plans. Reads research from SESSION.md active docs and writes to .claude/docs/plans/<name>.md."
+description: "Phase 2. Review, iterate, and refine implementation plans. Reads research from SESSION.md active docs and writes to .claude/docs/in-progress/<name>/plan.md."
 disable-model-invocation: true
 allowed-tools: Read Grep Glob Bash Write
 ---
@@ -18,11 +18,11 @@ Reserved words: `review`, `refine`. If no name provided, ask for one.
 
 ## Start mode
 
-1. Read active research from `.claude/docs/SESSION.md` → `## Active docs`. If none, check `.claude/docs/research/` for candidates. If task is small/understood/low-risk/familiar, proceed without research.
+1. Read active research from `.claude/docs/SESSION.md` → `## Active docs`. If none, check `.claude/docs/in-progress/` for candidates. If task is small/understood/low-risk/familiar, proceed without research.
 2. Run `git status` and `uv run pytest --tb=no -q` for baseline.
 3. Read every file that will be touched before specifying changes.
 
-Write to `.claude/docs/plans/$NAME.md`. Update SESSION.md active docs.
+Write to `.claude/docs/in-progress/$NAME/plan.md`. Update SESSION.md active docs.
 
 ### Key constraints
 

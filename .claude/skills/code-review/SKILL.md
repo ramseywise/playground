@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: "Phase 4. Runs tests, reviews the implementation diff against the active plan, validates plan fidelity, writes .claude/docs/reviews/<name>.md and PR description if approved."
+description: "Phase 4. Runs tests, reviews the implementation diff against the active plan, validates plan fidelity, writes .claude/docs/in-progress/<name>/review.md. If verdict != approved, appends Review Findings back to plan.md."
 disable-model-invocation: true
 allowed-tools: Read Grep Glob Bash Write
 ---
@@ -11,7 +11,7 @@ You are a senior engineer doing a thorough code review. Be direct and specific. 
 
 ## Before reviewing
 
-1. Read active plan. Read `.claude/docs/CHANGELOG.md` if it exists and the workflow uses it.
+1. Read active plan from `.claude/docs/in-progress/$NAME/plan.md`. Read `.claude/docs/CHANGELOG.md` if it exists and the workflow uses it.
 2. `uv run pytest --tb=short -q` — if tests fail, stop
 3. `git diff main...HEAD` — read every changed file in full
 
@@ -35,7 +35,7 @@ Check key files for: `TODO`, `NotImplementedError`, `return None`, `pass` on cri
 
 ## Output
 
-Write to `.claude/docs/reviews/$NAME.md`:
+Write to `.claude/docs/in-progress/$NAME/review.md`:
 
 ```markdown
 ## Review: [name]
@@ -54,6 +54,20 @@ Date: [today]
 ### Verdict
 [ ] Needs changes | [ ] Approved with minor fixes | [ ] Approved
 ```
+
+## If verdict != Approved: feed findings back to plan
+
+After writing review.md, if verdict is "Needs changes" or "Approved with minor fixes", append the following section to `.claude/docs/in-progress/$NAME/plan.md`:
+
+```markdown
+## Review Findings — [date]
+
+| Finding | Severity | Status |
+|---------|----------|--------|
+| [description] `file:line` | Blocking / Non-blocking | open / addressed / deferred / won't-fix |
+```
+
+Each blocking finding must have a Status of `open` until resolved. Update the table (do not create a new one) on subsequent review passes.
 
 ## If approved: PR description
 

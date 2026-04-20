@@ -1,0 +1,44 @@
+{
+  "eval_id": 1,
+  "eval_name": "product-card",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "uses-surfaceUpdate-not-updateComponents",
+      "passed": true,
+      "evidence": "JSON example uses 'surfaceUpdate' message type, not 'updateComponents'"
+    },
+    {
+      "text": "flat-adjacency-list",
+      "passed": true,
+      "evidence": "All components are siblings in the top-level 'components' array with ID references (root-col, product-card, card-content, product-image, product-name, product-price, add-to-cart-label, add-to-cart-btn)"
+    },
+    {
+      "text": "includes-beginRendering",
+      "passed": true,
+      "evidence": "beginRendering message present as the second message with surfaceId and root: 'root-col'"
+    },
+    {
+      "text": "all-four-components-present",
+      "passed": true,
+      "evidence": "Card (product-card), Image (product-image), Text for name (product-name) and price (product-price), Button (add-to-cart-btn) all present"
+    },
+    {
+      "text": "button-has-action",
+      "passed": true,
+      "evidence": "Button has action: { type: 'event', name: 'addToCart', payload: { productId: 'headphones-001' } }"
+    },
+    {
+      "text": "adk-agent-instantiated",
+      "passed": true,
+      "evidence": "root_agent = Agent(model='gemini-2.5-flash', name='product_card_agent', description='...', instruction=A2UI_INSTRUCTION)"
+    }
+  ],
+  "pass_rate": 1.0,
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  }
+}

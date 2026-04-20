@@ -1,0 +1,27 @@
+{
+  "eval_id": 2,
+  "eval_name": "version-comparison",
+  "prompt": "What's the difference between A2UI v0.8 and v0.9? I'm starting a new project — which should I use and why? Also show me the same simple 'Hello World' text surface in both versions.",
+  "assertions": [
+    {
+      "name": "recommends-v08-for-new-projects",
+      "description": "Explicitly recommends v0.8 for new/production projects because it is stable"
+    },
+    {
+      "name": "v08-example-has-beginRendering",
+      "description": "v0.8 Hello World example includes a beginRendering message"
+    },
+    {
+      "name": "v09-example-has-createSurface",
+      "description": "v0.9 Hello World example includes a createSurface message"
+    },
+    {
+      "name": "mentions-flat-component-format-in-v09",
+      "description": "Explains that v0.9 uses a flat component format where 'component' is a string key"
+    },
+    {
+      "name": "mentions-plain-json-data-in-v09",
+      "description": "Mentions that v0.9 dataModel uses plain JSON values (not valueString/valueNumber wrappers)"
+    }
+  ]
+}

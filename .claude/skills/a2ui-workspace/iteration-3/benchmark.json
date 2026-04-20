@@ -1,0 +1,333 @@
+{
+  "metadata": {
+    "skill_name": "a2ui",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-04-02T02:35:21Z",
+    "evals_run": [
+      0,
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 36.5,
+        "tokens": 16237,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "uses-flat-adjacency-list",
+          "passed": true,
+          "evidence": "All components in flat list with ID refs"
+        },
+        {
+          "text": "textfield-has-data-binding",
+          "passed": true,
+          "evidence": "email-field uses value: {path: /form/email}"
+        },
+        {
+          "text": "multiplechoice-present",
+          "passed": true,
+          "evidence": "MultipleChoice with Standard/Express/Overnight options"
+        },
+        {
+          "text": "card-reads-from-data-model",
+          "passed": true,
+          "evidence": "summary-value-total uses {path: /order/total}"
+        },
+        {
+          "text": "dataModelUpdate-included",
+          "passed": true,
+          "evidence": "dataModelUpdate seeds form/email, form/shipping, order/* paths"
+        },
+        {
+          "text": "beginRendering-is-last",
+          "passed": true,
+          "evidence": "beginRendering is the final message"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 52.6,
+        "tokens": 15641,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "identifies-missing-beginRendering-as-primary-cause",
+          "passed": true,
+          "evidence": "Cause 1: Missing beginRendering (most common cause)"
+        },
+        {
+          "text": "explains-ordering-requirement",
+          "passed": true,
+          "evidence": "All surfaceUpdate messages must arrive before beginRendering"
+        },
+        {
+          "text": "mentions-root-id-mismatch",
+          "passed": true,
+          "evidence": "beginRendering.root must reference an id that actually exists"
+        },
+        {
+          "text": "shows-correct-example",
+          "passed": true,
+          "evidence": "Shows broken vs fixed JSON with surfaceUpdate then beginRendering"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 65.2,
+        "tokens": 16437,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "uses-surfaceUpdate-not-updateComponents",
+          "passed": true,
+          "evidence": "Uses surfaceUpdate message type"
+        },
+        {
+          "text": "flat-adjacency-list",
+          "passed": true,
+          "evidence": "All 8 components flat with ID refs"
+        },
+        {
+          "text": "includes-beginRendering",
+          "passed": true,
+          "evidence": "beginRendering present as final message"
+        },
+        {
+          "text": "all-four-components-present",
+          "passed": true,
+          "evidence": "Card, Image, Text x2, Button all present"
+        },
+        {
+          "text": "button-has-action",
+          "passed": true,
+          "evidence": "Button has action: {type: event, name: addToCart}"
+        },
+        {
+          "text": "adk-agent-instantiated",
+          "passed": true,
+          "evidence": "root_agent = Agent(model=..., name=..., instruction=..., tools=[...])"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.16666666666666666,
+        "passed": 1,
+        "failed": 5,
+        "total": 6,
+        "time_seconds": 70.2,
+        "tokens": 12960,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "uses-flat-adjacency-list",
+          "passed": false,
+          "evidence": "Uses nested children tree inside \"layout\" \u2014 not flat adjacency list"
+        },
+        {
+          "text": "textfield-has-data-binding",
+          "passed": false,
+          "evidence": "Uses fake \"bind\": \"email\" shorthand, not {path: \"/...\"}"
+        },
+        {
+          "text": "multiplechoice-present",
+          "passed": true,
+          "evidence": "MultipleChoice with shipping options present"
+        },
+        {
+          "text": "card-reads-from-data-model",
+          "passed": false,
+          "evidence": "Card uses fake \"bind\" and \"expression\" fields, not path binding"
+        },
+        {
+          "text": "dataModelUpdate-included",
+          "passed": false,
+          "evidence": "No dataModelUpdate message \u2014 uses fake \"data\" block in surface definition"
+        },
+        {
+          "text": "beginRendering-is-last",
+          "passed": false,
+          "evidence": "No beginRendering message at all"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "failed": 4,
+        "total": 4,
+        "time_seconds": 61.7,
+        "tokens": 11819,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "identifies-missing-beginRendering-as-primary-cause",
+          "passed": false,
+          "evidence": "beginRendering never mentioned \u2014 lists generic web debugging advice"
+        },
+        {
+          "text": "explains-ordering-requirement",
+          "passed": false,
+          "evidence": "No mention of message ordering"
+        },
+        {
+          "text": "mentions-root-id-mismatch",
+          "passed": false,
+          "evidence": "Not mentioned"
+        },
+        {
+          "text": "shows-correct-example",
+          "passed": false,
+          "evidence": "No JSON example at all"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 3,
+        "failed": 3,
+        "total": 6,
+        "time_seconds": 96.8,
+        "tokens": 15178,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "uses-surfaceUpdate-not-updateComponents",
+          "passed": false,
+          "evidence": "Uses fake schema: {\"a2ui\": \"0.8\", \"type\": \"card\", \"children\": [...]} \u2014 not surfaceUpdate"
+        },
+        {
+          "text": "flat-adjacency-list",
+          "passed": false,
+          "evidence": "Nested children tree, not flat adjacency list"
+        },
+        {
+          "text": "includes-beginRendering",
+          "passed": false,
+          "evidence": "No beginRendering message"
+        },
+        {
+          "text": "all-four-components-present",
+          "passed": true,
+          "evidence": "Card/container, image, text (name+price), button all present conceptually"
+        },
+        {
+          "text": "button-has-action",
+          "passed": true,
+          "evidence": "Button has action.type=event with add_to_cart payload"
+        },
+        {
+          "text": "adk-agent-instantiated",
+          "passed": true,
+          "evidence": "Agent(...) instantiated with name, model, instruction, tools"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 51.4333,
+        "stddev": 14.3855,
+        "min": 36.5,
+        "max": 65.2
+      },
+      "tokens": {
+        "mean": 16105.0,
+        "stddev": 414.0918,
+        "min": 15641,
+        "max": 16437
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.2222,
+        "stddev": 0.2546,
+        "min": 0.0,
+        "max": 0.5
+      },
+      "time_seconds": {
+        "mean": 76.2333,
+        "stddev": 18.3113,
+        "min": 61.7,
+        "max": 96.8
+      },
+      "tokens": {
+        "mean": 13319.0,
+        "stddev": 1708.0343,
+        "min": 11819,
+        "max": 15178
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.78",
+      "time_seconds": "-24.8",
+      "tokens": "+2786"
+    }
+  },
+  "notes": []
+}

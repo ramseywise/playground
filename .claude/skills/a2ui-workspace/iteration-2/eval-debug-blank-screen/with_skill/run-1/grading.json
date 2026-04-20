@@ -1,0 +1,32 @@
+{
+  "eval_name": "eval-debug-blank-screen",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "identifies-missing-beginRendering-as-primary-cause",
+      "passed": true,
+      "evidence": "\"1. Missing beginRendering (most common cause)\" listed first"
+    },
+    {
+      "text": "explains-ordering-requirement",
+      "passed": true,
+      "evidence": "Explains surfaceUpdate must come before beginRendering"
+    },
+    {
+      "text": "mentions-root-id-mismatch",
+      "passed": true,
+      "evidence": "root field must match an id in components list"
+    },
+    {
+      "text": "shows-correct-example",
+      "passed": true,
+      "evidence": "Shows wrong vs correct JSON with surfaceUpdate then beginRendering"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1.0
+  }
+}

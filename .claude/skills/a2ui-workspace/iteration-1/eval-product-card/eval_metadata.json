@@ -1,0 +1,31 @@
+{
+  "eval_id": 1,
+  "eval_name": "product-card",
+  "prompt": "Help me write an ADK agent in Python that outputs A2UI v0.8 JSON showing a product card with an image, name, price, and an 'Add to Cart' button. Include the full agent code and example A2UI JSON output.",
+  "assertions": [
+    {
+      "name": "uses-surfaceUpdate-not-updateComponents",
+      "description": "Response uses v0.8 surfaceUpdate message type (not v0.9 updateComponents)"
+    },
+    {
+      "name": "flat-adjacency-list",
+      "description": "Components are defined as a flat list with ID references, not a deeply nested JSON tree"
+    },
+    {
+      "name": "includes-beginRendering",
+      "description": "Response includes a beginRendering message after the surfaceUpdate"
+    },
+    {
+      "name": "all-four-components-present",
+      "description": "Response includes Card, Image, Text (for name and price), and Button components"
+    },
+    {
+      "name": "button-has-action",
+      "description": "Button component has an action property for 'Add to Cart'"
+    },
+    {
+      "name": "adk-agent-instantiated",
+      "description": "Python code instantiates an ADK Agent with model, name, instruction, and tools parameters"
+    }
+  ]
+}

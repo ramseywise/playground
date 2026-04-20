@@ -16,7 +16,7 @@ tests/                # Mirrors src/agents/ structure
 obsidian/             # Curated knowledge corpus (vault output)
 ```
 
-> **Current state**: See `.claude/docs/plans/` for active plans and `.claude/docs/plans/backlog/` for deferred work.
+> **Current state**: See `.claude/docs/in-progress/` for active plans and `.claude/docs/backlog/` for deferred work. See `.claude/docs/INDEX.md` for the full topic map.
 
 ## Stack
 
@@ -108,15 +108,19 @@ All phase artifacts live in `{project}/.claude/docs/` and are gitignored.
 
 | Phase | Skill | Artifact |
 |-------|-------|----------|
-| 1. Research | `/research-review <name>` | `.claude/docs/research/<name>.md` |
+| 1. Research | `/research-review <name>` | `.claude/docs/in-progress/<name>/research.md` |
 | 1a. Iterate | `/research-review review\|refine\|argue` | (updates research file) |
-| 2. Plan | `/plan-review <name>` | `.claude/docs/plans/<name>.md` |
+| 2. Plan | `/plan-review <name>` | `.claude/docs/in-progress/<name>/plan.md` |
 | 2a. Iterate | `/plan-review review\|refine` | (updates plan file) |
 | — | `/compact-session` | — ← **saves artifacts + checkpoint + commits before compacting** |
 | 3. Execute | `/execute-plan` | `.claude/docs/CHANGELOG.md` (append per step when used) |
-| 4. Review | `/code-review <name>` | `.claude/docs/reviews/<name>.md` + PR |
+| 4. Review | `/code-review <name>` | `.claude/docs/in-progress/<name>/review.md` + PR |
+| 4a. Findings | (automatic in `/code-review`) | appended to `in-progress/<name>/plan.md` if verdict != Approved |
+| 5. Archive | manual or `/archive-topic <name>` | moves `in-progress/<name>/` → `archived/<name>/` |
 
 All phase artifacts live in `.claude/docs/` — do NOT create them at the project root. Use root-level `docs/` only for human-facing project documentation if the repo needs it.
+
+**Archive trigger**: all three artifacts present (research.md + plan.md + review.md) AND review verdict is Approved (or all blocking findings resolved). Move `in-progress/<name>/` to `archived/<name>/`.
 
 All skills run **directly in the current conversation** — no subagents for pipeline phases.
 

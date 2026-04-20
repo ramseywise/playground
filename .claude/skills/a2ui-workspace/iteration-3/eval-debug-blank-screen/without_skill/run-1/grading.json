@@ -1,0 +1,32 @@
+{
+  "eval_name": "eval-debug-blank-screen",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "identifies-missing-beginRendering-as-primary-cause",
+      "passed": false,
+      "evidence": "beginRendering never mentioned \u2014 lists generic web debugging advice"
+    },
+    {
+      "text": "explains-ordering-requirement",
+      "passed": false,
+      "evidence": "No mention of message ordering"
+    },
+    {
+      "text": "mentions-root-id-mismatch",
+      "passed": false,
+      "evidence": "Not mentioned"
+    },
+    {
+      "text": "shows-correct-example",
+      "passed": false,
+      "evidence": "No JSON example at all"
+    }
+  ],
+  "summary": {
+    "passed": 0,
+    "failed": 4,
+    "total": 4,
+    "pass_rate": 0.0
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "eval_name": "eval-product-card",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "uses-surfaceUpdate-not-updateComponents",
+      "passed": true,
+      "evidence": "Uses surfaceUpdate message type"
+    },
+    {
+      "text": "flat-adjacency-list",
+      "passed": true,
+      "evidence": "All components flat with ID refs, no nesting"
+    },
+    {
+      "text": "includes-beginRendering",
+      "passed": true,
+      "evidence": "beginRendering present as final message"
+    },
+    {
+      "text": "all-four-components-present",
+      "passed": true,
+      "evidence": "Card, Image, Text (name+price), Button all present"
+    },
+    {
+      "text": "button-has-action",
+      "passed": false,
+      "evidence": "Button has child but no action property in JSON example"
+    },
+    {
+      "text": "adk-agent-instantiated",
+      "passed": true,
+      "evidence": "root_agent = Agent(model=..., name=..., instruction=..., tools=[...])"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 1,
+    "total": 6,
+    "pass_rate": 0.8333333333333334
+  }
+}
