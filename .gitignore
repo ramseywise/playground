@@ -69,3 +69,9 @@ docs/
 
 # Research agent manifest
 .processed.json
+
+/ts_google_adk
+/infrastructure
+/infra
+/frontend
+/.github
