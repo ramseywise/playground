@@ -23,8 +23,8 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
-from playground.agent_poc.mcp_servers.billy.app.common import register_all
-from playground.agent_poc.mcp_servers.billy.app.config import Config
+from app.common import register_all
+from app.config import Config
 
 mcp = FastMCP(name=Config.SERVER_NAME)
 register_all(mcp)

@@ -2,7 +2,7 @@
 
 from typing import Literal, Optional
 
-from playground.agent_poc.mcp_servers.billy.app.db import get_conn, next_id
+from app.db import get_conn, next_id
 
 # Valid sort columns – whitelisted to prevent SQL injection.
 _SORT_COLS = {"name", "created_time"}
@@ -153,6 +153,30 @@ def edit_customer(
         "registration_no": c["registration_no"],
         "created_time": c["created_time"],
     }
+
+
+def get_customer(customer_id: str) -> dict:
+    """Gets detailed information about a single customer by their ID.
+
+    Returns the full customer record including address, contact details,
+    and registration number.
+
+    Args:
+        customer_id: The customer/contact ID to look up.
+
+    Returns:
+        Full customer record, or an error dict if not found.
+    """
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM customers WHERE id = ?", (customer_id,)
+        ).fetchone()
+        if not row:
+            return {"error": f"Customer '{customer_id}' not found."}
+        c = dict(row)
+        c["is_customer"] = bool(c["is_customer"])
+        c["is_supplier"] = bool(c["is_supplier"])
+    return c
 
 
 def create_customer(

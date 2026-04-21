@@ -1,4 +1,5 @@
-.PHONY: setup lint typecheck test test-librarian test-core test-eval eval-unit eval-regression eval-capability eval-compare eval-experiment
+.PHONY: setup lint typecheck test test-librarian test-core test-eval eval-unit eval-regression eval-capability eval-compare eval-experiment \
+        va-up va-up-ui va-down va-smoke
 
 setup:
 	bash setup.sh
@@ -62,3 +63,28 @@ eval-compare:
 # Set EVAL_DATASET_PATH for the external golden JSONL; falls back to test samples.
 eval-experiment:
 	uv run python -m eval.experiment run
+
+# ── VA agents (docker compose) ────────────────────────────────────────────────
+
+COMPOSE := docker compose -f infrastructure/containers/docker-compose.va.yml
+
+# Full stack: frontend + billy-mcp + both gateways + postgres
+va-up:
+	$(COMPOSE) up --build
+
+# UI only: frontend + billy-mcp (fastest path to test the agent)
+va-up-ui:
+	$(COMPOSE) up --build frontend billy-mcp
+
+va-down:
+	$(COMPOSE) down
+
+va-smoke:
+	@echo "--- frontend ---"
+	@curl -sf http://localhost:3000/health || echo "FAIL :3000"
+	@echo "--- billy-mcp ---"
+	@curl -sf http://localhost:8766/docs > /dev/null && echo "OK :8766" || echo "FAIL :8766"
+	@echo "--- va-gateway-adk ---"
+	@curl -sf http://localhost:8000/health || echo "FAIL :8000"
+	@echo "--- va-gateway-lg ---"
+	@curl -sf http://localhost:8001/health || echo "FAIL :8001"

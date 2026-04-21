@@ -1,6 +1,6 @@
 """Email stub tools for the Billy MCP server."""
 
-from playground.agent_poc.mcp_servers.billy.app.db import get_conn
+from app.db import get_conn
 
 
 def send_invoice_by_email(
@@ -39,4 +39,41 @@ def send_invoice_by_email(
         "invoice_id": invoice_id,
         "sent_state": "sent",
         "message": f"Invoice successfully sent by email to {email}.",
+    }
+
+
+def send_quote_by_email(
+    quote_id: str,
+    contact_id: str,
+    email_subject: str,
+    email_body: str,
+) -> dict:
+    """Sends a quote by email to the customer's primary contact person.
+
+    Args:
+        quote_id: The quote ID to send.
+        contact_id: The customer/contact ID associated with this quote.
+        email_subject: Email subject line.
+        email_body: Email body text.
+
+    Returns:
+        Dict with success status, quote_id, sent_state, and a confirmation message.
+    """
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT email FROM customers WHERE id = ?", (contact_id,)
+        ).fetchone()
+
+    email = row["email"] if row else None
+    if not email:
+        return {
+            "success": False,
+            "error": "No email address found for this customer. Please update their contact details first.",
+        }
+
+    return {
+        "success": True,
+        "quote_id": quote_id,
+        "sent_state": "sent",
+        "message": f"Quote successfully sent by email to {email}.",
     }

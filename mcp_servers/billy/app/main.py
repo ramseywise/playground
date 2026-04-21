@@ -19,11 +19,11 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-from playground.agent_poc.mcp_servers.billy.app.config import Config
-from playground.agent_poc.mcp_servers.billy.app.tools.customers import create_customer, edit_customer, list_customers
-from playground.agent_poc.mcp_servers.billy.app.tools.emails import send_invoice_by_email
-from playground.agent_poc.mcp_servers.billy.app.tools.invitations import invite_user
-from playground.agent_poc.mcp_servers.billy.app.tools.invoices import (
+from app.config import Config
+from app.tools.customers import create_customer, edit_customer, list_customers
+from app.tools.emails import send_invoice_by_email
+from app.tools.invitations import invite_user
+from app.tools.invoices import (
     InvoiceLine,
     InvoiceLineUpdate,
     create_invoice,
@@ -40,8 +40,8 @@ from playground.agent_poc.mcp_servers.billy.app.tools.invoices import (
     get_insight_top_customers,
     list_invoices,
 )
-from playground.agent_poc.mcp_servers.billy.app.tools.products import create_product, edit_product, list_products
-from playground.agent_poc.mcp_servers.billy.app.tools.support_knowledge import fetch_support_knowledge
+from app.tools.products import create_product, edit_product, list_products
+from app.tools.support_knowledge import fetch_support_knowledge
 
 app = FastAPI(title="Billy Stub API", version="0.1.0")
 

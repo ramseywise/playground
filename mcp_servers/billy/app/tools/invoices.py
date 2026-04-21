@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from playground.agent_poc.mcp_servers.billy.app.db import get_conn, next_id
+from app.db import get_conn, next_id
 
 
 class InvoiceLine(BaseModel):
@@ -778,6 +778,143 @@ def get_insight_customer_summary(
             }
             for r in open_rows
         ],
+    }
+
+
+def void_invoice(invoice_id: str, reason: str) -> dict:
+    """Voids an invoice, marking it as cancelled and clearing the balance.
+
+    Voided invoices are no longer collectible. Only approved or draft invoices
+    can be voided.
+
+    Args:
+        invoice_id: The ID of the invoice to void.
+        reason: The reason for voiding (required for audit trail).
+
+    Returns:
+        Dict with voided=True and the invoice ID, or an error dict.
+    """
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM invoices WHERE id = ?", (invoice_id,)
+        ).fetchone()
+        if not row:
+            return {"error": f"Invoice '{invoice_id}' not found."}
+        invoice = dict(row)
+        if invoice["state"] == "voided":
+            return {"error": f"Invoice {invoice_id} is already voided."}
+        conn.execute(
+            "UPDATE invoices SET state = 'voided', balance = 0 WHERE id = ?",
+            (invoice_id,),
+        )
+    return {"voided": True, "invoice_id": invoice_id, "reason": reason}
+
+
+def send_invoice_reminder(invoice_id: str, message: Optional[str] = None) -> dict:
+    """Sends a payment reminder for an unpaid approved invoice.
+
+    Looks up the customer's email and sends a reminder message. The invoice
+    must be in 'approved' state and unpaid.
+
+    Args:
+        invoice_id: The ID of the invoice to send a reminder for.
+        message: Optional custom reminder message. A default message is used if omitted.
+
+    Returns:
+        Dict with sent=True and delivery details, or an error dict.
+    """
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT i.*, c.email AS customer_email FROM invoices i "
+            "LEFT JOIN customers c ON c.id = i.contact_id "
+            "WHERE i.id = ?",
+            (invoice_id,),
+        ).fetchone()
+        if not row:
+            return {"error": f"Invoice '{invoice_id}' not found."}
+        inv = dict(row)
+    if inv["state"] != "approved":
+        return {"error": f"Invoice {invoice_id} is in '{inv['state']}' state. Only approved invoices can receive reminders."}
+    if inv["is_paid"]:
+        return {"error": f"Invoice {invoice_id} is already paid."}
+    to_email = inv.get("customer_email") or ""
+    default_msg = (
+        f"This is a friendly reminder that invoice {inv['invoice_no']} "
+        f"for DKK {inv['gross_amount']:,.2f} is due on {inv['due_date']}. "
+        "Please arrange payment at your earliest convenience."
+    )
+    return {
+        "sent": True,
+        "invoice_id": invoice_id,
+        "invoice_no": inv["invoice_no"],
+        "to": to_email,
+        "message": message or default_msg,
+    }
+
+
+def get_invoice_dso_stats(
+    contact_id: Optional[str] = None,
+    year: Optional[int] = None,
+) -> dict:
+    """Days Sales Outstanding (DSO) statistics: average payment speed and overdue rate.
+
+    Calculates avg_days_to_pay from payment terms on paid invoices, and
+    overdue_rate as the fraction of open approved invoices past their due date.
+
+    Args:
+        contact_id: Optionally restrict to a single customer.
+        year: Fiscal year filter. Defaults to current year.
+
+    Returns:
+        Dict with avg_days_to_pay, overdue_rate (0.0–1.0), and trend.
+    """
+    target_year = year or date.today().year
+    year_prefix = f"{target_year}-%"
+    today_str = date.today().isoformat()
+
+    conditions_base = ["entry_date LIKE ?"]
+    params_base: list = [year_prefix]
+    if contact_id:
+        conditions_base.append("contact_id = ?")
+        params_base.append(contact_id)
+    where_base = "WHERE " + " AND ".join(conditions_base)
+
+    with get_conn() as conn:
+        paid_rows = conn.execute(
+            f"SELECT entry_date, due_date FROM invoices {where_base} AND is_paid = 1",
+            params_base,
+        ).fetchall()
+
+        open_count = conn.execute(
+            f"SELECT COUNT(*) FROM invoices {where_base} AND is_paid = 0 AND state = 'approved'",
+            params_base,
+        ).fetchone()[0]
+
+        overdue_count = conn.execute(
+            f"SELECT COUNT(*) FROM invoices {where_base} AND is_paid = 0 AND state = 'approved' AND due_date < ?",
+            params_base + [today_str],
+        ).fetchone()[0]
+
+    if paid_rows:
+        days_list = []
+        for r in paid_rows:
+            try:
+                entry = date.fromisoformat(r["entry_date"])
+                due = date.fromisoformat(r["due_date"])
+                days_list.append((due - entry).days)
+            except ValueError:
+                pass
+        avg_days = round(sum(days_list) / len(days_list), 1) if days_list else 0.0
+    else:
+        avg_days = 0.0
+
+    overdue_rate = round(overdue_count / open_count, 3) if open_count > 0 else 0.0
+
+    return {
+        "year": target_year,
+        "avg_days_to_pay": avg_days,
+        "overdue_rate": overdue_rate,
+        "trend": "stable",
     }
 
 

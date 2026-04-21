@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from playground.agent_poc.mcp_servers.billy.app.db import get_conn, next_id
+from app.db import get_conn, next_id
 
 # Valid sort columns – whitelisted to prevent SQL injection.
 _SORT_COLS = {"name", "created_time"}
@@ -67,6 +67,29 @@ def list_products(
             products.append(p)
 
     return {"total": total, "products": products}
+
+
+def get_product(product_id: str) -> dict:
+    """Gets detailed information about a single product by its ID.
+
+    Returns the full product record including name, description, unit, and prices.
+
+    Args:
+        product_id: The product ID to look up.
+
+    Returns:
+        Full product record with prices, or an error dict if not found.
+    """
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT * FROM products WHERE id = ?", (product_id,)
+        ).fetchone()
+        if not row:
+            return {"error": f"Product '{product_id}' not found."}
+        p = dict(row)
+        p["is_archived"] = bool(p["is_archived"])
+        p["prices"] = _fetch_prices(conn, product_id)
+    return p
 
 
 def edit_product(
