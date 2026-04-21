@@ -1,4 +1,4 @@
-"""Customer domain expert."""
+"""Expense domain expert."""
 
 from __future__ import annotations
 
@@ -12,14 +12,17 @@ from google.genai import types
 from shared.schema import AssistantResponse
 from .shared_tools import THINKING_CONFIG, report_out_of_domain
 
-_INSTRUCTION = (Path(__file__).parent.parent / "prompts" / "customer_agent.txt").read_text()
+_INSTRUCTION = (Path(__file__).parent.parent / "prompts" / "expense_agent.txt").read_text()
 
 _BILLY_MCP_URL = os.getenv("BILLY_MCP_URL", "http://localhost:8765/sse")
 
-customer_agent = Agent(
+expense_agent = Agent(
     model="gemini-2.5-flash",
-    name="customer_agent",
-    description="Handles customers and contacts: create, view, list, and edit. Knows CVR, address, and contact persons.",
+    name="expense_agent",
+    description=(
+        "Handles business expenses: log, view, list, and analyse spending by category "
+        "and vendor. Computes gross margin by comparing revenue against expenses."
+    ),
     static_instruction=types.Content(role="user", parts=[types.Part(text=_INSTRUCTION)]),
     output_schema=AssistantResponse,
     output_key="response",
@@ -27,7 +30,15 @@ customer_agent = Agent(
         report_out_of_domain,
         MCPToolset(
             connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
-            tool_filter=["list_customers", "get_customer", "create_customer", "edit_customer"],
+            tool_filter=[
+                "list_expenses",
+                "get_expense",
+                "create_expense",
+                "get_expense_summary",
+                "get_vendor_spend",
+                "get_expenses_by_category",
+                "get_gross_margin",
+            ],
         ),
     ],
     generate_content_config=THINKING_CONFIG,

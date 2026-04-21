@@ -1,23 +1,20 @@
 """Invoice domain expert."""
 
+from __future__ import annotations
+
+import os
 from pathlib import Path
 
 from google.adk.agents import Agent
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, SseConnectionParams
 from google.genai import types
 
-from ....shared.schema import AssistantResponse
-from ....shared.tools.customers import list_customers
-from ....shared.tools.invoices import (
-    create_invoice,
-    edit_invoice,
-    get_invoice,
-    get_invoice_summary,
-    list_invoices,
-)
-from ....shared.tools.products import list_products
+from shared.schema import AssistantResponse
 from .shared_tools import THINKING_CONFIG, report_out_of_domain
 
 _INSTRUCTION = (Path(__file__).parent.parent / "prompts" / "invoice_agent.txt").read_text()
+
+_BILLY_MCP_URL = os.getenv("BILLY_MCP_URL", "http://localhost:8765/sse")
 
 invoice_agent = Agent(
     model="gemini-2.5-flash",
@@ -30,14 +27,22 @@ invoice_agent = Agent(
     output_schema=AssistantResponse,
     output_key="response",
     tools=[
-        get_invoice,
-        list_invoices,
-        get_invoice_summary,
-        edit_invoice,
-        create_invoice,
-        list_customers,
-        list_products,
         report_out_of_domain,
+        MCPToolset(
+            connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
+            tool_filter=[
+                "get_invoice",
+                "list_invoices",
+                "get_invoice_summary",
+                "create_invoice",
+                "edit_invoice",
+                "void_invoice",
+                "send_invoice_reminder",
+                "get_invoice_dso_stats",
+                "list_customers",
+                "list_products",
+            ],
+        ),
     ],
     generate_content_config=THINKING_CONFIG,
 )

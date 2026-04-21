@@ -19,15 +19,32 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
 from .session_manager import _SENTINEL, session_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+_GATEWAY_API_KEY = os.getenv("GATEWAY_API_KEY", "")
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+_MAX_MESSAGE_CHARS = int(os.getenv("MAX_MESSAGE_CHARS", "4000"))
+
+
+def _require_api_key(key: str | None = Security(_api_key_header)) -> None:
+    if not _GATEWAY_API_KEY:
+        return  # not configured — dev / local mode
+    if key != _GATEWAY_API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 
 app = FastAPI(title="VA Assistant Gateway")
 
@@ -61,7 +78,7 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/agents")
+@app.get("/agents", dependencies=[Depends(_require_api_key)])
 async def list_agents():
     return [
         {
@@ -71,13 +88,21 @@ async def list_agents():
     ]
 
 
-@app.post("/chat")
-async def post_chat(req: ChatRequest):
+@app.post("/chat", dependencies=[Depends(_require_api_key)])
+async def post_chat(
+    req: ChatRequest,
+    x_trace_id: str | None = Header(default=None),
+):
     """Accept a user message and start an ADK turn as a background task.
 
     The client must open GET /chat/stream BEFORE calling this endpoint so that
     SSE events are not lost.
     """
+    if len(req.message) > _MAX_MESSAGE_CHARS:
+        raise HTTPException(status_code=400, detail=f"Message exceeds {_MAX_MESSAGE_CHARS} characters")
+
+    trace_id = x_trace_id or req.request_id
+
     # Ensure session + queue exist before the background task starts
     session_manager.get_or_create(req.session_id)
 
@@ -86,12 +111,13 @@ async def post_chat(req: ChatRequest):
             session_id=req.session_id,
             message=req.message,
             page_url=req.page_url,
+            trace_id=trace_id,
         )
     )
-    return {"status": "accepted", "request_id": req.request_id}
+    return {"status": "accepted", "request_id": req.request_id, "trace_id": trace_id}
 
 
-@app.get("/chat/stream")
+@app.get("/chat/stream", dependencies=[Depends(_require_api_key)])
 async def stream_chat(session_id: str = Query(...)):
     """SSE stream for a session.
 
