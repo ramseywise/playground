@@ -13,11 +13,13 @@ class AgentState(TypedDict):
     # ── conversation ──────────────────────────────────────────────
     messages: Annotated[list[BaseMessage], add_messages]
     session_id: str
+    user_id: str                          # identifies user across sessions
     page_url: str | None
 
+    # ── memory ────────────────────────────────────────────────────
+    user_preferences: list[dict[str, str]]  # [{key, value}] loaded at turn start
+
     # ── routing ───────────────────────────────────────────────────
-    # One of: "invoice" | "quote" | "customer" | "product" |
-    #         "email"   | "invitation" | "support" | "direct"
     intent: str | None
     routing_confidence: float
 

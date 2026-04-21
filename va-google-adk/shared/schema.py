@@ -130,3 +130,11 @@ class AssistantResponse(BaseModel):
         default=None,
         description="Proactive warning or actionable prompt surfaced alongside the message.",
     )
+    artefact_id: Optional[str] = Field(
+        default=None,
+        description="UUID of a stored artefact generated in this turn (e.g. handoff doc).",
+    )
+    artefact_url: Optional[str] = Field(
+        default=None,
+        description="Download URL for the artefact. Valid for ARTEFACT_TTL_DAYS (default 30 days).",
+    )

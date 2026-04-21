@@ -13,29 +13,44 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import trim_messages
 from langchain_core.tools import BaseTool
-from langchain_google_genai import ChatGoogleGenerativeAI
 
+from shared.model_factory import resolve_chat_model
 from ..state import AgentState
 
 logger = logging.getLogger(__name__)
+
+_MAX_HISTORY_TOKENS = int(os.getenv("MAX_HISTORY_TOKENS", "12000"))
+
+
+def _token_count(messages: list) -> int:
+    """Rough token estimate: 4 chars ≈ 1 token, minimum 1 per message."""
+    return sum(max(1, len(str(getattr(m, "content", ""))) // 4) for m in messages)
 
 
 async def run_domain(
     state: AgentState,
     system_prompt: str,
     tools: list[BaseTool],
-    model: str = "gemini-2.5-flash",
+    model: str = "medium",
 ) -> AgentState:
     """Run a ReAct loop for a domain agent.
 
     Uses bind_tools for tool calling. Loops until the model stops
     calling tools or hits a max-iterations guard.
+
+    Args:
+        model: size tier passed to resolve_chat_model ("small"|"medium"|"large")
+               or a literal model string for backwards compatibility.
     """
-    llm = ChatGoogleGenerativeAI(model=model, temperature=0)
+    # Reuse cached LLM instance — important for Gemini prefix caching
+    size = model if model in ("small", "medium", "large") else "medium"
+    llm = resolve_chat_model(size, temperature=0)
     llm_with_tools = llm.bind_tools(tools)
     tools_by_name = {t.name: t for t in tools}
 
@@ -54,6 +69,21 @@ async def run_domain(
     max_iterations = 8
 
     for _ in range(max_iterations):
+        # Trim accumulated messages before each LLM call to stay within token budget
+        if len(loop_messages) > 3:
+            try:
+                loop_messages = trim_messages(
+                    loop_messages,
+                    max_tokens=_MAX_HISTORY_TOKENS,
+                    token_counter=_token_count,
+                    strategy="last",
+                    allow_partial=False,
+                    include_system=True,
+                    start_on="human",
+                )
+            except Exception:
+                pass  # trim failure is non-fatal — proceed with untrimmed list
+
         response: AIMessage = await llm_with_tools.ainvoke(loop_messages)
         loop_messages.append(response)
 

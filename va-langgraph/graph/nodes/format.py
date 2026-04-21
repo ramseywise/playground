@@ -33,6 +33,8 @@ Schema fields:
 - email_form (optional): {"to": "...", "subject": "...", "body": "..."}
 - confirm (optional): true before destructive edits.
 - contact_support (optional): true when the user needs a human.
+- artefact_id (optional): UUID string returned by save_artefact — set when a file was stored this turn.
+- artefact_url (optional): Download URL returned by save_artefact — set alongside artefact_id.
 
 Respond ONLY with valid JSON. No markdown fences.
 """

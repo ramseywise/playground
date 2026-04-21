@@ -12,6 +12,27 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
+class ChartData(BaseModel):
+    chart_type: Literal["bar", "line", "pie", "area"]
+    title: str
+    labels: list[str]
+    series: list[dict]
+
+
+class MetricCard(BaseModel):
+    label: str
+    value: str
+    trend: Optional[str] = None
+    sentiment: Optional[Literal["positive", "neutral", "negative"]] = None
+
+
+class Alert(BaseModel):
+    severity: Literal["info", "warning", "critical"]
+    message: str
+    action_label: Optional[str] = None
+    action_route: Optional[str] = None
+
+
 class NavButton(BaseModel):
     """A deep-link button rendered in the Billy app UI."""
 
@@ -96,4 +117,24 @@ class AssistantResponse(BaseModel):
     contact_support: bool = Field(
         default=False,
         description="Set to True to surface a Contact Customer Service button.",
+    )
+    chart_data: Optional[ChartData] = Field(
+        default=None,
+        description="Structured chart data for frontend visualization (bar, line, pie, area).",
+    )
+    metric_cards: list[MetricCard] = Field(
+        default_factory=list,
+        description="KPI tiles for insights dashboards (label, value, trend, sentiment).",
+    )
+    alert: Optional[Alert] = Field(
+        default=None,
+        description="Proactive warning or actionable prompt surfaced alongside the message.",
+    )
+    artefact_id: Optional[str] = Field(
+        default=None,
+        description="UUID of a stored artefact generated in this turn (e.g. handoff doc).",
+    )
+    artefact_url: Optional[str] = Field(
+        default=None,
+        description="Download URL for the artefact. Valid for ARTEFACT_TTL_DAYS (default 30 days).",
     )

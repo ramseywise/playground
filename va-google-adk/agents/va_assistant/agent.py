@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
@@ -13,6 +14,8 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
+
+import shared.memory as memory_store
 
 from .sub_agents.accounting_agent import accounting_agent
 from .sub_agents.banking_agent import banking_agent
@@ -70,18 +73,37 @@ _BLOCKED_RESPONSE = (
 
 
 def provide_router_instruction(ctx: ReadonlyContext) -> str:
-    tried = ctx._invocation_context.session.state.get("tried_agents", [])
-    if not tried:
-        return ""
-    return _TRIED_AGENTS_TEMPLATE.format(agents=", ".join(tried))
+    state = ctx._invocation_context.session.state
+    tried = state.get("tried_agents", [])
+    prefs: list[dict] = state.get("user_preferences", [])
+
+    parts: list[str] = []
+    if tried:
+        parts.append(_TRIED_AGENTS_TEMPLATE.format(agents=", ".join(tried)))
+    if prefs:
+        pref_lines = "\n".join(f"  - {p['key']}: {p['value']}" for p in prefs)
+        parts.append(f"User preferences (apply these when relevant):\n{pref_lines}")
+
+    return "\n\n".join(parts)
 
 
-def _before_agent_callback(callback_context: CallbackContext) -> types.Content | None:
-    """Clear tried_agents once per invocation."""
+async def _before_agent_callback(callback_context: CallbackContext) -> types.Content | None:
+    """Clear tried_agents once per invocation. Load user preferences on first turn."""
     invocation_id = callback_context._invocation_context.invocation_id
     if callback_context.state.get("_tried_agents_invocation") != invocation_id:
         callback_context.state["tried_agents"] = []
         callback_context.state["_tried_agents_invocation"] = invocation_id
+
+    # Load preferences from memory store on the first turn of this session
+    if "user_preferences" not in callback_context.state:
+        user_id = callback_context.state.get("user_id", "default")
+        try:
+            prefs = await memory_store.get_top(user_id)
+            callback_context.state["user_preferences"] = prefs
+        except Exception as e:
+            logger.warning("Could not load user preferences: %s", e)
+            callback_context.state["user_preferences"] = []
+
     return None
 
 
@@ -128,6 +150,45 @@ def _guardrail_callback(
 
 
 # ---------------------------------------------------------------------------
+# Memory tools — exposed on the root agent so any turn can trigger them
+# ---------------------------------------------------------------------------
+
+
+async def update_user_preference(key: str, value: str, tool_context: Any = None) -> dict:
+    """Remember a user preference. Call when the user says 'remember that...' or 'don't forget...'."""
+    user_id = "default"
+    try:
+        if tool_context is not None:
+            user_id = tool_context.state.get("user_id", "default")
+    except Exception:
+        pass
+    await memory_store.upsert(user_id, f"pref:{key}", value)
+    try:
+        if tool_context is not None:
+            tool_context.state["user_preferences"] = await memory_store.get_top(user_id)
+    except Exception:
+        pass
+    return {"success": True, "message": f"I'll remember that {key} is {value}."}
+
+
+async def delete_user_preference(key: str, tool_context: Any = None) -> dict:
+    """Forget a stored user preference. Call when the user says 'forget my ... preference'."""
+    user_id = "default"
+    try:
+        if tool_context is not None:
+            user_id = tool_context.state.get("user_id", "default")
+    except Exception:
+        pass
+    await memory_store.delete(user_id, f"pref:{key}")
+    try:
+        if tool_context is not None:
+            tool_context.state["user_preferences"] = await memory_store.get_top(user_id)
+    except Exception:
+        pass
+    return {"success": True, "message": f"I've forgotten your {key} preference."}
+
+
+# ---------------------------------------------------------------------------
 # Root agent
 # ---------------------------------------------------------------------------
 
@@ -149,6 +210,7 @@ root_agent = Agent(
         parts=[types.Part(text=_INSTRUCTION)],
     ),
     instruction=provide_router_instruction,
+    tools=[update_user_preference, delete_user_preference],
     sub_agents=[
         invoice_agent,
         quote_agent,

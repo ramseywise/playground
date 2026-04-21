@@ -4,17 +4,40 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Any
 
 from google.adk.agents import Agent
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, SseConnectionParams
 from google.genai import types
 
+import shared.artefact_store as artefact_store
 from shared.schema import AssistantResponse
 from .shared_tools import THINKING_CONFIG, report_out_of_domain
 
 _INSTRUCTION = (Path(__file__).parent.parent / "prompts" / "accounting_agent.txt").read_text()
 
 _BILLY_MCP_URL = os.getenv("BILLY_MCP_URL", "http://localhost:8765/sse")
+
+
+async def save_artefact(
+    content: str,
+    filename: str,
+    content_type: str = "text/markdown",
+    tool_context: Any = None,
+) -> dict:
+    """Save generated content as a downloadable artefact.
+
+    Call after generate_handoff_doc to make the document downloadable.
+    Returns artefact_id and url.
+    """
+    session_id = "default"
+    try:
+        if tool_context is not None:
+            session_id = tool_context.state.get("session_id", "default")
+    except Exception:
+        pass
+    return await artefact_store.save(session_id, content, filename, content_type)
+
 
 accounting_agent = Agent(
     model="gemini-2.5-flash",
@@ -29,6 +52,7 @@ accounting_agent = Agent(
     output_key="response",
     tools=[
         report_out_of_domain,
+        save_artefact,
         MCPToolset(
             connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
             tool_filter=[

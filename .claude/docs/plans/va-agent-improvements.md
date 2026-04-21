@@ -490,36 +490,54 @@ Phase 7 — Accounting domain  ✅ DONE
   └── va-langgraph: accounting_subgraph node + 'accounting' intent in analyze_node ✅
       _ACCOUNTING_TOOLS + _ACCOUNTING_SYSTEM + node + edges in builder.py ✅
 
-Phase 8 — Long-term memory  (components 2.3 — lightweight first pass)
-  ├── preference_store table in Postgres (session checkpointer DB)
-  │   Schema: {user_id, key, value, updated_at}
-  │   Covers: explicit user preferences set during conversation
-  ├── Episodic summary: LangGraph node writes 1-sentence session summary
-  │   to preference_store on session end (keyed by session_id)
-  ├── Retrieval: inject top-3 relevant preferences into system prompt at
-  │   turn start (simple recency + key-match, no vector search yet)
-  ├── ADK equivalent: session-end callback writes summary to same table
-  └── Correction / deletion: tool `update_user_preference(key, value)`
-      exposed to agent; user can say "remember that..." or "forget..."
+Phase 8 — Long-term memory  ✅ DONE
+  ├── shared/memory.py — SQLite preference_store(user_id, key, value, updated_at) ✅
+  │   Async via asyncio.to_thread; same schema for both LangGraph and ADK.
+  │   Keys: pref:<name> for preferences; session:<id> for episodic summaries.
+  │   MEMORY_DB_PATH env var (default memory.db); production can swap to Postgres.
+  ├── Episodic summary: runner.run_turn() finally block generates 1-sentence
+  │   LLM summary and saves to preference_store(session:<id>) ✅ (LangGraph + ADK)
+  ├── Retrieval: memory_load_node (LangGraph) and _before_agent_callback (ADK)
+  │   inject top-3 recent preferences into AgentState / session state ✅
+  │   analyze_node prepends [User preferences: ...] to user_text ✅
+  │   provide_router_instruction injects preferences into ADK router context ✅
+  ├── LangGraph "memory" intent: analyze_node + memory_node + builder wired ✅
+  │   "remember/forget" requests routed to memory_node → END (no format_node)
+  ├── ADK tools: update_user_preference + delete_user_preference on root agent ✅
+  │   tool_context.state used to get user_id and update in-session prefs list
+  ├── user_id field added to ChatRequest (both gateways, default="default") ✅
+  └── AgentState extended: user_id + user_preferences fields ✅
 
   Deferred to later pass:
   - Vector DB for semantic memory retrieval
   - Inferred preferences (confidence threshold)
   - Cross-session RAG over episodic summaries
 
-Phase 9 — Artefact store  (components 2.4 — S3-backed)
-  ├── S3 bucket: artefacts/{session_id}/{artefact_id}.{ext}
-  ├── Metadata in Postgres: {artefact_id, session_id, type, s3_key,
-  │   created_at, ttl_days, content_type}
-  ├── Gateway endpoints:
-  │   POST /artefacts          → upload, returns {artefact_id, url}
-  │   GET  /artefacts/{id}     → signed S3 URL (15 min TTL)
-  │   DELETE /artefacts/{id}   → soft-delete
-  ├── AssistantResponse: add {artefact_id, artefact_url} field alongside
-  │   the existing message — used by accounting generate_handoff_doc
-  ├── Agent: `save_artefact(content, filename, content_type)` tool
-  │   (not in MCP — gateway-side utility)
-  └── Retention policy: default 30-day TTL; configurable per type
+Phase 9 — Artefact store  ✅ DONE
+  ├── shared/artefact_store.py — SQLite artefacts table (same memory.db) ✅
+  │   Async via asyncio.to_thread; no new dependencies for local backend.
+  │   Backends: local (default, ./artefacts/) and s3 (boto3, env ARTEFACT_BACKEND=s3).
+  │   ARTEFACT_LOCAL_DIR, ARTEFACT_S3_BUCKET, ARTEFACT_TTL_DAYS, GATEWAY_BASE_URL env vars.
+  │   Same file in both va-langgraph/ and va-google-adk/.
+  ├── Gateway endpoints (both gateways) ✅
+  │   POST /artefacts          → save(), returns {artefact_id, url}
+  │   GET  /artefacts/{id}/download → read_local() → stream file (local) or 404
+  │   DELETE /artefacts/{id}   → soft_delete() (sets deleted_at)
+  ├── AssistantResponse: artefact_id + artefact_url Optional[str] fields ✅
+  │   Added to shared/schema.py in both projects.
+  ├── LangGraph: save_artefact LangChain @tool in accounting_subgraph ✅
+  │   Closure captures session_id from state. Added to tools alongside MCP tools.
+  │   _ACCOUNTING_SYSTEM updated to instruct calling save_artefact after generate_handoff_doc.
+  │   format_node _SYSTEM updated to mention artefact_id/artefact_url fields.
+  ├── ADK: save_artefact async function tool in accounting_agent ✅
+  │   tool_context.state used to get session_id. Added to agent tools list.
+  │   accounting_agent.txt prompt updated to call save_artefact after generate_handoff_doc.
+  └── Retention policy: ARTEFACT_TTL_DAYS env var (default 30 days) stored per record ✅
+
+  Deferred to later pass:
+  - Active TTL expiry cleanup job (records stay in DB; files persist past TTL until pruned)
+  - S3 presigned URL redirect for local gateway (download endpoint returns file inline for local)
+  - Artefact listing endpoint (GET /artefacts?session_id=...)
 
 Production path  (separate track, not gating dev phases)
   ├── BILLY_BACKEND=api → direct httpx wrapper around real Billy REST API
@@ -543,7 +561,7 @@ Production path  (separate track, not gating dev phases)
 | +Phase 6 (Insights) | Net margin, anomaly detection, customer concentration, break-even | Accounting/VAT |
 | +Phase 7 (Accounting) | Audit readiness, VAT periods, handoff doc | Long-term memory, Artefacts |
 | +Phase 8 (Long-term memory) | User preferences recalled cross-session; episodic session summaries | Artefacts |
-| +Phase 9 (Artefact store) | Generated docs / reports stored outside prompt; downloadable from UI | Real Billy data (Production path) |
+| +Phase 9 (Artefact store) ✅ | Generated docs / reports stored outside prompt; downloadable from UI | Real Billy data (Production path) |
 
 ---
 
