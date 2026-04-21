@@ -1,6 +1,6 @@
 # Plan: VA Agent Improvements — Tool × Domain Roadmap
 
-> Status: Revised — 2026-04-20
+> Status: Revised — 2026-04-21 (components 2.1–2.4 incorporated)
 > Scope: `playground/va-google-adk` + `playground/va-langgraph`
 > Framing: tool-function × domain perspective; each new tool directly addresses
 > one or more BA discovery questions from the feature inventory.
@@ -302,6 +302,121 @@ Destructive ops that warrant confirmation:
 - `void_invoice` (irreversible)
 - `invite_user` (external invite)
 
+### 4.6 Context compaction (components 2.1, 2.2)
+Long conversations will exceed model token limits without a compaction strategy.
+
+**ADK**: ✅ Already implemented — `App(events_compaction_config=EventsCompactionConfig(
+compaction_interval=10, overlap_size=2, summarizer=LlmEventSummarizer(...)))` in `app.py`.
+No work needed.
+
+**LangGraph**: Still needed. Use `langchain_core.messages.trim_messages` before each
+LLM call in `base.py`'s `run_domain` — keep the most recent N tokens, preserving the
+system message and last human turn. Threshold configurable via `MAX_HISTORY_TOKENS`
+env var (default 12 000).
+
+### 4.7 Prefix / context caching (components 2.1)
+Stable prompt prefix (system prompt + tool schemas) should be reused across turns
+rather than re-transmitted. Wiring:
+
+- **Gemini** (both gateways): system prompt is implicitly cached by the API when
+  unchanged. Ensure the system prompt is constructed once per session, not per turn.
+- **Anthropic** (if model factory adds Claude): set `cache_control: {"type": "ephemeral"}`
+  on the system prompt block. Handle in `model_factory.py` so callers never touch it.
+
+### 4.8 Escalation trigger — human supporter handoff (components 2.1)
+Separate from destructive-op HITL. Add an escalation path when the agent cannot
+resolve a request:
+
+```python
+ESCALATION_TRIGGERS = [
+    "speak to a human", "talk to support", "this isn't working",
+    # low-confidence signal: routing_confidence < 0.3 after 2 turns
+]
+```
+
+LangGraph: add an `escalation` node that `interrupt()`s with `{"type": "escalation",
+"reason": ...}`. Gateway exposes `POST /chat/resume` (already planned) — same
+endpoint handles both HITL confirm and escalation resolution.
+
+ADK: `before_model_callback` checks for trigger tokens; emits a structured
+`escalation` event to the client.
+
+### 4.9 Token budget / query size guard (components 2.1)
+Prevent abuse and runaway context from oversized user inputs. Add at the gateway
+request layer — not in the agent — so both ADK and LG share the same guard:
+
+```python
+MAX_MESSAGE_CHARS = int(os.getenv("MAX_MESSAGE_CHARS", "4000"))
+if len(req.message) > MAX_MESSAGE_CHARS:
+    raise HTTPException(status_code=400, detail="Message too long")
+```
+
+Also track per-turn token count in `run_turn` and log a warning when a turn
+exceeds `WARN_TURN_TOKENS` (default 8 000) — feeds future cost observability.
+
+### 4.10 Observability — trace_id propagation (components 2.2)
+`trace_id` is a 2.2 hard constraint: every stored turn must carry it.
+
+**Phase 3 scope (code-only)**:
+- Accept `X-Trace-Id` header at the gateway; fall back to `request_id` if absent
+- Propagate `trace_id` through `run_turn(...)` → LangGraph config metadata →
+  logged in every `tool_result` SSE event
+
+**Deferred (separate infra initiative)**:
+- LangFuse SDK wiring (needs project key + dashboard)
+- DataDog / OTelemetry exporter (needs agent sidecar or lambda layer)
+
+### 4.11 Guardrails — complete the pipeline (systems plan §3, §4)
+
+**LangGraph** (`graph/nodes/guardrail.py`) — 3/4 checks already done (✅ size, ✅ injection,
+✅ PII). Still missing:
+- Domain check: if `routing_confidence < 0.2` after the analyze node, short-circuit
+  to `direct_node` with an out-of-domain reply instead of invoking a domain subgraph.
+  Add as a conditional edge in `builder.py` (not in `guardrail_node` — happens after analysis).
+
+**ADK** — No `BeforeAgentCallback` equivalent yet. Add one to `root_agent` in `agent.py`:
+- Port the same injection detection + PII redaction from LangGraph's `guardrail_node`
+  into a `before_agent_callback` function
+- Size truncation is already handled by `EventsCompactionConfig`
+- Out-of-domain is already handled by `report_out_of_domain()` tool (no change needed)
+
+### 4.12 Support CRAG loop — LangGraph `support_subgraph` (systems plan §4)
+
+Current `support_subgraph` calls `fetch_support_knowledge` in a single pass and stops.
+Replace with a retrieve → grade → rewrite → retrieve loop:
+
+```
+support_subgraph (mini StateGraph):
+  retrieve  → fetch_support_knowledge(query)
+  grade     → Haiku call: is this result sufficient to answer the question? (yes/no)
+  sufficient? → generate (write AssistantResponse with sources)
+  not sufficient (≤2 retries) → rewrite (rephrase query) → retrieve
+```
+
+Grader is a `ChatGoogleGenerativeAI(model="gemini-2.0-flash")` call with a binary
+output schema `{sufficient: bool, reason: str}`. Max 2 rewrite iterations to cap cost.
+
+### 4.13 LangGraph streaming upgrade — `.astream_events()` (systems plan §4)
+
+Current `runner.py` uses `.astream(stream_mode="updates")` — delivers node-level diffs
+only. The gateway contract (`va-agent-systems.md` §2c) includes a `text` event type
+for streaming token chunks, which this mode cannot produce.
+
+Switch to `.astream_events(version="v2")`:
+```python
+async for event in self._graph.astream_events(initial_state, config=config, version="v2"):
+    kind = event["event"]
+    if kind == "on_chat_model_stream":
+        chunk = event["data"]["chunk"].content
+        if chunk:
+            await session.queue.put({"type": "text", "data": chunk})
+    elif kind == "on_chain_end" and event["name"] == "format":
+        ...  # extract final AssistantResponse from node output
+```
+
+This gives the frontend token-level streaming for the message field while still
+capturing structured `response` events when the format node completes.
+
 ---
 
 ## 5. Build order (revised)
@@ -309,56 +424,102 @@ Destructive ops that warrant confirmation:
 Work always flows: **MCP server first → agents consume via MCP**.
 
 ```
-Phase 1 — Wire va agents to MCP server  ← was "Phase 7", already built
-  ├── va-langgraph: replace shared/tools imports with MultiServerMCPClient
-  │   Pattern: native_skill_mcp/tools.py → build_mcp_client() + load_all_billy_tools()
-  │   BILLY_MCP_URL=http://127.0.0.1:8765/sse  (or stdio subprocess)
-  ├── va-google-adk: swap sub-agent tools for MCPToolset
-  │   Pattern: MCPToolset(StdioServerParameters(command="python",
-  │              args=["-m", "app.main_noauth"], cwd="mcp_servers/billy"))
-  └── Both: delete shared/tools/*.py (replaced by MCP); keep shared/schema.py
+Phase 1 — Wire va agents to MCP server  ✅ DONE
+  ├── va-langgraph: MultiServerMCPClient in every domain subgraph (domains.py) ✅
+  ├── va-google-adk: MCPToolset(SseConnectionParams) in every sub-agent ✅
+  └── shared/tools/*.py deleted; shared/schema.py kept ✅
 
-Phase 2 — Complete MCP server coverage  (no new domains, no agent changes)
-  ├── Register all 6 unregistered insight tools in common.py
+Phase 2 — Complete MCP server coverage  ✅ DONE
+  ├── Register all 6 unregistered insight tools in common.py ✅
   │   (get_insight_revenue_summary, get_insight_invoice_status,
   │    get_insight_aging_report, get_insight_customer_summary,
   │    get_insight_product_revenue, get_invoice_lines_summary)
-  ├── Add get_customer, get_product to MCP (customers.py / products.py)
-  ├── Add send_invoice_reminder, get_invoice_dso_stats, void_invoice to invoices.py
-  ├── Add quotes domain to MCP server
-  │   (quotes table in db.py + tools/quotes.py + register in common.py)
-  └── Add insights / invoice sub-agents for the 6 newly-registered tools
+  ├── Add get_customer to customers.py + register ✅
+  ├── Add get_product to products.py + register ✅
+  ├── Add void_invoice, send_invoice_reminder, get_invoice_dso_stats to invoices.py + register ✅
+  ├── Add edit_quote, get_quote_conversion_stats to quotes.py + register ✅
+  │   (quotes table + tools/quotes.py already existed; added missing tools)
+  ├── va-langgraph: insights_subgraph + updated all tool filters ✅
+  ├── va-langgraph: analyze_node + builder.py updated for insights routing ✅
+  └── va-google-adk: insights_agent sub-agent + updated all sub-agent tool filters ✅
 
-Phase 3 — Architecture hardening  (no domain changes)
-  ├── AgentRuntime Protocol (shared/runtime_protocol.py)
-  ├── Injected checkpointer (va-langgraph build_graph refactor)
-  ├── Multi-provider model factory (shared/model_factory.py)
-  ├── ADK 1.30 compatibility check
-  └── AssistantResponse: add chart_data + metric_cards + alert fields
+Phase 3 — Architecture hardening  ✅ DONE
+  ├── AgentRuntime Protocol (shared/runtime_protocol.py) ✅
+  ├── Multi-provider model factory (shared/model_factory.py) ✅
+  ├── ADK 1.30 compatibility check ✅ (EventsCompactionConfig still present in 1.31 — no change needed)
+  ├── AssistantResponse: add chart_data + metric_cards + alert fields ✅
+  ├── Context compaction: ADK ✅ done; LangGraph trim_messages in run_domain ✅
+  ├── Prefix caching: LLM instances cached via lru_cache in model_factory ✅
+  ├── Escalation trigger — LangGraph: escalation_node + intent; ADK: before_model_callback ✅
+  ├── Token budget guard at ADK gateway (MAX_MESSAGE_CHARS=4000) ✅
+  ├── trace_id propagation (X-Trace-Id header → run_turn → SSE events, both gateways) ✅
+  ├── Guardrails: LangGraph confidence edge (ROUTING_CONFIDENCE_THRESHOLD=0.2) ✅
+  │   ADK before_model_callback injection detection + escalation ✅
+  ├── Support CRAG loop — retrieve → grade → rewrite (max 2 retries) in support_subgraph ✅
+  └── LangGraph streaming upgrade to .astream_events(v2) for text token chunks ✅
 
-Phase 4 — Expenses domain  ← CRITICAL BLOCKER (unlocks Phases 5–7)
-  ├── MCP server: expenses table in db.py + tools/expenses.py + register in common.py
-  ├── va-google-adk: expenses_agent sub-agent
-  └── va-langgraph: expense_subgraph node
+Phase 4 — Expenses domain  ✅ DONE
+  ├── MCP server: expenses table in db.py + tools/expenses.py + register in common.py ✅
+  ├── va-google-adk: expense_agent sub-agent ✅
+  └── va-langgraph: expense_subgraph node + 'expense' intent in analyze + builder ✅
 
-Phase 5 — Banking domain  (depends on Phase 4 for burn rate)
-  ├── MCP server: banking table + tools/banking.py + register
-  ├── va-google-adk: banking_agent sub-agent
-  └── va-langgraph: banking_subgraph node
+Phase 5 — Banking domain  ✅ DONE
+  ├── MCP server: bank_accounts + bank_transactions tables + 2 seed accounts + 6 seed transactions ✅
+  │   tools/banking.py: get_bank_balance, list_bank_transactions, match_transaction_to_invoice,
+  │   get_cashflow_forecast, get_runway_estimate — registered in common.py ✅
+  ├── va-google-adk: banking_agent sub-agent + prompts/banking_agent.txt + wired into root agent ✅
+  └── va-langgraph: banking_subgraph + 'banking' intent in analyze_node + node + edges in builder ✅
 
-Phase 6 — Cross-domain Insights  (depends on Phases 4+5 in DB)
-  ├── MCP server: add cross-domain tools to insights section of invoices.py
+Phase 6 — Cross-domain Insights  ✅ DONE
+  ├── MCP server: tools/insights.py with 6 cross-domain tools ✅
   │   (get_net_margin, get_margin_by_product, get_customer_concentration,
   │    get_dso_trend, get_break_even_estimate, detect_anomaly)
-  ├── va-google-adk: insights_agent sub-agent
-  ├── va-langgraph: insights_subgraph + confidence routing for multi-domain queries
-  └── AssistantResponse: confirm chart_data + metric_cards are wired end-to-end
+  │   Registered in common.py ✅
+  ├── va-google-adk: insights_agent tool_filter + description + prompts/insights_agent.txt ✅
+  ├── va-langgraph: _INSIGHTS_TOOLS + _INSIGHTS_SYSTEM updated in domains.py ✅
+  └── AssistantResponse: chart_data + metric_cards already in schema (Phase 3) ✅
 
-Phase 7 — Accounting domain  (depends on Phase 4 + RAG corpus)
-  ├── MCP server: accounting tools + VAT table
-  ├── RAG corpus: Danish VAT rules, audit checklist, reporting periods
-  ├── va-google-adk: accounting_agent sub-agent
-  └── va-langgraph: accounting_subgraph node
+Phase 7 — Accounting domain  ✅ DONE
+  ├── MCP server: tools/accounting.py with 5 tools ✅
+  │   (get_vat_summary, get_unreconciled_transactions, get_audit_readiness_score,
+  │    get_period_summary, generate_handoff_doc) — registered in common.py ✅
+  │   Note: Danish VAT domain knowledge encoded in tool docstrings + agent prompt;
+  │   no separate RAG corpus needed — computed directly from structured DB data.
+  ├── va-google-adk: accounting_agent sub-agent + prompts/accounting_agent.txt ✅
+  │   Wired into root agent sub_agents list + description updated ✅
+  └── va-langgraph: accounting_subgraph node + 'accounting' intent in analyze_node ✅
+      _ACCOUNTING_TOOLS + _ACCOUNTING_SYSTEM + node + edges in builder.py ✅
+
+Phase 8 — Long-term memory  (components 2.3 — lightweight first pass)
+  ├── preference_store table in Postgres (session checkpointer DB)
+  │   Schema: {user_id, key, value, updated_at}
+  │   Covers: explicit user preferences set during conversation
+  ├── Episodic summary: LangGraph node writes 1-sentence session summary
+  │   to preference_store on session end (keyed by session_id)
+  ├── Retrieval: inject top-3 relevant preferences into system prompt at
+  │   turn start (simple recency + key-match, no vector search yet)
+  ├── ADK equivalent: session-end callback writes summary to same table
+  └── Correction / deletion: tool `update_user_preference(key, value)`
+      exposed to agent; user can say "remember that..." or "forget..."
+
+  Deferred to later pass:
+  - Vector DB for semantic memory retrieval
+  - Inferred preferences (confidence threshold)
+  - Cross-session RAG over episodic summaries
+
+Phase 9 — Artefact store  (components 2.4 — S3-backed)
+  ├── S3 bucket: artefacts/{session_id}/{artefact_id}.{ext}
+  ├── Metadata in Postgres: {artefact_id, session_id, type, s3_key,
+  │   created_at, ttl_days, content_type}
+  ├── Gateway endpoints:
+  │   POST /artefacts          → upload, returns {artefact_id, url}
+  │   GET  /artefacts/{id}     → signed S3 URL (15 min TTL)
+  │   DELETE /artefacts/{id}   → soft-delete
+  ├── AssistantResponse: add {artefact_id, artefact_url} field alongside
+  │   the existing message — used by accounting generate_handoff_doc
+  ├── Agent: `save_artefact(content, filename, content_type)` tool
+  │   (not in MCP — gateway-side utility)
+  └── Retention policy: default 30-day TTL; configurable per type
 
 Production path  (separate track, not gating dev phases)
   ├── BILLY_BACKEND=api → direct httpx wrapper around real Billy REST API
@@ -376,11 +537,13 @@ Production path  (separate track, not gating dev phases)
 | 0 (today) | Revenue mostly, DSO partial | Profitability, Break-even, Costs, Banking |
 | +Phase 1 (MCP wired) | Persistent state mutations; insight panels live via MCP | Same domain gaps |
 | +Phase 2 (MCP complete) | DSO analytics, AR aging, customer summary, product revenue, quote pipeline | Profitability, Break-even, Costs, Banking |
-| +Phase 3 (hardening) | Architecture only — no new coverage | Same |
+| +Phase 3 (hardening) | Compaction, caching, escalation, trace_id — no new domain coverage | Same |
 | +Phase 4 (Expenses) | Profitability cluster, Break-even, most of Costs | Banking, cross-domain margin |
 | +Phase 5 (Banking) | Runway, cashflow forecast, balance | Cross-domain Insights |
 | +Phase 6 (Insights) | Net margin, anomaly detection, customer concentration, break-even | Accounting/VAT |
-| +Phase 7 (Accounting) | Audit readiness, VAT periods, handoff doc | Real Billy data (Production path) |
+| +Phase 7 (Accounting) | Audit readiness, VAT periods, handoff doc | Long-term memory, Artefacts |
+| +Phase 8 (Long-term memory) | User preferences recalled cross-session; episodic session summaries | Artefacts |
+| +Phase 9 (Artefact store) | Generated docs / reports stored outside prompt; downloadable from UI | Real Billy data (Production path) |
 
 ---
 
@@ -404,8 +567,15 @@ Production path  (separate track, not gating dev phases)
 - **Price recommender** — needs market benchmark data outside Billy
 - **Recurring invoice automation** — Act capability requiring event triggers
 - **Web client** — frontend; separate initiative
-- **LangFuse observability** — separate infra initiative
 - **Eval suites** — separate quality initiative
+- **LangFuse / DataDog wiring** — observability infra (separate initiative); trace_id
+  propagation IS in Phase 3 so LangFuse can be bolted on later with no agent changes
+- **Voice agent compatibility** — same session store for text and voice turns; spike needed
+- **Semantic / vector-based memory retrieval** — deferred past Phase 8 (simple
+  recency + key-match is the Phase 8 baseline)
+- **Inferred user preferences** — confidence-threshold promotion deferred past Phase 8
+- **Open-banking connector** — Banking domain (Phase 5) assumes Billy's own bank
+  reconciliation view; real open-banking is a separate connector
 
 ---
 

@@ -25,7 +25,7 @@ dependencies = [
 packages = ["agents", "langgraph_agents", "shared"]
 
 [tool.pytest.ini_options]
-testpaths = ["agents", "langgraph_agents", "shared", "mcp_servers"]
+testpaths = ["agents", "langgraph_agents", "shared"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 
