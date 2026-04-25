@@ -1,0 +1,64 @@
+[
+  {"id": "inv-001", "query": "show me my unpaid invoices", "expected_intent": "invoice", "category": "invoice", "difficulty": "easy"},
+  {"id": "inv-002", "query": "create an invoice for Jens Hansen for 5000 DKK", "expected_intent": "invoice", "category": "invoice", "difficulty": "easy"},
+  {"id": "inv-003", "query": "void invoice INV-0042", "expected_intent": "invoice", "category": "invoice", "difficulty": "medium"},
+  {"id": "inv-004", "query": "how much does customer Skov A/S owe me?", "expected_intent": "invoice", "category": "invoice", "difficulty": "medium"},
+
+  {"id": "quo-001", "query": "create a quote for 10 hours of consulting", "expected_intent": "quote", "category": "quote", "difficulty": "easy"},
+  {"id": "quo-002", "query": "list all my open quotes", "expected_intent": "quote", "category": "quote", "difficulty": "easy"},
+  {"id": "quo-003", "query": "convert quote QUO-007 to an invoice", "expected_intent": "quote", "category": "quote", "difficulty": "medium"},
+  {"id": "quo-004", "query": "what is the status of my latest quote?", "expected_intent": "quote", "category": "quote", "difficulty": "easy"},
+
+  {"id": "cus-001", "query": "find contact for Lars Nielsen", "expected_intent": "customer", "category": "customer", "difficulty": "easy"},
+  {"id": "cus-002", "query": "list all my customers", "expected_intent": "customer", "category": "customer", "difficulty": "easy"},
+  {"id": "cus-003", "query": "update the address for customer Dansk Software A/S", "expected_intent": "customer", "category": "customer", "difficulty": "medium"},
+
+  {"id": "prd-001", "query": "what products do I have?", "expected_intent": "product", "category": "product", "difficulty": "easy"},
+  {"id": "prd-002", "query": "add a new service called Web Design at 1200 DKK per hour", "expected_intent": "product", "category": "product", "difficulty": "medium"},
+  {"id": "prd-003", "query": "update the price of product SKU-042", "expected_intent": "product", "category": "product", "difficulty": "medium"},
+
+  {"id": "eml-001", "query": "send invoice INV-0012 to the customer by email", "expected_intent": "email", "category": "email", "difficulty": "easy"},
+  {"id": "eml-002", "query": "email quote QUO-003 to Anna", "expected_intent": "email", "category": "email", "difficulty": "easy"},
+  {"id": "eml-003", "query": "forward the invoice reminder to the client", "expected_intent": "email", "category": "email", "difficulty": "medium"},
+
+  {"id": "inv-i-001", "query": "invite my accountant to the organisation", "expected_intent": "invitation", "category": "invitation", "difficulty": "easy"},
+  {"id": "inv-i-002", "query": "add a new team member with admin access", "expected_intent": "invitation", "category": "invitation", "difficulty": "medium"},
+
+  {"id": "ins-001", "query": "what is my revenue this month?", "expected_intent": "insights", "category": "insights", "difficulty": "easy"},
+  {"id": "ins-002", "query": "show me a DSO trend for the last 6 months", "expected_intent": "insights", "category": "insights", "difficulty": "medium"},
+  {"id": "ins-003", "query": "who are my top 5 customers by revenue?", "expected_intent": "insights", "category": "insights", "difficulty": "easy"},
+  {"id": "ins-004", "query": "what is my overdue rate?", "expected_intent": "insights", "category": "insights", "difficulty": "medium"},
+  {"id": "ins-005", "query": "give me a revenue breakdown by product category", "expected_intent": "insights", "category": "insights", "difficulty": "hard"},
+
+  {"id": "exp-001", "query": "log an expense of 450 DKK for office supplies", "expected_intent": "expense", "category": "expense", "difficulty": "easy"},
+  {"id": "exp-002", "query": "what did I spend on software last quarter?", "expected_intent": "expense", "category": "expense", "difficulty": "medium"},
+  {"id": "exp-003", "query": "show me my top vendors by spend", "expected_intent": "expense", "category": "expense", "difficulty": "medium"},
+  {"id": "exp-004", "query": "what is my gross margin?", "expected_intent": "expense", "category": "expense", "difficulty": "hard"},
+
+  {"id": "bnk-001", "query": "what is my current bank balance?", "expected_intent": "banking", "category": "banking", "difficulty": "easy"},
+  {"id": "bnk-002", "query": "show me my bank transactions from last week", "expected_intent": "banking", "category": "banking", "difficulty": "easy"},
+  {"id": "bnk-003", "query": "how long is my runway at the current burn rate?", "expected_intent": "banking", "category": "banking", "difficulty": "medium"},
+  {"id": "bnk-004", "query": "give me a cashflow forecast for the next 3 months", "expected_intent": "banking", "category": "banking", "difficulty": "hard"},
+
+  {"id": "acc-001", "query": "what is my VAT liability for Q1?", "expected_intent": "accounting", "category": "accounting", "difficulty": "medium"},
+  {"id": "acc-002", "query": "are my books audit-ready?", "expected_intent": "accounting", "category": "accounting", "difficulty": "medium"},
+  {"id": "acc-003", "query": "generate a handoff document for my accountant", "expected_intent": "accounting", "category": "accounting", "difficulty": "hard"},
+  {"id": "acc-004", "query": "how many transactions are unreconciled?", "expected_intent": "accounting", "category": "accounting", "difficulty": "medium"},
+
+  {"id": "sup-001", "query": "how do I create an invoice in Billy?", "expected_intent": "support", "category": "support", "difficulty": "easy"},
+  {"id": "sup-002", "query": "what does DSO mean?", "expected_intent": "support", "category": "support", "difficulty": "easy"},
+  {"id": "sup-003", "query": "can I connect my bank account to Billy?", "expected_intent": "support", "category": "support", "difficulty": "medium"},
+  {"id": "sup-004", "query": "explain how the recurring invoice feature works", "expected_intent": "support", "category": "support", "difficulty": "medium"},
+
+  {"id": "dir-001", "query": "hi", "expected_intent": "direct", "category": "direct", "difficulty": "easy"},
+  {"id": "dir-002", "query": "hello there!", "expected_intent": "direct", "category": "direct", "difficulty": "easy"},
+  {"id": "dir-003", "query": "what is the capital of France?", "expected_intent": "direct", "category": "direct", "difficulty": "medium"},
+
+  {"id": "esc-001", "query": "I need to speak to a human agent right now", "expected_intent": "escalation", "category": "escalation", "difficulty": "easy"},
+  {"id": "esc-002", "query": "this is not working, get me to customer support", "expected_intent": "escalation", "category": "escalation", "difficulty": "easy"},
+  {"id": "esc-003", "query": "I have been trying to fix this for an hour, I want to talk to a real person", "expected_intent": "escalation", "category": "escalation", "difficulty": "medium"},
+
+  {"id": "mem-001", "query": "remember that my preferred language is English", "expected_intent": "memory", "category": "memory", "difficulty": "easy"},
+  {"id": "mem-002", "query": "forget my currency preference", "expected_intent": "memory", "category": "memory", "difficulty": "easy"},
+  {"id": "mem-003", "query": "forget everything you know about me", "expected_intent": "memory", "category": "memory", "difficulty": "medium"}
+]
