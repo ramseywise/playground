@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import shared.memory as memory_store
+import memory as memory_store
 
 from ..state import AgentState
 

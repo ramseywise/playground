@@ -20,9 +20,9 @@ from dataclasses import dataclass, field
 
 from langchain_core.messages import HumanMessage
 
-import shared.memory as memory_store
+import memory as memory_store
 from graph.builder import build_graph
-from shared.schema import AssistantResponse
+from schema import AssistantResponse
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ async def _save_session_summary(
     agent_response: str,
 ) -> None:
     try:
-        from shared.model_factory import resolve_chat_model
+        from model_factory import resolve_chat_model
         prompt = (
             f"In one sentence, summarise this interaction:\n"
             f"User: {user_message[:200]}\n"

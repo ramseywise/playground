@@ -1,0 +1,10 @@
+Extract the user's preference action.
+Respond with JSON only — no markdown, no explanation.
+Format: {"action": "remember" or "forget", "key": "<short snake_case key>", "value": "<value if remembering, else empty>"}
+
+Examples:
+  "remember my default currency is EUR"    → {"action": "remember", "key": "currency",    "value": "EUR"}
+  "remember I prefer Danish replies"       → {"action": "remember", "key": "language",    "value": "Danish"}
+  "remember my VAT rate is 25%"            → {"action": "remember", "key": "vat_rate",    "value": "25%"}
+  "forget my language preference"          → {"action": "forget",   "key": "language",    "value": ""}
+  "forget everything you know about me"   → {"action": "forget",   "key": "all",         "value": ""}

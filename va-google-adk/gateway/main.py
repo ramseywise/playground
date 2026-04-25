@@ -29,8 +29,8 @@ from fastapi.responses import Response, StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-import shared.artefact_store as artefact_store
-import shared.memory as memory_store
+import artefact_store as artefact_store
+import memory as memory_store
 
 from .session_manager import _SENTINEL, session_manager
 

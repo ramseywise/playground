@@ -14,7 +14,7 @@ import pytest
 from eval.graders.message_quality_judge import MessageQualityJudge
 from eval.harnesses.capability import run_capability_eval
 from eval.models import EvalRunConfig, EvalTask
-from shared.schema import AssistantResponse
+from schema import AssistantResponse
 
 _GATE = os.getenv("CONFIRM_EXPENSIVE_OPS") == "1"
 pytestmark = pytest.mark.skipif(
@@ -51,7 +51,7 @@ def _make_tasks() -> list[EvalTask]:
 @pytest.mark.asyncio
 async def test_message_quality_avg_meets_floor():
     """Average quality score across sampled responses must be ≥ 0.70."""
-    from shared.model_factory import resolve_chat_model
+    from model_factory import resolve_chat_model
 
     llm = resolve_chat_model("small")
     judge = MessageQualityJudge(llm=llm)
@@ -73,7 +73,7 @@ async def test_message_quality_avg_meets_floor():
 @pytest.mark.asyncio
 async def test_message_quality_per_dimension():
     """Each quality dimension (clarity/tone/actionability) must average ≥ 0.65."""
-    from shared.model_factory import resolve_chat_model
+    from model_factory import resolve_chat_model
 
     llm = resolve_chat_model("small")
     judge = MessageQualityJudge(llm=llm)

@@ -1,0 +1,902 @@
+[
+  {
+    "id": "sev-001",
+    "query": "Hatte fragen zum testaccount",
+    "expected_answer": "Guten Tag,\nvielen Dank für deine Anfrage!\n\t\nDanke, dass du sevDesk in deine Überlegungen mit einbezogen hast.\n\t\nNach Ablauf der 14 tägigen Testphase wird dein Account automatisch gesperrt und\nnicht in ein Abo überführt. Eine Kündigung ist somit nicht notwendig.\n\t\nDu kannst deinen Account unter Einstellungen -> System -> Daten zurücksetzten ->\nAccount löschen.\n\t\nBei weiteren Fragen stehe ich gerne zur Verfügung!\nIch wünsche dir alles Gute und einen schönen Tag :)\n\t\n\t\n\nMontag, 17. Juni 2024, 15:27:13 +0200, Nicole von Degenfeld <[EMAIL]>:\n>Hallo,   die Anmeldung lief über die E-Mail-Adresse [EMAIL], nicht über die [EMAIL] Bitte die Testphase beenden, wie bereits telefonisch besprochen.   Herzlichen Dank und liebe [NAME] Nicole sevdesk.de <[EMAIL]> hat",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Sonstiges",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-002",
+    "query": "Es werden ganz viele Belege nicht mit an DATEV übermittelt. Unser Steuerberaterbüro fragt nun mehr als 70 Belege aus dem letzten Quartal manuell an. Alle Buchungen habe ich mit Belegen versehen. Woran kann das liegen?",
+    "expected_answer": "Hallo,\n\t\nvielen Dank für deine Nachricht.\n\t\nIch bräuchte hier bitte einige Beispiele als Beispiel, es genügen hier die Belegnummern. Weiterhin würden mir die Infos helfen welche Art von Export dein Steuerberater nutzt.\n\t\nGerne höre ich von dir.",
+    "expected_intent": "accounting",
+    "category": "accounting",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Datev-Export",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-003",
+    "query": "Kunde hatte fragen zur Vetragskündigung",
+    "expected_answer": "Hallo [NAME],\n\t\nvielen Dank für dein Feedback.\n\t\nDas tut mir leid, dass ich dein Anliegen nicht zu deiner Zufriedenheit klären konnte.\n\t\nIch würde mich über Tipps von dir freuen, wie ich es in Zukunft besser machen kann.\n\t\nIch wünsche dir einen tollen Tag.\n\t\nBei weiteren Fragen stehe ich dir gerne zur Verfügung.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Sonstiges",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-004",
+    "query": "Frage zu Ticket [REF]",
+    "expected_answer": "Hallo,\nvielen Dank für deine Bewertung des Vorganges.\n\t\nIch habe eben gesehen, dass du diesen mit \"Nicht zufriedenstellend\" bewertet hast.\n\t\nUm dir und auch unseren weiteren Kunden künftig das bestmögliche Erlebnis gewährleisten zu können, wäre ich dankbar, wenn du mir kurz sagen könntest, was ich aus deiner Sicht das nächste mal besser machen kann. \n\t\nDein originales Ticket [REF] liegt immer noch bei der bei meiner Kollegin, welches noch bearbeitet wird. Ich muss allerdings auch ein Ticket zur Dokumentation erstellen, da du ja bei uns angerufen hast.\n\t\nVielen Dank für deine Unterstützung.\n\t\nIch wünsche dir noch einen schönen Tag.",
+    "expected_intent": "invoice",
+    "category": "invoice",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Rechnungen & Dokumente erstellen und löschen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-005",
+    "query": "Sehr geehrte [NAME] und Herren!\nWenn wir jedes Mal die Kontaktdaten eingeben und speichern, werden nach dem Speichern alle Daten im Auftragsbestätigung gelöscht, müssen dann alles wieder eingeben.",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nWir werden hierzu in den kommenden Stunden noch eine Anpassung zur Fehlerbehebung ausspielen, so dass das Problem im Laufe des Tages gelöst wird und nicht mehr auftreten wird.\nBitte entschuldige die Unannehmlichkeiten.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Login & Passwort-Probleme",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-006",
+    "query": "kann ich die E-Mail Rechnungen ab 2025 wie gewohnt und ohne weiterer Einstellungen über sevdesk senden und auch E-Mail Rechnungen über sevdesk empfangen ? Können Sie mir dazu bitte einen \"Laufzettel \" senden. Danke für Ihre Mühen.",
+    "expected_answer": "Guten Tag [NAME]\n,                                                                                             \nvielen Dank für deine Nachricht.\n\t\n\t\nhttps://hilfe.sevdesk.de/de/articles/9453113-belege-erfassen",
+    "expected_intent": "banking",
+    "category": "banking",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Rechnungsüberweisung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-007",
+    "query": "Hallo, ich habe heute sevDesk Buchhaltung für zwei Jahre gebucht (Rechnungsnummer 92[PHONE]). Allerdings fehlt in der Rechnungsanschrift die Firmenbezeichnung ALPHAR Recharge GmbH & Co. KG. Die Rechnung ist nur auf meinen Namen ausgestellt. Ich bitte um Rechnungskorrektur mit der korrekten Firmenbezeichnung ALPHAR Recharge GmbH & Co. KG (Adresse stimmt) und erneute Zusendung. Vielen Dank, Stefan Reinhardt, Geschäftsführer",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nAnbei die korrigierte Rechnung, passt dies so?\nGerne höre ich von dir.",
+    "expected_intent": "invoice",
+    "category": "invoice",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Rechnung und Zahlungsdetails",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-008",
+    "query": "Der Klient des Kunden hat die Rechnung 241030 bereits bezahlt, allerdings ohne MwSt. (Deutsche ID, mit Adresse aus Österreich). Deshalb wurde die Rechnung des Klienten vom Kunden storniert und es soll eine neue Rechnung erstellt werden, in der nur der Betrag der nicht bezahlten MwSt. (408,22) in Rechnung gestellt wird. Die Anzahlungsrechnung muss allerdings in der Schlussrechnung ersichtlich sein, da die ursprüngliche Rechnung storniert wurde. In Rechnung gestellt werden müssen daher 408,22 EUR, da der Kunde nur  2.148,50 EUR statt 2.556,72 EUR EUR bezahlt hat.",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Anfrage.\n\t\nDas Anliegen wurde mit weitergeleitet, allerdings verstehe ich es nicht ganz.\n\t\nBei deinem Account 573501 gibt es zwei sevdesk-Vertrags-Rechnungen über 127,09€, diese sind aber viel geringer? Oder geht es um Rechnungen welche du deinen Kunden geschrieben hast? \n\t\nBitte um Rückmeldung.",
+    "expected_intent": "banking",
+    "category": "banking",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Rechnungsüberweisung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-009",
+    "query": "Jürgen Mann Hallstädter Weg 1 [LOCATION] Kundennummer 368488 Ich kündige hiermit mein Sev Desk Abo, Vertrag für Nutzung ihrer Software fristgerecht zum 31.12 .2024 Bitte um kurze Bestätigung der Kündigung  Jürgen Mann",
+    "expected_answer": "Hallo ,\nvielen Dank für deine Nachricht.\n\t\nWir haben deinen Kündigungswunsch erhalten.\nSo schließt du deine Kündigung ab.\n1. Überprüfe unter nachfolgendem Link deine Daten. \n2. Bitte hier klicken: https://landing.sevdesk.de/kuendigung1\n3. Bestätige deinen Kündigungswunsch durch Authentifizierung mit deinem Passwort. \n4. ​\n5. Die Kündigung wird dann zum nächstmöglichen Zeitpunkt gültig.\n6. ​\n7. Eine Bestätigung erhältst du nach erfolgreicher Bearbeitung per Mail.\nHinweis: Was passiert mit meinen Daten, wenn ich kündige?\nEine GoBD-Konforme Speicherung deiner Daten ist nur im Rahmen eines aktiven sevDesk Abos möglich. Natürlich ist es möglich auch nach Kündigungseingang Backups von deinen Daten zu exportieren, jedoch werden im Laufe der Zeit Serverbereinigungen durchgeführt.\n​\nWir bedanken uns für dein Vertrauen und würden uns freuen, wenn du uns weiterhin als User erhalten bleibst.\n​",
+    "expected_intent": "invoice",
+    "category": "invoice",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Rechnung und Zahlungsdetails",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-010",
+    "query": "Hallo [NAME],\n\nich bin etwas verunsichert in der Auswahl der richtigen Software. Welche Ihrer Versionen würden Sie uns empfehlen. Wir brauchen aktuell kein Modul Lohn und Gehalt, aber nutzen gerne die Reisekostenoption.\nAngebote, Rechnungen, Übergabe an die Buchhaltung/ StB. / Terminierung (CRM-Kalender s.u.)\n\n\n\nMeine Vorabfragen:\n\nE-Rechnungsausgang ist für uns relevant, wann wird Ihre Software das können?\n\nWenn ich einen Kunden anlege, kann ich diesem eine \"Sprache\" zuordnen und ein angepasstes Formular (Angebot, Rechnung etc) würde dann in dieser Sprache zukünftig für den Kunden erscheinen (wir sind sehr international, sodass Deutsch nicht ausreicht. Mindestens Englisch, besser noch weitere Sprachen wären sinnvoll). Der Rahmen des Angebots sollte dann auch in Englisch oder eben z.B. Spanisch. etc. sein. Was bietet ihre Software hier an?\n\nFür Kunden in den USA haben wir unsere Preise bereits auf Dollar (nicht nach Wechselkurs) umgerechnet...kann das Angebot anhand der Destination (Anschriftfeld mit US Anschrift) entsprechende Datensätze anbieten?\n\nNach Rechnungserstellung und dessen Versand sowie der Verschickung des Downloadlinks (wir vertreiben unsere eigene Software), was der Auslieferung gleichkommt, würden wir gerne ein Erinnerungsdatum für (4 Wochen) vor dem Ablaufen der Wartungsvereinbarung gesetzt haben. Bestenfalls sollte die Software dann eine Erinnerungs-/Werbemail für die Verlängerung der Wartung an den Kunden verschicken.\n\nGleichzeitig muss bei Versand / Verkauf auch der Abgleich mit unserem Lizenzserver  hinterlegt werden ( eine Schnittstelle würden wir programmieren / beauftragen).\n\nWas können Sie mir empfehlen?\n\n\nBesten Gruß\nKlaus Melcher",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nsevDesk bietet kein Lohnabrechnungsmodul.\n\t\nAb dem Tarif Rechnung kannst du E-Rechnungen schreiben und ab dem Tarif Buchhaltung kannst du sie empfangen.\n\t\nLeider kannst du keine Kunden einer Sprache zuweisen.\n\t\nRechnungen müssen händisch in eine andere Sprache oder Währung umgestellt werden.\n\t\nsevDesk hat nicht die Funktion, eine Erinnerung auszulösen. Diese und auch andere Funktionen sind maximal über die offene Rest-API Schnittstelle verbindbar.\n\t\nDiese ist nur ab dem Tarif Buchhaltung-Pro verfügbar.",
+    "expected_intent": "accounting",
+    "category": "accounting",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Datev-Export",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-011",
+    "query": "Hallo,\n\nwie komme ich für Dezember auf Steuerpflichtige Umsätze von -3777€???\n\n\nViele Grüße,\nCornelius Schaffer",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nDer Betrag setzt sich durch deine Rechnungen und Belege zusammen. Überprüfe diese gerne und beachte die Berechnungsgrundlagen.\n\t\nBei weiteren Fragen stehe ich dir gerne zur Verfügung!\nIch wünsche dir alles Gute und einen schönen Tag.",
+    "expected_intent": "accounting",
+    "category": "accounting",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Rechnungen & Belege verbuchen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-012",
+    "query": "ich habe am 08.12. eine Erinnerung zur UST-VA erhalten obwohl in der APP eine vierteljährliche UST-VA eingetragen ist.",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\nDie Erinnerungen sind derzeit nur für die monatliche UStVA möglich.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Unternehmenseinstellungen / Einstellungen in sevdesk",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-013",
+    "query": "Hallo [NAME] sevdesk-Team, \nwir haben einen neuen Kunden aus China, dem müssen wir Angebote und Rechnungen natürlich in englisch schicken. Ist das möglich über sevdesk Buchhaltung Pro? \nViele Grüße\nChristina Schertler",
+    "expected_answer": "Hallo [NAME],\n\t\nich kümmere mich um dein Anliegen.\n\t\nDu kannst wenn du in der Rechnungsvorschau bist rechtsseitig unter Einstellungen das Sprachlayout der Rechnung einstellen, - dann wäre diese auch Englisch.\n\t\nIch wünsche dir ein schönes Wochenende",
+    "expected_intent": "invoice",
+    "category": "invoice",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Rechnungen & Dokumente erstellen und löschen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-014",
+    "query": "sonnenenergie / Unternehmens Name auf der  von Uns Rechnung",
+    "expected_answer": "Hallo [NAME],\n\t\nvielen Dank für deine Nachricht.\n\t\nIch würde dich hierfür einmal bitten einmal in deinem Account wenn du dich einloggst links unten auf deinen Namen zu klicken und dann auf Vertragsdaten, denn dort kannst du den Firmennamen einmal abändern. Mir dann Bescheid zu geben, wenn du dies durch geführt hast damit ich dir die Rechnung auch korrigieren kann.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - EU-Rechnungen und Reverse Charge",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-015",
+    "query": "Kunde hat ein Angebot bekommen per Mail und findet es nicht mehr, kann es noch mal zugesendet werden",
+    "expected_answer": "Hallo [NAME],\n\t\nvielen Dank für deine Nachricht.\nLeider kann ich das Angebot nicht noch einmal zusenden, was möchtest du denn buchen?\nDann schaue ich was ich Rabatttechnisch machen kann.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Tarifwechsel",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-016",
+    "query": "Kleinunternehmer Reverscharge auswählen",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Bewertung des Vorganges.\nIch habe eben gesehen, dass du diesen mit \"Nicht zufriedenstellend\" bewertet hast.\n\t\nEs tut mir leid das du so lange warten musstest auf eine Antwort, um die Weihnachtszeit ist viel los bei uns wir hoffen das wir dir in der Zukunft schnell helfen können. \n\t\nIch hoffe natürlich auch das wir bald eine Lösung für dein Anliegen zu finden.\n\t\nWünsche dir noch eine schöne Restwoche und eine gute Weinachtszeit.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - EU-Rechnungen und Reverse Charge",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-017",
+    "query": "Ich wollte eine Textvorlage für Stornorechnung erstellen, leider kann ich \"Storno\" in den Textvorlagen nicht auswählen. \nHätten Sie eine Lösung für mich?",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nIn sevdesk ist das leider nicht möglich, eine Textvorlage für Stornorechnungen zu erstellen, da diese automatisch erstellt werden.\n\t\nIch wünsche dir ein angenehmes Wochenende.",
+    "expected_intent": "insights",
+    "category": "insights",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Auswertungen & Umsatzsteuer",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-018",
+    "query": ".fr-emoticon.fr-emoticon-img {\n                                background-repeat: no-repeat !important;\n                                font-size: inherit;\n                                height: 1em;\n                                width: 1em;\n                                min-height: 20px;\n                                min-width: 20px;\n                                display: inline-block;\n                                margin: -0.1em 0.1em 0.1em;\n                                line-height: 1;\n                                vertical-align: middle;\n                            }\n                            .fr-emoticon {\n                                font-weight: normal;\n                                font-family: \"Apple Color Emoji\",\"Segoe UI Emoji\",\"NotoColorEmoji\",\"Segoe UI Symbol\",\"Android Emoji\",\"EmojiSymbols\";\n                                display: inline;\n                                line-height: 0;\n                            }\n                        Sehr geehrte [NAME] und Herren,\nleider haben Sie mir keine E-Mail geschickt in der das Ende, oder die Möglichkeit zur Kündigung des Vertrages hin gewissen wird, leider musste ich auch feststellen, dass die verlinkte Seite mit der Kündigung Möglichkeit nicht funktioniert, dies sollte doch schnell behoben werden. Ich kündige daher meinen Vertrag zum [PHONE], da ich kein Gewerbe mehr habe, und seit einiger Zeit mit dem Bürgergeld auskommen muss.Daraus ergibt sich auch, jeglicher Versuch von Forderungen zu versuchen würde nur sinnlose Mehrkosten erzeugen.\n\nMit freundlichen Grüßen\nStefan Bohländer",
+    "expected_answer": ".fr-emoticon.fr-emoticon-img {\n                                background-repeat: no-repeat !important;\n                                font-size: inherit;\n                                height: 1em;\n                                width: 1em;\n                                min-height: 20px;\n                                min-width: 20px;\n                                display: inline-block;\n                                margin: -0.1em 0.1em 0.1em;\n                                line-height: 1;\n                                vertical-align: middle;\n                            }\n                            .fr-emoticon {\n                                font-weight: normal;\n                                font-family: \"Apple Color Emoji\",\"Segoe UI Emoji\",\"NotoColorEmoji\",\"Segoe UI Symbol\",\"Android Emoji\",\"EmojiSymbols\";\n                                display: inline;\n                                line-height: 0;\n                            }\n                        Sehr geehrte [NAME] und Herren,\nleider haben Sie mir keine E-Mail geschickt in der das Ende, oder die Möglichkeit zur Kündigung des Vertrages hin gewissen wird, leider musste ich auch feststellen, dass die verlinkte Seite mit der Kündigung Möglichkeit nicht funktioniert, dies sollte doch schnell behoben werden. Ich kündige daher meinen Vertrag zum [PHONE], da ich kein Gewerbe mehr habe, und seit einiger Zeit mit dem Bürgergeld auskommen muss.Daraus ergibt sich auch, jeglicher Versuch von Forderungen zu versuchen würde nur sinnlose Mehrkosten erzeugen.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "Spam",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-019",
+    "query": "Bei \"Automatisch zuordnen\": Dein Beleg konnte leider nicht fertiggestellt werden. Bitte kontaktiere das sevdesk Support-Team falls der Fehler erneut auftritt.",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nEntschuldige bitte die Unannehmlichkeiten, der Fehler konnte bereits behoben werden und du kannst nun wie gewohnt weiterarbeiten.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "TE - Server Fehlermeldung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-020",
+    "query": "Wenn ich auf Belege klicke kommt folgende Fehlermeldung: Keine oder fehlerhafte Antwort vom Server erhalten!\nFehler-ID: 89dfbbe7-4c48-4536-a51a-bd5acf99212c",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nKönntest du bitte einmal deinen Browsercache leeren sowie die hinterlegten Cookies für sevDesk löschen? So gehst du sicher das keine \"alten\" Funktionen oder Ansichten in deinem Browser gespeichert sind.\nDanach sollte es wieder funktionieren.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "TE - Server Fehlermeldung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-021",
+    "query": "Ich kündige den Aktive Add-ons 2 x Weiterer Benutzer. Wird nicht mehr benötigt, da nur ein Nutzer. Bitte bestätigen Sie mir die Änderung des Tarifs. Vielen Dank. Mit freundlichen Grüßen Diana Reichel eft-system GmbH",
+    "expected_answer": "Hallo [NAME],\n\t\nvielen Dank für deine Nachricht.\n\t\nWie von dir gewünscht, habe ich das Addon \"2* Benutzer\" zum nächstmöglichen Zeitpunkt, dem 21.12.2024, gekündigt.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Add On kündigen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-022",
+    "query": "Rabatt aus Ticket [REF] für Verlängerung hinterlegt",
+    "expected_answer": "Guten Tag [NAME],\n\t\nvielen Dank für deinen Anruf.\n\t\nWie gewünscht und vereinbart habe ich dir für deine kommende Vertragsverlängerung am 06.01.25 einen Rabatt von 25% hinterlegt. \n\t\nIch wünsche dir weiterhin viel Erfolg",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Kulanz / Rabattanfrage",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-023",
+    "query": "Seit der Anpassung des Dashboards stimmt die \"Gewinn vor Steuern\" Ansicht nicht mehr. Vorher wurden Gewinne bei Rechnungsstellung erfasst, nun zeigt das Schaubild Zahlen, welche nicht zuzuordnen sind.",
+    "expected_answer": "Guten Morgen Felix,\ndanke für deine Nachricht.\n\t\nWas genau stimmt da nicht? Kannst du mir das genauer erklären?\n\t\nSchönen Tag!",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Integrationspartner",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-024",
+    "query": "Hat beim Inkasso gezahlt. Vertrag bitte wieder aufnehmen. Davor im Slack fragen ob er gezahlt hat.",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nDu hast an Inkasso nur 14,16e überwiesen, der ganze Betrag war aber 49,87 € du musst an Inkasso noch 35,71 € begleichen, dann können wir dein Account wieder freischalten.\n\t\nIch wünsche dir einen guten Start in die Woche.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Sonstiges",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-025",
+    "query": "Hallo, \nkurze Frage. E-Rechnungen und PDF Rechnungen ,werde noch hier in SevDesk 10 Jahre gespeichert oder ?\n\nMit freundlichen Grüßen",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nWas passiert mit meinen Daten, wenn ich kündige?\n Eine GOBD-Konforme Speicherung deiner Daten ist nur im Rahmen eines aktiven sevDesk Abos möglich. Natürlich ist es möglich auch nach Kündigungseingang einen 48 stündigen Zugang freizuschalten um Backups von deinen Daten zu exportieren, jedoch werden im Laufe der Zeit Serverbereinigungen durchgeführt.\n\t\nBei weiteren Fragen stehe ich dir gerne zur Verfügung!\nIch wünsche dir alles Gute und einen schönen Tag.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Login & Passwort-Probleme",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-026",
+    "query": "Es ist mir nicht mehr möglich eingegangene Rechnungen auf den Status bezahlt zu setzten, sowohl in der App als auch in der Desktop Version",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nIch habe mir das ganze gerade einmal in unserer Datenbank angeschaut.\nDas Problem lag hier daran das du für dein Basiskonto die Nummer 1820 hinterlegt hattest, diese ist für \"Privateinlagen\" gedacht.\n\t\nIch habe dir das Buchungskonto auf 1200 \"Bank\" angepasst, du solltest so nun deine Rechnungen wieder wie gewohnt buchen können.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - nicht erkennbar",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-027",
+    "query": "Ich kann derzeit beim Belege erstellen keine Belege hochladen und bekomme folgende Fehlermeldung:\nFolgende Dateien konnten nicht erfolgreich hochgeladen und gespeichert werden. Bitte versuche es noch einmal oder wende dich mit der Datei an das sevdesk Support-Team.\n\nRechnung_N9VRM-00057.pdf",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nDas Problem tritt meist auf, wenn die PDF eine fehlerhafte Strukturierung oder eine digitale Signatur hat. \nKönntest du die PDF einmal mit einem PDF Reader öffnen und dann zum Beispiel bei Windows mit dem mitgelieferten \"Microsoft Print to PDF\" drucken bzw. damit neu erzeugen.\nAlso Datei----> Drucken ---> Print to PDF auswählen und die neue Datei abspeichern und dann hochladen.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "TE - nicht erkennbar",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-028",
+    "query": "Hallo [NAME] sevdesk-Team,\n\nich habe angefangen Belege zu erstellen. Bisher handelt es sich um Einkäufe im Inland im Laden direkt vor Ort.\nBei \"Erstattung der Umsatzsteuer\" ist \"Vorsteuerabziehbare Aufwendungen\" nicht auszuwählen. Nur die anderen beiden Optionen. Jetzt steht dann, wenn der Beleg fertig ist, ich diesen speichere und als bezahlt markiere, dass der Betrag ohne Steuer wäre, was er aber ja in Wirklichkeit ist. Ich hab mal einen Screenshot eines Beleg gemacht. \n\nDer Betrag ist 77,58€ Brutto (inkl. 19% MwSt) so auf dem Kassenbon. Im System ist er dann aber 77,58€ netto.\n\nDas verstehe ich nicht. Ich hoffe ihr könnt mir da weiterhelfen!",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nDu bist bei uns als Kleinunternehmer geführt, somit umsatzsteuerbefreit, deswegen kannst du dies auch nicht auswählen.\n\t\nWenn du nähere Informationen bezüglich deines Steuerrechts haben möchtest, dann empfehle ich dir, dich bei deinem Steuerberater zu melden.",
+    "expected_intent": "accounting",
+    "category": "accounting",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Rechnungen & Belege verbuchen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-029",
+    "query": "SMTP Error",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Bewertung des Vorganges.\nIch habe eben gesehen, dass du diesen mit \"Nicht zufriedenstellend\" bewertet hast.\n\t\nDas bearbeiten hat leider etwas länger gedauert und ich hatte dann gesehen das du bereits mit einem anderen Kollegen telefonierst ich hoffe, dass dir dieser Kollege helfen konnte.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "TE - SMPT & E-Mail Probleme",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-030",
+    "query": "Keine oder fehlerhafte Antwort vom Server erhalten!\nFehler-ID: f0b36d96-1bbd-40d4-a44d-cf66e603d112",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nDie E-Rechnung ist nicht valide, erfüllt die Vorgaben der EN16931 nicht // Das kannst du selbst prüfen -> portinvoice.com (http://portinvoice.com)\n\t\nIch wünsche dir eine schöne Weihnachtszeit.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Fehlermeldung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-031",
+    "query": "Einer unserer Kunden fordert die E-Rechnung im ZUGFeRD Format mit dem Erfordernis Die Kostenstelle bzw. Bestellnummer für jede Rechnung separat im Feld \"BuyerOrderReferencedDocument\" oder \"BuyerReference\" zu übergeben. Wo müssen wir diese bei der Rechnungserstellung eintragen, damit dies richtig übermittelt wird? Hinweis: X-Rechnung wird von dem Kunden nicht akzeptiert. \n\nAnliegend die genaue Spezifikation des Kunden hierzu.\n\nMit freundlichen Grü0en,\nMartin Kalus",
+    "expected_answer": "Hallo [NAME],\ndanke für deine Nachricht.\n\t\nLeider nicht, du musst es durch einen Konverter ziehen, wenn es geht, ansonsten ist dies leider nicht möglich.\nTut uns leid für die Umstände.\n\t\nWünsche dir einen schönen Tag.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - E-Rechnung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-032",
+    "query": "Wenn er das System Update durchführen möchte schlägt es nach einer gewissen seit immer Fehl und kann nicht durchgeführt werden das ist jetzt seit ein paar Tagen der fall",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nEntschuldige bitte, dein Account ist zu früh in das Update gerutscht. Uns fehlt hier noch eine Funktionalität um deinen Account komplett für das Systemupdate freizuschalten.\n\t\nIch müsste dich hier also noch um etwas Geduld bitten.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "TE - Fehlermeldung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-033",
+    "query": "Guten Abend, \n\nich habe eine Frage zur Archivierung der E-Rechnung:\nIch habe mir extra eine E-Mail-Adresse angelegt um E-Rechnungen zu empfangen. Wenn ich jetzt eine bekomme habe, füge ich diese ja in die Belegerkennung bei sevDesk ein und buche sie. Wird diese rechnung dann in sevDesk nach den Anforderungen archiviert oder muss dies im E-Mail-Account wo die Rechnung eingegangen ist, passieren?\n\nViele Grüße Sonja Friedrich",
+    "expected_answer": "Guten Tag [NAME],\n\t\nvielen Dank für deine Nachricht.\n\t\nDaten werden nach allen Anforderungen der GoBD sicher archiviert.Alle Daten werden so lange von uns aufbewahrt, wie der Vertrag läuft. Wenn der Vertrag gekündigt wird, müssen alle Daten ab dem Tag, an dem die Kündigung greift exportiert werden. \n\t\nBei weiteren Fragen, kannst du uns jederzeit gerne kontaktieren.\n\t\nIch wünsche dir schöne Weihnachtsfeiertage.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - E-Rechnung",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-034",
+    "query": "ich mache ja Hausverwaltung. Ich bekomme von einer Mandantin immer einen Betrag überwiesen der beinhaltet Rücklagen , Hausgeld und Verwalterkosten. Die Rücklagen und das Hausgeld buche ich immer privat aber wie bekomme ich meine Rechnung ausgebucht. Wenn Sie bei mir reingehen handelt es sich um die Überweisungen Daum. Vielleicht können sie mich ja zurückrufen. Tel. [PHONE] Liebe [NAME] aus Bremen Hubert Trimpe",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nHast du ein genaueres Beispiel für mich?\n\t\nSofern du telefonisch mit uns in Kontakt treten möchtest, kannst du gerne unsere\nHotline nutzen. Alle Informationen hierzu findest du in meiner Signatur.\n\t\nBei weiteren Fragen stehe ich dir gerne zur Verfügung!\nIch wünsche dir alles Gute und einen schönen Tag.",
+    "expected_intent": "quote",
+    "category": "quote",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Angebote & Teil-/Abschlagsrechnungen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-035",
+    "query": "Meine Bankanbindung funktioniert nicht mehr, vermutlich weil sie im Sommer umfirmiert hat von Volksbank Südmünsterland-Mitte auf Volksbank Westmünsterland. Westmünsterland wird in sevdesk nicht vorgeschlagen.\n\nIch bekomme Fehlercode 850 gemeldet.\nGerne würde ich morgen am 19.12.24 einen online Termin mit sevdesk support vereinbaren.",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nKönntest du bitte einmal deine beiden Konten wie unten beschrieben komplett neu auf die richtige Verbindung anlegen?\nWichtig ist hierbei das du bei der Suche nach deiner Bank mit der aktuellen BLZ deiner Bank suchst\n\t\nGib mir im Anschluss eine kurze Rückmeldung und ich würde dir dann einmal die Transaktionen von deinen \"alten\" Konten auf deine \"neuen\" verschieben.\nSomit hättest du im Anschluss auch wieder alles in einem Konto sichtbar.\n\t\n\t\nBitte achte besonders auf den letzten Schritt.\n\t\nSchritt 1: Zahlungen oder Bank > Konten > Klicken auf \"Zahlungskonto anlegen/hinzufügen\"\n\t\nSchritt 2: Eingabe des BICS oder der BLZ deiner Bank\n\t\n\t\n\t\nSchritt 3: Wähle das Startdatum, ab wann Transaktionen importiert werden sollen und dann Klick auf \"Weiter\"\n\t\n\t\n\t\nSchritt 4: Eingabe deiner Anmeldedaten ---> Je nach Bank erfolgt eine Verifizierung über die Seite der Bank\nSchritt 5: Setzen des Hakens bei \"Pin speichern\"\nSchritt 6: Klicken auf \"Weiter\"\n\t\n\t\n\t\nSchritt 7: Tan-Verfahren für alle zukünftigen Authentifizierungen speichern.\n\t\nSchritt 8 : Kontenauswahl bei FINAPI treffen.\n\t\nSchritt 9: Sollten alle gewünschten Konten vorhanden sein, klicke auf \"Zurück zur Anwendung\",\nSollten noch weitere Konten oder z.B. Kreditkarten unter diesem Login importiert werden, dann\nauf \"Weitere Konten abrufen\".\n\t\nfinaler Schritt: \"Konto anlegen\"\n\t\n\t\nNun sollten die betroffenen Konten angebunden sein.",
+    "expected_intent": "banking",
+    "category": "banking",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "TE - Transaktionen abrufen/importieren",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-036",
+    "query": "In meinen Rechnungen und Angeboten wird das Logo meiner Firma nicht mehr angezeigt. Weder in der Vorschau, noch in den finalen Dokumenten.",
+    "expected_answer": "Guten Tag,\nvielen Dank für deine Nachricht.\n\t\nDas fehlende Logo in deinen Rechnungen und Angeboten lag daran, dass ein Blanko-Briefpapier als Standard hinterlegt war, wodurch das Logo überdeckt wurde.\n\t\nIch habe die Einstellung angepasst, sodass dein Logo nun wieder korrekt angezeigt wird – sowohl in der Vorschau als auch auf den finalen Dokumenten.\n\t\nBei weiteren Fragen stehe ich dir gerne zur Verfügung!\nIch wünsche dir alles Gute und einen schönen Tag.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Logo & Layout",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-037",
+    "query": ".\n\nMit freundlichen Grüßen aus Oberwart, Team Webschmiede\n[image: Mitarbeiter Foto]\n\n[image: Webschmiede Logo]\n*Team Webschmiede Oberwart*\n*T:* +43 3352 213 13\n*E: *[EMAIL]\n*Webschmiede GmbH*\nWienerstraße 59 / Top 2\n7400 Oberwart\nUID [BIZ-ID] • FN [BIZ-ID] t\n*www.webschmiede.at* <http://www.webschmiede.at>\n[image: facebook icon] <https://www.facebook.com/webschmiede.at/> [image:\ninstagram icon] <https://www.instagram.com/webschmiede/> [image: linkedin\nicon] <https://www.linkedin.com/company/15873271/> [image: youtube icon]\n<https://www.youtube.com/channel/UCwETzPWkJmLhD4ymIHqQCpA>",
+    "expected_answer": ".",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - nicht erkennbar",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-038",
+    "query": "Ich muss eine Provision zahlen. Über eine Gutschrift geht dies leider nicht, denn dort ist als Buchungskategorie \"Minderleistung\" fest eingetragen. Wie ist so ein Beleg zu erstellen?? (nur am Rande: Es gibt Überzahlung bzw. doppelte Zahlungen)",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht. ​\n\t\nUm eine Gutschrift mit dem Grund \"Provision\" zu erstellen gehe hier bitte so vor, dass du unsere Vorlage verwendest und diese anschließend als Ausgabe Beleg in sevdesk hochlädst.\n\t\nBei weiteren Fragen stehe ich dir gerne zur Verfügung!\nIch wünsche dir alles Gute und schöne Feiertage.",
+    "expected_intent": "quote",
+    "category": "quote",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Angebote & Teil-/Abschlagsrechnungen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-039",
+    "query": "Hallo [NAME],\n\nnein ist erledigt, ich werde das Programm nicht benutzen.\n\nMit freundlichen Grüßen / Best regards\nJoachim Schünicke\nIm Grund 11\n[LOCATION]\nTel. [PHONE]\nFax [PHONE]\nMobil [PHONE]\n[EMAIL]",
+    "expected_answer": "Hallo [NAME],\n\nnein ist erledigt, ich werde das Programm nicht benutzen.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Add On kündigen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-040",
+    "query": "Hallo, ganze wochenende ich kann nicht Rechnung senden, weil System kann sie nicht mit E- mail adresse aus Kontakten verbinden.",
+    "expected_answer": "Hallo [NAME],\ndanke für deine Nachricht.\n\t\nBesteht das Problem bei mehreren Kontakten oder nur bei einem ?\nFalls nur ein Kontakt betroffen ist, wird es wahrscheinlich an der hinterlegten Mail Adresse liegen.\n\t\nIch wünsche dir frohe Feiertage.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Kontakte erstellen, bearbeiten, importieren",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-041",
+    "query": "KD hat Fragen zu seiner offenen Rechnung. Bei ihm gab es eine Fehlbuchung > Gutschrift > neue Rechnung > Gutschrift: nun stimmt der Betrag, der laut Mail gezahlt werden soll, wieder nicht. KD wünscht Rückmeldung (am liebsten telefonisch) und hätte gerne eine korrekte Rechnung von uns. Account vorübergehend entsperrt.",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Anfrage.\n\t\nGerne habe ich dein Kundekonto bei uns geprüft und das ist alles mit den Rechnungen und Gutschriften richtig. Du musst noch den Betrag von 227,04 € an sevdesk überweisen damit dein Kundenkonto ausgeglichen ist.\n\t\nIch wünsche dir einen guten Start ins Neue Jahr.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Account gesperrt",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-042",
+    "query": "Guten Tag, \nich habe mein Geschäftskonto als Hauptkonto hinterlegt und zusätzlich ein Konto Privateinlage erstellt, auf dem ich alle Ausgaben für die Firma von meinem privaten Konto, inkl. der privaten Überweisungen an mein Geschäftskonto um Liquidität herzustellen eingetragen habe. Werden die Ausgaben auf dem Konto Privateinlage nun automatisch in EÜR berücksichtig?`\nVielen Dank und beste Grüße\nRasmus Prager",
+    "expected_answer": "Guten Morgen Rasmus,\ndanke für deine Nachricht.\n\t\nDas Verrechnungskonto Privateinlagen wird in der EÜR automatisch berücksichtigt.\n\t\nSolltest du weitere Fragen haben, kannst du dich gerne melden.\n\t\nWünsche einen schönen Tag!",
+    "expected_intent": "insights",
+    "category": "insights",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Auswertungen & Umsatzsteuer",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-043",
+    "query": "Hatte Fragen zum Tarifwechsel bezüglich Gutscheinen die sie im Internet gefunden hat",
+    "expected_answer": "Hallo [NAME],\n\t\nvielen Dank für deine Bewertung des Vorganges.\n\t\nIch habe eben gesehen, dass du diesen mit \"Nicht zufriedenstellend\" bewertet hast.\n\t\nUm dir und auch unseren weiteren Kunden künftig das bestmögliche Ergebnis gewährleisten zu können, wäre ich dankbar, wenn du mir kurz sagen könntest, was ich aus deiner Sicht das nächste mal besser machen kann.\n\t\nVielen Dank für deine Unterstützung.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Tarifwechsel",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-044",
+    "query": "Kann seit dem 09.12.24 keine Umsätze mehr von meinem Konto einbinden bzw. schreibt er nur dass keine neuen Umsätze hinzugekommen sind, obwohl auf meinem Konto ca 20 Buchungen vorhanden sind. Überweisungen funktionieren jedoch.",
+    "expected_answer": "Hallo [NAME] ,\nvielen Dank für deine Nachricht.\n\t\nKannst du bitte einmal versuchen einen manuellen Sync durchführen. Hierdurch wird ein direkter Abruf bei der Bank gestartet, welcher die neuesten Transaktionen und den aktuellen Saldo abruft.\n\n​Schritt 1: Navigiere zu Bank/Zahlungen---> Konten und wähle dort das gewünschte Konto aus.\nSchritt 2: Klicke auf manuell Synchronisieren (kleines Symbol rechts vom Saldo)\n\t\n\t\n\t\nSchritt 3: Im Fall eine Weiterleitung Klicke auf \"weiter\"\n\t\n\t\n​Schritt 4: Folge den Anweisungen von FinAPI\n\t\n\t\nWICHTIG: bei Kreditkaren muss das Tan Verfahren gespeichert werden, damit eine autmatische Abfrage von sevDesk erfolgen kann.\n\t\n\t\n\t\nDurch das manuelle Synchronisieren wird eine neue Anfrage an die Bank gesendet. Dabei kann eine Tan-Abfrage kommen wodurch die Authentifizierung verlängert wird.",
+    "expected_intent": "banking",
+    "category": "banking",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "TE - Transaktionen abrufen/importieren",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-045",
+    "query": "Sevdesk hat sich verlängert . Weitere Infos Notiz",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Anfrage.\n\t\nBitte einmal um Auflistung was nicht funktioniert hat.\n\t\nDie Einwilligung in unsere Vertragsmodalitäten, und somit in die Vertragsverlängerung, erteiltest du uns bei Vertragsabschluss",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Kulanz / Rabattanfrage",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  },
+  {
+    "id": "sev-046",
+    "query": "Hallo, wir interessieren uns für Ihr Programm. Gerne würden wir die Software testen. Beim Test würden wir nur Testkunden, Testrechnungen und Testangebote erstellen. Falls uns das Programm danach zusagt, wäre es dann möglich (nach der Testphase) alles zurück zu setzen? Sprich alle Test-Kunden, Test-Rechnungen und Test-Angebote zu löschen und bei Null zu starten?\n\nMit freundlichen Grüßen\nB. Matijevic",
+    "expected_answer": "Hallo [NAME] sevdesk Interessent,\n\t\nvielen Dank für deine Nachricht und dein Interesse an sevdesk.\nBitte entschuldige die verspätete Rückmeldung.\nAufgrund von hoher Kapazitätsauslastung erhältst du erst jetzt Rückmeldung von uns. \n\t\nEs ist möglich nach der Testphase die Daten nochmals zurückzusetzen, sodass du dann bereinigt starten kannst.\n\t\nDu hast die Möglichkeit im Hauptmenü unter -> Einstellungen -> System deine Daten zurückzusetzen. Beachte, dass die Grundeinstellungen erhalten bleiben, die Rechnungen, Belege und Dokumente jedoch alle gelöscht werden.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Unternehmenseinstellungen / Einstellungen in sevdesk",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-047",
+    "query": "Hallo [NAME]-Team,\n\nich möchte eine neue Funktion für ein künftiges Update vorschlagen.\n\nBisher habe ich Angebote, Rechnungen und Auftragsbestätigungen über unterschiedliche E-Mailadressen versendet.\nLeider kann in sevDesk aktuell nur eine SMTP-Anbindung hinterlegt werden.\n\nEs wäre daher hilfreich, wenn ihr künftig mehrere Mailadressen zum Versand unterstützen würdet, die beim Versand des jeweiligen Dokuments ausgewählt werden können.\n\nViele Grüße\nBenjamin",
+    "expected_answer": "Guten Morgen Benjamin,\ndanke für deine Nachricht.\n\t\nGerne gebe ich das als Feature Request weiter.\n\t\nSolltest du weitere Fragen haben, kannst du dich gerne melden.\n\t\nEinen schönen Tag :)",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Feature Request",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-048",
+    "query": "Guten Tag, ich befinde mich grad in der Testphase. Leide reicht aufgrund der Feiertage der Testzeitraum nicht aus. Zentrales Entscheidungskriterium ist, inwieweit mein Steuerberater die XML Dateien in seine Buchhaltung übernehmen kann. Dies kann aber eben aufgrund der Feiertage erst nächste Woche geklärt werden. Kann mein Testzeitraum verlängert werden? Oder sind meine Daten dann noch online, denn ich möchte nicht die ganzen Daten nochmal neu eingeben müssen. Herzlichen Dank Mit freundlichen Grüßen",
+    "expected_answer": "Guten Tag [NAME],                                                                                             \nvielen Dank für deine Nachricht.\n\t\nHabe dich bis zum 30.01.2025 verlängert. Viel Spaß.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Verlängerung Testphase",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-049",
+    "query": "Umstellung auf neuen Tarif Buchhaltung Pro. Im neuen Tarif ist der Inventar nicht enthalten, ich benötige auch keine Inventarübersicht. Jedoch benötige ich  Lieferantenpreise\n Kundenpreise\n Lieferantenzuordnung\n Artikelzuordnung\nBenötige ich das Addon Inventar?\n\nViele grüße\nManuel Diaz",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nDein Tarif wird automatisch auf Buchhaltung PRO mit Inventar umgestellt zum 02.02.25.\nBis dahin hast du noch den aktuellen Tarif Warenwirtschaft.\n\t\nUm die Kunden- und Lieferantenpreise zu nutzen, ist das Inventar notwendig. \n\t\nBei Rückfragen gerne melden.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 7,
+    "difficulty": "hard",
+    "test_type": "regression",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SE - Sonstiges",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-7"
+    ]
+  },
+  {
+    "id": "sev-050",
+    "query": "Wir fangen an mit Buchhaltung für 2025, jetzt wollen wir die anfangsbestand/Saldenliste aus 2024 buchen. Wie geht das? Ich finde kein weg die anfnagsbestand von Bank zu geben",
+    "expected_answer": "Hallo [NAME],\nvielen Dank für deine Nachricht.\n\t\nIn sevdesk ist es möglich, den Saldo des Kassenbuches als Anfangsbestand zu hinterlegen. Eine Möglichkeit, den Anfangsbestand eines Bankkontos zu hinterlegen, gibt es derzeit leider nicht.\n\t\nBei weiteren Fragen stehe ich dir gerne zur Verfügung!\nIch wünsche dir alles Gute und einen schönen Tag.",
+    "expected_intent": "support",
+    "category": "support",
+    "ces_rating": 1,
+    "difficulty": "easy",
+    "test_type": "capability",
+    "source": "sevdesk_raw",
+    "language": "de",
+    "source_category": "SU - Buchhalterische Anfragen",
+    "tags": [
+      "sevdesk",
+      "real-ticket",
+      "ces-1"
+    ]
+  }
+]

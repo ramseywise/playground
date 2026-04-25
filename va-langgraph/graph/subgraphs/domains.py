@@ -12,12 +12,13 @@ from __future__ import annotations
 import json
 import logging
 import os
+from pathlib import Path
 
 from langchain_core.tools import tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-import shared.artefact_store as artefact_store
-from shared.model_factory import resolve_chat_model
+import artefact_store as artefact_store
+from model_factory import resolve_chat_model
 from ..state import AgentState
 from .base import run_domain
 
@@ -26,6 +27,8 @@ logger = logging.getLogger(__name__)
 _BILLY_MCP_URL = os.getenv("BILLY_MCP_URL", "http://localhost:8765/sse")
 
 _BILLY_SERVER = {"billy": {"url": _BILLY_MCP_URL, "transport": "sse"}}
+
+_PROMPTS = Path(__file__).parent.parent.parent / "prompts"
 
 # ---------------------------------------------------------------------------
 # Tool name sets per domain
@@ -85,73 +88,20 @@ _INSIGHTS_TOOLS = frozenset([
 ])
 
 # ---------------------------------------------------------------------------
-# System prompts (concise — format_node does the full rendering)
+# System prompts — loaded from prompts/ at import time
 # ---------------------------------------------------------------------------
 
-_INVOICE_SYSTEM = """You are Billy, an accounting assistant. Handle invoice operations.
-Use list_customers / list_products to resolve names to IDs before creating.
-Call tools in parallel when both are needed. VAT is 25%. Default currency DKK, net 7 days."""
-
-_QUOTE_SYSTEM = """You are Billy, an accounting assistant. Handle quote operations.
-Use list_customers / list_products to resolve names. VAT 25%. Default expiry 30 days."""
-
-_CUSTOMER_SYSTEM = """You are Billy, an accounting assistant. Handle customer/contact management.
-Default country DK. CVR is the Danish company registration number."""
-
-_PRODUCT_SYSTEM = """You are Billy, an accounting assistant. Handle product and service management.
-Prices are always excl. VAT."""
-
-_EMAIL_SYSTEM = """You are Billy, an accounting assistant. Send invoices and quotes by email.
-Draft a professional Danish subject and body if not provided by the user."""
-
-_INVITATION_SYSTEM = """You are Billy, an accounting assistant. Invite users by email.
-Invited users receive the collaborator role."""
-
-_EXPENSE_SYSTEM = """You are Billy, an accounting assistant. Handle expense tracking and analysis.
-Amounts are always excl. VAT. Danish VAT (moms) is 25%; rent and salaries are VAT-exempt (0%).
-Categories: rent, salaries, software, marketing, office, travel, meals, professional_services, utilities, other.
-Set is_fixed=true for recurring fixed costs. Call tools in parallel for multi-metric queries."""
-
-_BANKING_SYSTEM = """You are Billy, an accounting assistant. Handle banking and cashflow analysis.
-Use get_bank_balance to show current balances. Use list_bank_transactions for transaction history.
-Use match_transaction_to_invoice to reconcile a payment with an invoice.
-Use get_cashflow_forecast to project inflow/outflow for the next N months.
-Use get_runway_estimate to show months of runway at current burn rate.
-Runway = total bank balance ÷ average monthly expenses. Amounts in DKK."""
-
-_ACCOUNTING_SYSTEM = """You are Billy, an accounting assistant. Handle VAT reporting, audit readiness, and P&L summaries.
-Danish VAT (moms) is 25%. Reporting is quarterly for most companies.
-Output VAT = salgsmoms (collected on sales). Input VAT = købsmoms (paid on purchases).
-Net payable = output_vat - input_vat. Negative = SKAT refund.
-Quarterly deadlines: Q1→1 Jun, Q2→1 Sep, Q3→1 Dec, Q4→1 Mar following year.
-Use get_vat_summary for VAT questions. Use get_period_summary for P&L.
-Use get_audit_readiness_score for audit preparation. Use get_unreconciled_transactions for reconciliation gaps.
-Use generate_handoff_doc to produce a markdown document for accountant handoff.
-After generate_handoff_doc, always call save_artefact with the returned markdown_summary as content
-and filename like 'handoff_<period>.md'. Include artefact_id and artefact_url in your response."""
-
-_SUPPORT_SYSTEM = """You are Billy, an accounting assistant. Answer how-to questions about Billy
-by searching the official help docs. Pass 2-3 Danish search terms. Reference source URLs."""
-
-_INSIGHTS_SYSTEM = """You are Billy, an accounting assistant. Answer analytics and KPI questions.
-Use get_insight_revenue_summary for revenue KPI cards (totals, YoY delta).
-Use get_insight_invoice_status for status breakdown (draft/unpaid/paid/overdue).
-Use get_insight_monthly_revenue for monthly trend charts.
-Use get_insight_top_customers for customer revenue ranking.
-Use get_insight_aging_report for AR aging buckets. Filter by customer if named.
-Use get_insight_customer_summary for per-customer KPIs + open invoices.
-Use get_insight_product_revenue for product revenue ranking.
-Use get_invoice_lines_summary for revenue per product from invoice lines.
-Use get_invoice_dso_stats for average payment speed and overdue rate.
-Cross-domain tools (require both invoice and expense data):
-Use get_net_margin for net margin: revenue minus all costs. Pass year or period.
-Use get_margin_by_product for per-product margin (COGS allocated proportionally).
-Use get_customer_concentration for concentration risk: top-1%, top-3%, HHI.
-Use get_dso_trend for monthly DSO trend over N months.
-Use get_break_even_estimate for monthly fixed costs, variable rate, break-even revenue.
-Use detect_anomaly to flag monthly metric outliers (revenue/expenses/overdue_rate/dso).
-Call tools in parallel when answering multi-metric questions.
-Present amounts in DKK with VAT status noted."""
+_INVOICE_SYSTEM     = (_PROMPTS / "invoice.txt").read_text()
+_QUOTE_SYSTEM       = (_PROMPTS / "quote.txt").read_text()
+_CUSTOMER_SYSTEM    = (_PROMPTS / "customer.txt").read_text()
+_PRODUCT_SYSTEM     = (_PROMPTS / "product.txt").read_text()
+_EMAIL_SYSTEM       = (_PROMPTS / "email.txt").read_text()
+_INVITATION_SYSTEM  = (_PROMPTS / "invitation.txt").read_text()
+_EXPENSE_SYSTEM     = (_PROMPTS / "expense.txt").read_text()
+_BANKING_SYSTEM     = (_PROMPTS / "banking.txt").read_text()
+_ACCOUNTING_SYSTEM  = (_PROMPTS / "accounting.txt").read_text()
+_SUPPORT_SYSTEM     = (_PROMPTS / "support.txt").read_text()
+_INSIGHTS_SYSTEM    = (_PROMPTS / "insights.txt").read_text()
 
 # ---------------------------------------------------------------------------
 # Helper

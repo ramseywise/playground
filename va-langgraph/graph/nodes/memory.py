@@ -8,26 +8,17 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
-import shared.memory as memory_store
-from shared.model_factory import resolve_chat_model
-from shared.schema import AssistantResponse
+import memory as memory_store
+from model_factory import resolve_chat_model
+from schema import AssistantResponse
 
 from ..state import AgentState
 
 logger = logging.getLogger(__name__)
 
-_EXTRACT_SYSTEM = """Extract the user's preference action.
-Respond with JSON only — no markdown, no explanation.
-Format: {"action": "remember" or "forget", "key": "<short snake_case key>", "value": "<value if remembering, else empty>"}
-
-Examples:
-  "remember my default currency is EUR"    → {"action": "remember", "key": "currency",    "value": "EUR"}
-  "remember I prefer Danish replies"       → {"action": "remember", "key": "language",    "value": "Danish"}
-  "remember my VAT rate is 25%"            → {"action": "remember", "key": "vat_rate",    "value": "25%"}
-  "forget my language preference"          → {"action": "forget",   "key": "language",    "value": ""}
-  "forget everything you know about me"   → {"action": "forget",   "key": "all",         "value": ""}
-"""
+_EXTRACT_SYSTEM = (Path(__file__).parent.parent.parent / "prompts" / "memory_extract.txt").read_text()
 
 
 async def memory_node(state: AgentState) -> AgentState:

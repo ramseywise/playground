@@ -25,9 +25,9 @@ from google.adk.runners import Runner  # noqa: E402
 from google.adk.sessions import InMemorySessionService  # noqa: E402
 from google.genai import types  # noqa: E402
 
-import shared.memory as memory_store  # noqa: E402
-from agents.va_assistant.app import app as va_app  # noqa: E402
-from shared.schema import AssistantResponse  # noqa: E402
+import memory as memory_store  # noqa: E402
+from app import app as va_app  # noqa: E402
+from schema import AssistantResponse  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ async def _save_session_summary(
     agent_response: str,
 ) -> None:
     try:
-        from shared.model_factory import resolve_chat_model
+        from model_factory import resolve_chat_model
         prompt = (
             f"In one sentence, summarise this interaction:\n"
             f"User: {user_message[:200]}\n"

@@ -5,18 +5,18 @@ from __future__ import annotations
 import pytest
 from google.adk.agents import Agent
 
-from agents.va_assistant.agent import root_agent as va_assistant
-from agents.va_assistant.sub_agents.accounting_agent import accounting_agent
-from agents.va_assistant.sub_agents.banking_agent import banking_agent
-from agents.va_assistant.sub_agents.customer_agent import customer_agent
-from agents.va_assistant.sub_agents.email_agent import email_agent
-from agents.va_assistant.sub_agents.expense_agent import expense_agent
-from agents.va_assistant.sub_agents.insights_agent import insights_agent
-from agents.va_assistant.sub_agents.invitation_agent import invitation_agent
-from agents.va_assistant.sub_agents.invoice_agent import invoice_agent
-from agents.va_assistant.sub_agents.product_agent import product_agent
-from agents.va_assistant.sub_agents.quote_agent import quote_agent
-from agents.va_assistant.sub_agents.support_agent import support_agent
+from agent import root_agent as va_assistant
+from sub_agents.accounting_agent import accounting_agent
+from sub_agents.banking_agent import banking_agent
+from sub_agents.customer_agent import customer_agent
+from sub_agents.email_agent import email_agent
+from sub_agents.expense_agent import expense_agent
+from sub_agents.insights_agent import insights_agent
+from sub_agents.invitation_agent import invitation_agent
+from sub_agents.invoice_agent import invoice_agent
+from sub_agents.product_agent import product_agent
+from sub_agents.quote_agent import quote_agent
+from sub_agents.support_agent import support_agent
 
 _ALL_SUB_AGENTS = [
     accounting_agent, banking_agent, customer_agent, email_agent,

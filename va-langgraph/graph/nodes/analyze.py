@@ -25,37 +25,14 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
-from shared.model_factory import resolve_chat_model
+from model_factory import resolve_chat_model
 from ..state import AgentState
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = """You are a routing classifier for a Billy accounting assistant.
-
-Given the user's latest message classify the PRIMARY intent into EXACTLY ONE of:
-  invoice, quote, customer, product, email, invitation, insights, expense, banking, accounting, support, direct, escalation, memory
-
-Rules:
-- "direct" only for greetings (hi, hello) or requests completely outside Billy.
-- Any how-to / explanatory question → support, even if it mentions an action.
-- "insights" for analytics, KPIs, dashboards, trends, aging reports, DSO, revenue summaries,
-  top customers/products, overdue rates, and conversion stats. NOT for listing individual invoices.
-- "expense" for logging, viewing, listing, or analysing business expenses, vendor spend,
-  cost categories, fixed vs variable costs, or gross margin questions.
-- "banking" for bank balance queries, bank transactions, reconciling payments to invoices,
-  cashflow forecasting, or runway / burn rate questions.
-- "accounting" for VAT/moms questions, audit readiness, period P&L summaries for accountants,
-  unreconciled transactions (as an audit/accounting concern), or generating handoff documents.
-- "escalation" when the user explicitly wants a human: "speak to a human", "talk to support",
-  "this isn't working", or expresses severe frustration after multiple failed attempts.
-- "memory" ONLY when the user explicitly wants to save or delete a preference: "remember that...",
-  "don't forget...", "forget my ... preference", "forget everything you know about me".
-- When in doubt → support.
-
-Respond with a JSON object:
-{"intent": "<one of the above>", "confidence": <0.0–1.0>}
-"""
+_SYSTEM = (Path(__file__).parent.parent.parent / "prompts" / "router.txt").read_text()
 
 
 async def analyze_node(state: AgentState) -> AgentState:

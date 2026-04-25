@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from agents.va_assistant.agent import _INJECTION_RE, _ESCALATION_RE
+from agent import _INJECTION_RE, _ESCALATION_RE
 
 
 class TestInjectionPattern:

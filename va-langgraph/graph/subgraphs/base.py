@@ -20,7 +20,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.messages import trim_messages
 from langchain_core.tools import BaseTool
 
-from shared.model_factory import resolve_chat_model
+from model_factory import resolve_chat_model
 from ..state import AgentState
 
 logger = logging.getLogger(__name__)

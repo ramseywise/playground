@@ -6,9 +6,10 @@ WORKDIR /app
 COPY va-langgraph/pyproject.toml va-langgraph/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
+COPY va-langgraph/schema.py va-langgraph/memory.py va-langgraph/artefact_store.py va-langgraph/model_factory.py ./
 COPY va-langgraph/graph ./graph
 COPY va-langgraph/gateway ./gateway
-COPY va-langgraph/shared ./shared
+COPY va-langgraph/prompts ./prompts
 
 ENV PATH="/app/.venv/bin:$PATH"
 

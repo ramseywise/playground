@@ -18,10 +18,10 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["agents", "gateway", "shared"]
+packages = ["sub_agents", "gateway"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "agents"]
+testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 

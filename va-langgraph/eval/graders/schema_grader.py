@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from shared.schema import AssistantResponse
+from schema import AssistantResponse
 from ..models import EvalTask, GraderResult
 
 

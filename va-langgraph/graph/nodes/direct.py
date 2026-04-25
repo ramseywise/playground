@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from shared.schema import AssistantResponse
+from schema import AssistantResponse
 from ..state import AgentState
 
-_SYSTEM = """You are Billy, an accounting assistant. You can help with:
-invoices, quotes, customers, products, sending emails, inviting users, and support questions.
-
-For greetings: respond with a friendly welcome and briefly list what you can do.
-For out-of-scope requests: respond in ≤15 words explaining what you can help with.
-
-Respond with an AssistantResponse JSON object (message field is required)."""
+_SYSTEM = (Path(__file__).parent.parent.parent / "prompts" / "direct.txt").read_text()
 
 def _get_structured_llm():
     llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-lite", temperature=0.3)

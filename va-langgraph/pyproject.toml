@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["graph", "gateway", "shared", "eval"]
+packages = ["graph", "gateway", "eval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "graph"]

@@ -8,36 +8,17 @@ from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from shared.schema import AssistantResponse
+from schema import AssistantResponse
 from ..state import AgentState
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM = """You are Billy, an accounting assistant for the Billy.dk platform.
-
-You have just executed the user's request.  The tool results are provided below.
-Produce a JSON response that strictly matches the AssistantResponse schema.
-
-Schema fields:
-- message (required): Main response as markdown. Summarise what was done and show relevant data.
-- suggestions (optional): 2-4 follow-up chips.
-- nav_buttons (optional): [{"label": "...", "route": "/...", "id": "...", "document_type": "..."}]
-  Routes: /invoices, /invoices/{id}, /quotes, /quotes/{id}, /contacts, /contacts/{id}, /products
-- sources (optional): [{"title": "...", "url": "..."}] — for support answers only.
-- table_type (optional): "invoices" | "customers" | "products" | "quotes" — when listing.
-- form (optional): {"type": "create_invoice|create_customer|create_product|create_quote", "defaults": {}}
-- email_form (optional): {"to": "...", "subject": "...", "body": "..."}
-- confirm (optional): true before destructive edits.
-- contact_support (optional): true when the user needs a human.
-- artefact_id (optional): UUID string returned by save_artefact — set when a file was stored this turn.
-- artefact_url (optional): Download URL returned by save_artefact — set alongside artefact_id.
-
-Respond ONLY with valid JSON. No markdown fences.
-"""
+_SYSTEM = (Path(__file__).parent.parent.parent / "prompts" / "format.txt").read_text()
 
 def _get_structured_llm():
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)

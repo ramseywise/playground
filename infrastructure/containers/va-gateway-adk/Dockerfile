@@ -6,9 +6,11 @@ WORKDIR /app
 COPY va-google-adk/pyproject.toml va-google-adk/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-COPY va-google-adk/agents ./agents
+COPY va-google-adk/agent.py va-google-adk/app.py ./
+COPY va-google-adk/schema.py va-google-adk/memory.py va-google-adk/artefact_store.py va-google-adk/model_factory.py ./
+COPY va-google-adk/sub_agents ./sub_agents
+COPY va-google-adk/prompts ./prompts
 COPY va-google-adk/gateway ./gateway
-COPY va-google-adk/shared ./shared
 
 ENV PATH="/app/.venv/bin:$PATH"
 

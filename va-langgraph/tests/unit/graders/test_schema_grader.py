@@ -6,7 +6,7 @@ import pytest
 
 from eval.graders.schema_grader import SchemaGrader
 from eval.models import EvalTask
-from shared.schema import AssistantResponse
+from schema import AssistantResponse
 
 
 def _task(response: dict | None) -> EvalTask:

@@ -152,7 +152,7 @@ def build_graph(checkpointer=None) -> "CompiledGraph":  # type: ignore[return]
 
 def _escalation_node(state: AgentState) -> AgentState:
     """Signal human-supporter handoff."""
-    from shared.schema import AssistantResponse
+    from schema import AssistantResponse
 
     return {
         **state,
@@ -168,7 +168,7 @@ def _escalation_node(state: AgentState) -> AgentState:
 
 def _blocked_node(state: AgentState) -> AgentState:
     """Produce a blocked AssistantResponse."""
-    from shared.schema import AssistantResponse
+    from schema import AssistantResponse
 
     reason = state.get("block_reason", "Your message could not be processed.")
     return {
