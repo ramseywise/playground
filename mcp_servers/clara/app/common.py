@@ -70,6 +70,7 @@ from app.tools.quotes import (
     get_quote_conversion_stats,
     list_quotes,
 )
+from app.tools.support_knowledge import fetch_support_knowledge
 
 _log = logging.getLogger("clara.tools")
 
@@ -161,6 +162,9 @@ def register_all(mcp: FastMCP) -> None:
     mcp.tool()(_logged(get_dso_trend))
     mcp.tool()(_logged(get_break_even_estimate))
     mcp.tool()(_logged(detect_anomaly))
+
+    # Support knowledge
+    mcp.tool()(_logged(fetch_support_knowledge))
 
     # Accounting
     mcp.tool()(_logged(get_vat_summary))
