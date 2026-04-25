@@ -77,22 +77,7 @@ va-eval-review:
 
 # Step 3: pre-commit PII grep check — must pass before git add on fixture files
 va-eval-pii-check:
-	@cd va-langgraph && python3 -c " \
-import json, re, sys; \
-data = json.load(open('tests/evalsuite/fixtures/sevdesk_tickets.json')); \
-issues = []; \
-[issues.append(f'{r[\"id\"]}.{f}: contains @') or 1 \
-    for r in data for f in ('query','expected_answer') \
-    if '@' in (r.get(f,'') or '')]; \
-[issues.append(f'{r[\"id\"]}.{f}: possible IBAN') or 1 \
-    for r in data for f in ('query','expected_answer') \
-    if re.search(r'DE\d{20}', r.get(f,'') or '')]; \
-v = re.sub(r'https?://\S+', '', r.get(f,'') or ''); \
-[issues.append(f'{r[\"id\"]}.{f}: possible phone/ID (7+ digits)') or 1 \
-    for r in data for f in ('query','expected_answer') \
-    if re.search(r'\d{7,}', re.sub(r'https?://\S+','',r.get(f,'') or ''))]; \
-(print('PII check FAILED:\n' + chr(10).join('  '+i for i in issues)) or sys.exit(1)) \
-    if issues else print('PII check passed — $(shell cd va-langgraph && python3 -c \"import json; print(len(json.load(open(\\\"tests/evalsuite/fixtures/sevdesk_tickets.json\\\"))))\") fixtures clean.')"
+	cd va-langgraph && uv run python eval/ingest/pii_check.py
 
 # Full pipeline: ingest → review → pii-check (run sequentially)
 va-eval-data:
