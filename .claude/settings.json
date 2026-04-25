@@ -19,6 +19,18 @@
           },
           {
             "type": "command",
+            "command": "bash .claude/hooks/ts_quality.sh",
+            "timeout": 10,
+            "statusMessage": "Enforcing TS standards..."
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/ts_typecheck.sh",
+            "timeout": 30,
+            "statusMessage": "Type-checking TypeScript..."
+          },
+          {
+            "type": "command",
             "command": "bash .claude/hooks/function_complexity_warning.sh",
             "timeout": 10,
             "statusMessage": "Checking function complexity..."
