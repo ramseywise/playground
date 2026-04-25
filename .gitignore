@@ -71,8 +71,44 @@ docs/
 .processed.json
 
 /ts_google_adk
-/infrastructure
 /infra
 /frontend
 /.github
 /.claude/docs/archived
+
+# Local-only dirs (not part of this project)
+/librarian
+
+# SQLite WAL journals
+*.db-shm
+*.db-wal
+
+# Terraform provider cache and state
+.terraform/
+*.tfstate
+*.tfstate.backup
+terraform.tfvars
+
+# Global Claude skills (live in ~/.claude/skills/ — only project-specific ones tracked here)
+.claude/skills/backend/
+.claude/skills/claude-insights/
+.claude/skills/code-debug/
+.claude/skills/code-review/
+.claude/skills/compact-session/
+.claude/skills/define-epic/
+.claude/skills/design-sprint/
+.claude/skills/execute-plan/
+.claude/skills/execute-tasks/
+.claude/skills/frontend/
+.claude/skills/github-projects/
+.claude/skills/mcp-builder/
+.claude/skills/plan-epic/
+.claude/skills/plan-refactor/
+.claude/skills/plan-review/
+.claude/skills/prototype/
+.claude/skills/quick-commit/
+.claude/skills/quick-pr/
+.claude/skills/research-review/
+.claude/skills/review-pr/
+.claude/skills/scope-initiative/
+.claude/skills/skill-creator/

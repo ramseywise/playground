@@ -1,0 +1,7 @@
+{
+  "default_agent": "va_assistant",
+  "excluded_agents": [],
+  "warmup": {
+    "agents": []
+  }
+}
