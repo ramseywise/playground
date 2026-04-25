@@ -66,7 +66,7 @@ eval-experiment:
 
 # ── VA agents (docker compose) ────────────────────────────────────────────────
 
-COMPOSE := docker compose -f infrastructure/containers/docker-compose.va.yml
+COMPOSE := docker compose -f infrastructure/containers/docker-compose.va.yml --env-file .env
 
 # Full stack: frontend + billy-mcp + both gateways + postgres
 va-up:
