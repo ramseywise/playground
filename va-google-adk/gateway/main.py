@@ -31,6 +31,7 @@ from pydantic import BaseModel
 
 import artefact_store as artefact_store
 import memory as memory_store
+import observability
 
 from .session_manager import _SENTINEL, session_manager
 
@@ -55,9 +56,11 @@ def _require_api_key(key: str | None = Security(_api_key_header)) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    observability.init_langsmith()
     await memory_store.init_memory_db()
     await artefact_store.init_artefact_db()
     yield
+    observability.shutdown_langsmith()
 
 
 app = FastAPI(title="VA Assistant Gateway", lifespan=lifespan)

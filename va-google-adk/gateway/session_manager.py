@@ -26,6 +26,7 @@ from google.adk.sessions import InMemorySessionService  # noqa: E402
 from google.genai import types  # noqa: E402
 
 import memory as memory_store  # noqa: E402
+import observability  # noqa: E402
 from app import app as va_app  # noqa: E402
 from schema import AssistantResponse  # noqa: E402
 
@@ -98,6 +99,12 @@ class SessionManager:
             return e
 
         _last_response_message: str | None = None
+        lf_trace = observability.start_trace(
+            trace_id=trace_id,
+            user_id=user_id,
+            session_id=session_id,
+            input=message,
+        )
 
         try:
             async for event in session.runner.run_async(
@@ -117,9 +124,14 @@ class SessionManager:
                     await session.queue.put(_evt("response", structured))
                     _last_response_message = structured.get("message")
 
+            if lf_trace:
+                lf_trace.finish(output=_last_response_message)
+
         except Exception as e:
             logger.exception("ADK turn error for session %s", session_id)
             await session.queue.put(_evt("error", str(e)))
+            if lf_trace:
+                lf_trace.finish(output=None, error=str(e))
         finally:
             await session.queue.put(_SENTINEL)
             if _last_response_message:

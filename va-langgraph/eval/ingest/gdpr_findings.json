@@ -1,0 +1,1562 @@
+[
+  {
+    "id": "sev-005",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Jürgen Mann",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-005",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Hallstädter Weg 1",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-005",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Jürgen Mann",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-006",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Klaus Melcher",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-007",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Cornelius Schaffer",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-011",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Stefan Bohländer",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-013",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Felix",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-017",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Martin Kalus",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-020",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "Webschmiede GmbH",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-020",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Wienerstraße 59 / Top 2",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-020",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "7400 Oberwart",
+    "suggestion": "[LOCATION]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-022",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Joachim Schünicke",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-022",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Im Grund 11",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-029",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Stefan",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-030",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Moni",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-032",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Simon Gerwig",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-035",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Marika",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-035",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Caroline",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-036",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Thomas",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-048",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Jürgen Sachweh",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-049",
+    "field": "expected_answer",
+    "issue_type": "company",
+    "snippet": "Tiertherapeutische",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-050",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Aleksandra",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-051",
+    "field": "query",
+    "issue_type": "account_id",
+    "snippet": "15233908274022",
+    "suggestion": "[REF]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-051",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Joachim",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-052",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Stefan Ortmeyer",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-053",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Roland Rauschert",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-055",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Anita",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-059",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Manuel Scharff",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-061",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Isabella",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-062",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Thomas",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-065",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Philipp",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-067",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "RESOUREX GmbH",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-067",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Patricia Janovsky",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-067",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Hegelgasse 21/5 | 1010 Wien | Austria",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-067",
+    "field": "query",
+    "issue_type": "phone",
+    "snippet": "T +43 (0)650 920 52 11",
+    "suggestion": "[PHONE]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-067",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Patricia",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-069",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Daniel",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-070",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Hans",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-072",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Toni Nitschke",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-072",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "sabotage - GASTRO Beratung",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-072",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Grünberger Straße 34",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-073",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Michael",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-073",
+    "field": "expected_answer",
+    "issue_type": "company",
+    "snippet": "Werbebekleidung - Juen",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-073",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Michael Juen",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-073",
+    "field": "expected_answer",
+    "issue_type": "address",
+    "snippet": "Ostersteinstrasse 37",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-073",
+    "field": "expected_answer",
+    "issue_type": "address",
+    "snippet": "6471 Arzl im Pitztal",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-076",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Christian Schaffer",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-077",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Felix Sisterhenn",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-084",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Manuel Fitz",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-085",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "kim",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-085",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "uwe",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-086",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Robin",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-087",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "Hausmeisterdienst Scheuermann",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-087",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Hendrik Scheuermann",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-088",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Joschka",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-089",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Bernd Eberhardt",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-090",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Yuliia Romanova",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-093",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Dirk",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-094",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Klaudia Bahlmann",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-095",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Birgit Laurent-Baganz",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-096",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Jörn",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-099",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Jäger",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-102",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Irina Grebien",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-103",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Adrienn Schaal",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-104",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Juri Nakonecny",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-105",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Michael Fuchs",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-107",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "Christian Gaugel (Revolut DE)",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-107",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Martina",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-107",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Christian Gaugel",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-110",
+    "field": "expected_answer",
+    "issue_type": "company",
+    "snippet": "Handels-Gruppe\n\nLoukas Gouromichos",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-110",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Loukas Gouromichos",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-110",
+    "field": "expected_answer",
+    "issue_type": "address",
+    "snippet": "Gmünder Straße 17",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-111",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Marika Mameli",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-113",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Manuel Kling",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-114",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Marc Hempowicz",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-116",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Alex",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-123",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Hajikhani",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-124",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Peter Rost",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-125",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Jonas Nitsch",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-127",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Erik Bender",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-127",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Raboisen 38",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-127",
+    "field": "query",
+    "issue_type": "other",
+    "snippet": "http://www.erikbender.de",
+    "suggestion": "[URL]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-128",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Ilona Tremmel",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-129",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Chris Pollak",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "René Mammitzsch",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "Fa. Erich Wutzig",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Andreas Saf",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Bahnhofstr. 7",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Robert Bosch Str. 14",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Theo-Neubauer-Str. 20",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "Fa. Wolfgang Medenbach",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "am Nelkenberg 13",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Naumburgerstr. 87a",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-130",
+    "field": "query",
+    "issue_type": "other",
+    "snippet": "HRA 6308",
+    "suggestion": "[BIZ-ID]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-134",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Stephan Rieder",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-136",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Andreas Nolte",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-137",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "-Werner",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-138",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Stefan Palme",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-139",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Mario Karrasch",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-145",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "S. Efe-Kara",
+    "suggestion": "S. [NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-145",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "Dr. Brandenburg Stb/WP GmbH",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-145",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "[NAME] Efe-Kara",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-150",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Richard",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-150",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Chris R.",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-151",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "[NAME]. Frien",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-154",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Sebastian Schäfer",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-155",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Stefan Wille",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-158",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Hotsat",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-161",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Jarne Nagel",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-165",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Ludger",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Ilona Tremmel",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Hauptstrasse 68",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Axel Bieber",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Peter Polzer",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Markus Strenzl",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Ilona Tremmel",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "expected_answer",
+    "issue_type": "address",
+    "snippet": "Hauptstrasse 68",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Axel Bieber",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Peter Polzer",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-167",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Markus Strenzl",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-169",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Elsa",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-174",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Thomas Avgustin",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-175",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Nicole Momberg",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-175",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Hans",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-176",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Detlef Neumann",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-176",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Detlef Neumann",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-176",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Borriesstrasse 1",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-177",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Mirko",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-179",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Gaby",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-181",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Thomas",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-189",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Kristin",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-190",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Katja",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-193",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Anke Sonnenschein",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-194",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Rüdiger Taeger",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-194",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "Ziegenpfad 12 A",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-194",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Rüdiger Taeger",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-194",
+    "field": "expected_answer",
+    "issue_type": "address",
+    "snippet": "Ziegenpfad 12 A",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-197",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Jan Lemke",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-198",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Martin Hübscher",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-199",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Jörn",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-201",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Andrea Wolf",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-202",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Thomas",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-205",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Magret",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-205",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Hans",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-206",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Michael Grathwohl",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-208",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Christiane",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-209",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Joachim",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-213",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Simone",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-218",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Jakob Kaufmann",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-220",
+    "field": "query",
+    "issue_type": "account_id",
+    "snippet": "166360",
+    "suggestion": "[REF]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-222",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Michael Otto",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-225",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Christian",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-226",
+    "field": "query",
+    "issue_type": "account_id",
+    "snippet": "B2B-17149952",
+    "suggestion": "[REF]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-227",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Karin Duczek",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-227",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Hans",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "query",
+    "issue_type": "account_id",
+    "snippet": "Kd-Nr. 623046",
+    "suggestion": "[REF]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Christoph Rudholzner",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Tina Maier",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "engelhardt\natelier für gestaltung\ninh. tina maier\ndipl.-designerin (fh)",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "query",
+    "issue_type": "address",
+    "snippet": "stadtplatz 47\n84453 mühldorf am inn",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "expected_answer",
+    "issue_type": "account_id",
+    "snippet": "Kd-Nr. 623046",
+    "suggestion": "[REF]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Christoph Rudholzner",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Tina Maier",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "expected_answer",
+    "issue_type": "company",
+    "snippet": "engelhardt\natelier für gestaltung\ninh. tina maier\ndipl.-designerin (fh)",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-230",
+    "field": "expected_answer",
+    "issue_type": "address",
+    "snippet": "stadtplatz 47\n84453 mühldorf am inn",
+    "suggestion": "[ADDRESS]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-232",
+    "field": "expected_answer",
+    "issue_type": "other",
+    "snippet": "_hsenc=p2ANqtz-9rRUpDpAYkMuwt_5zbrse8c9LrxMwixs5noCAKUp8zFy07EQ1m2269GQywKd2Hib0Y7V_c",
+    "suggestion": "[TRACKING_ID]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-235",
+    "field": "query",
+    "issue_type": "account_id",
+    "snippet": "215472477612811",
+    "suggestion": "[REF]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-237",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Agnes Palenga",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-241",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Nicole von Degenfeld",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-241",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Nicole",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-244",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "ALPHAR Recharge GmbH & Co. KG",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-244",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Stefan Reinhardt",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-245",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Christina Schertler",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-249",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Diana Reichel",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-249",
+    "field": "query",
+    "issue_type": "company",
+    "snippet": "eft-system GmbH",
+    "suggestion": "[COMPANY]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-255",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Sonja Friedrich",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-256",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Daum",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-256",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Hubert Trimpe",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-258",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Rasmus Prager",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-258",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Rasmus",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-260",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "B. Matijevic",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-261",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Benjamin",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-261",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Benjamin",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-263",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Manuel Diaz",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-264",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "E",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-265",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Daniel M.",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-266",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Hans",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-267",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Florian",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-270",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Olga Zibert",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-272",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Zielinski",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-273",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Herrn Erich Kanton",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-276",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Matthias Schach",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-277",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Charlotte Kastner",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-278",
+    "field": "query",
+    "issue_type": "name",
+    "snippet": "Daniel Müller",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  },
+  {
+    "id": "sev-279",
+    "field": "expected_answer",
+    "issue_type": "name",
+    "snippet": "Hans",
+    "suggestion": "[NAME]",
+    "confidence": "high"
+  }
+]

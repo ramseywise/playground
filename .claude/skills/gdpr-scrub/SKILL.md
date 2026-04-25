@@ -39,8 +39,25 @@ The script automatically handles:
 
 ## Step 2: LLM Review Pass
 
-After the script runs, read `sevdesk_tickets.json` and check for residual PII the regex missed.
-Common cases in German CS text:
+Run the review script — it batches all fixtures through Haiku and outputs structured findings.
+
+```bash
+cd va-langgraph
+
+# Calibration run first (14 fixtures, < $0.01) — review prompt before full batch
+uv run python eval/ingest/gdpr_review.py --sample 14
+
+# Full batch once prompt looks good
+uv run python eval/ingest/gdpr_review.py --findings eval/ingest/gdpr_findings.json
+```
+
+Review the findings, apply fixes manually to `sevdesk_tickets.json`, then re-run the
+pre-commit grep check in Step 4.
+
+The script uses `claude-haiku-4-5-20251001` by default (~$0.03 for 280 fixtures).
+Pass `--model claude-sonnet-4-6` for a more thorough pass on high-confidence findings.
+
+Common residual PII cases in German CS text that the regex misses:
 
 **Names in body text (not salutations)**
 - "Frau Müller hat angerufen" → "Frau [NAME] hat angerufen"

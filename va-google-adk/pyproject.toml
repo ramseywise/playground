@@ -12,6 +12,7 @@ dependencies = [
     "fastapi>=0.115.0",
     "google-adk>=1.28.0",
     "google-genai>=1.69.0",
+    "langsmith>=0.2.0",
     "pydantic>=2.0.0",
     "python-dotenv>=1.2.1",
     "uvicorn[standard]>=0.30.0",

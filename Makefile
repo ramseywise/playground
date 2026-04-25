@@ -1,5 +1,6 @@
 .PHONY: setup lint typecheck test test-librarian test-core test-eval eval-unit eval-regression eval-capability eval-compare eval-experiment \
-        va-up va-up-ui va-down va-smoke
+        va-up va-up-ui va-down va-smoke \
+        va-eval-ingest va-eval-review va-eval-pii-check va-eval-data
 
 setup:
 	bash setup.sh
@@ -63,6 +64,41 @@ eval-compare:
 # Set EVAL_DATASET_PATH for the external golden JSONL; falls back to test samples.
 eval-experiment:
 	uv run python -m eval.experiment run
+
+# ── VA eval data pipeline ─────────────────────────────────────────────────────
+# Step 1: ingest + regex scrub → sevdesk_tickets.json (default n=280)
+va-eval-ingest:
+	cd va-langgraph && uv run python eval/ingest/sevdesk_ingest.py
+
+# Step 2: LLM review pass → prints findings to stdout (review before committing)
+# Use --findings path/to/out.json to save; --sample N for calibration run
+va-eval-review:
+	cd va-langgraph && uv run python eval/ingest/gdpr_review.py
+
+# Step 3: pre-commit PII grep check — must pass before git add on fixture files
+va-eval-pii-check:
+	@cd va-langgraph && python3 -c " \
+import json, re, sys; \
+data = json.load(open('tests/evalsuite/fixtures/sevdesk_tickets.json')); \
+issues = []; \
+[issues.append(f'{r[\"id\"]}.{f}: contains @') or 1 \
+    for r in data for f in ('query','expected_answer') \
+    if '@' in (r.get(f,'') or '')]; \
+[issues.append(f'{r[\"id\"]}.{f}: possible IBAN') or 1 \
+    for r in data for f in ('query','expected_answer') \
+    if re.search(r'DE\d{20}', r.get(f,'') or '')]; \
+v = re.sub(r'https?://\S+', '', r.get(f,'') or ''); \
+[issues.append(f'{r[\"id\"]}.{f}: possible phone/ID (7+ digits)') or 1 \
+    for r in data for f in ('query','expected_answer') \
+    if re.search(r'\d{7,}', re.sub(r'https?://\S+','',r.get(f,'') or ''))]; \
+(print('PII check FAILED:\n' + chr(10).join('  '+i for i in issues)) or sys.exit(1)) \
+    if issues else print('PII check passed — $(shell cd va-langgraph && python3 -c \"import json; print(len(json.load(open(\\\"tests/evalsuite/fixtures/sevdesk_tickets.json\\\"))))\") fixtures clean.')"
+
+# Full pipeline: ingest → review → pii-check (run sequentially)
+va-eval-data:
+	$(MAKE) va-eval-ingest
+	$(MAKE) va-eval-review
+	$(MAKE) va-eval-pii-check
 
 # ── VA agents (docker compose) ────────────────────────────────────────────────
 
