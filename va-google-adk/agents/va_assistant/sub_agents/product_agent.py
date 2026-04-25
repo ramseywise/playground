@@ -27,7 +27,8 @@ product_agent = Agent(
         report_out_of_domain,
         MCPToolset(
             connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
-            tool_filter=["list_products", "get_product", "create_product", "edit_product"],
+            # TODO(2): add create_product, edit_product (need test account)
+            tool_filter=["list_products", "get_product"],
         ),
     ],
     generate_content_config=THINKING_CONFIG,

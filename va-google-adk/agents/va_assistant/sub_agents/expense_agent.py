@@ -30,10 +30,10 @@ expense_agent = Agent(
         report_out_of_domain,
         MCPToolset(
             connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
+            # TODO(2): add create_expense (need test account)
             tool_filter=[
                 "list_expenses",
                 "get_expense",
-                "create_expense",
                 "get_expense_summary",
                 "get_vendor_spend",
                 "get_expenses_by_category",

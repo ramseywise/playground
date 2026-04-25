@@ -27,7 +27,8 @@ customer_agent = Agent(
         report_out_of_domain,
         MCPToolset(
             connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
-            tool_filter=["list_customers", "get_customer", "create_customer", "edit_customer"],
+            # TODO(2): add create_customer, edit_customer (need test account)
+            tool_filter=["list_customers", "get_customer"],
         ),
     ],
     generate_content_config=THINKING_CONFIG,

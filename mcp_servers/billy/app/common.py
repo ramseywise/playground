@@ -89,23 +89,35 @@ def _logged(fn):
     return wrapper
 
 
+_WRITE_TOOLS_NOTE = (
+    "NOTE: tools marked [WRITE] mutate live Billy data and require a real Billy "
+    "account with API credentials. They work against the local SQLite stub but "
+    "are disabled in the VA agents until a test account is available. "
+    "TODO(2): re-enable once test account is set up."
+)
+
+
 def register_all(mcp: FastMCP) -> None:
-    """Register every Billy stub tool on *mcp*."""
+    """Register every Billy stub tool on *mcp*.
+
+    Read-only tools are safe to expose in all environments.
+    Write tools (marked below) require a live Billy account — see _WRITE_TOOLS_NOTE.
+    """
 
     # Customers
     mcp.tool()(_logged(list_customers))
     mcp.tool()(_logged(get_customer))
-    mcp.tool()(_logged(create_customer))
-    mcp.tool()(_logged(edit_customer))
+    mcp.tool()(_logged(create_customer))   # [WRITE]
+    mcp.tool()(_logged(edit_customer))     # [WRITE]
 
     # Invoices
     mcp.tool()(_logged(get_invoice))
     mcp.tool()(_logged(list_invoices))
     mcp.tool()(_logged(get_invoice_summary))
-    mcp.tool()(_logged(create_invoice))
-    mcp.tool()(_logged(edit_invoice))
-    mcp.tool()(_logged(void_invoice))
-    mcp.tool()(_logged(send_invoice_reminder))
+    mcp.tool()(_logged(create_invoice))         # [WRITE]
+    mcp.tool()(_logged(edit_invoice))           # [WRITE]
+    mcp.tool()(_logged(void_invoice))           # [WRITE]
+    mcp.tool()(_logged(send_invoice_reminder))  # [WRITE]
     mcp.tool()(_logged(get_invoice_dso_stats))
 
     # Insights
@@ -121,27 +133,27 @@ def register_all(mcp: FastMCP) -> None:
     # Products
     mcp.tool()(_logged(list_products))
     mcp.tool()(_logged(get_product))
-    mcp.tool()(_logged(create_product))
-    mcp.tool()(_logged(edit_product))
+    mcp.tool()(_logged(create_product))  # [WRITE]
+    mcp.tool()(_logged(edit_product))    # [WRITE]
 
     # Quotes
     mcp.tool()(_logged(list_quotes))
-    mcp.tool()(_logged(create_quote))
-    mcp.tool()(_logged(edit_quote))
-    mcp.tool()(_logged(create_invoice_from_quote))
+    mcp.tool()(_logged(create_quote))              # [WRITE]
+    mcp.tool()(_logged(edit_quote))                # [WRITE]
+    mcp.tool()(_logged(create_invoice_from_quote)) # [WRITE]
     mcp.tool()(_logged(get_quote_conversion_stats))
 
-    # Emails
-    mcp.tool()(_logged(send_invoice_by_email))
-    mcp.tool()(_logged(send_quote_by_email))
+    # Emails — [WRITE] sends real emails; requires live account
+    mcp.tool()(_logged(send_invoice_by_email))  # [WRITE]
+    mcp.tool()(_logged(send_quote_by_email))    # [WRITE]
 
-    # Invitations
-    mcp.tool()(_logged(invite_user))
+    # Invitations — [WRITE] sends real invites; requires live account
+    mcp.tool()(_logged(invite_user))  # [WRITE]
 
     # Expenses
     mcp.tool()(_logged(list_expenses))
     mcp.tool()(_logged(get_expense))
-    mcp.tool()(_logged(create_expense))
+    mcp.tool()(_logged(create_expense))  # [WRITE]
     mcp.tool()(_logged(get_expense_summary))
     mcp.tool()(_logged(get_vendor_spend))
     mcp.tool()(_logged(get_expenses_by_category))
@@ -150,7 +162,7 @@ def register_all(mcp: FastMCP) -> None:
     # Banking
     mcp.tool()(_logged(get_bank_balance))
     mcp.tool()(_logged(list_bank_transactions))
-    mcp.tool()(_logged(match_transaction_to_invoice))
+    mcp.tool()(_logged(match_transaction_to_invoice))  # [WRITE]
     mcp.tool()(_logged(get_cashflow_forecast))
     mcp.tool()(_logged(get_runway_estimate))
 

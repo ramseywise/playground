@@ -31,36 +31,40 @@ _BILLY_SERVER = {"billy": {"url": _BILLY_MCP_URL, "transport": "sse"}}
 # Tool name sets per domain
 # ---------------------------------------------------------------------------
 
+# TODO(2): re-add write tools once a Billy test account is available.
+# Write tools (create_*, edit_*, void_*, send_*, invite_*, match_*) require
+# live Billy credentials — they work against the local SQLite stub but must
+# not be exposed to users until a real test account is set up.
+
 _INVOICE_TOOLS = frozenset([
     "get_invoice", "list_invoices", "get_invoice_summary",
-    "create_invoice", "edit_invoice", "void_invoice",
-    "send_invoice_reminder", "get_invoice_dso_stats",
+    "get_invoice_dso_stats",
     "list_customers", "list_products",
 ])
 
 _QUOTE_TOOLS = frozenset([
-    "list_quotes", "create_quote", "edit_quote", "create_invoice_from_quote",
-    "get_quote_conversion_stats", "list_customers", "list_products",
+    "list_quotes", "get_quote_conversion_stats",
+    "list_customers", "list_products",
 ])
 
-_CUSTOMER_TOOLS = frozenset(["list_customers", "get_customer", "create_customer", "edit_customer"])
+_CUSTOMER_TOOLS = frozenset(["list_customers", "get_customer"])
 
-_PRODUCT_TOOLS = frozenset(["list_products", "get_product", "create_product", "edit_product"])
+_PRODUCT_TOOLS = frozenset(["list_products", "get_product"])
 
-_EMAIL_TOOLS = frozenset(["send_invoice_by_email", "send_quote_by_email"])
+_EMAIL_TOOLS = frozenset([])      # TODO(2): add send_invoice_by_email, send_quote_by_email (need test account)
 
-_INVITATION_TOOLS = frozenset(["invite_user"])
+_INVITATION_TOOLS = frozenset([]) # TODO(2): add invite_user (need test account)
 
 _EXPENSE_TOOLS = frozenset([
-    "list_expenses", "get_expense", "create_expense",
+    "list_expenses", "get_expense",
     "get_expense_summary", "get_vendor_spend",
     "get_expenses_by_category", "get_gross_margin",
 ])
 
 _BANKING_TOOLS = frozenset([
     "get_bank_balance", "list_bank_transactions",
-    "match_transaction_to_invoice", "get_cashflow_forecast",
-    "get_runway_estimate",
+    "get_cashflow_forecast", "get_runway_estimate",
+    # TODO(2): add match_transaction_to_invoice (need test account)
 ])
 
 _ACCOUNTING_TOOLS = frozenset([

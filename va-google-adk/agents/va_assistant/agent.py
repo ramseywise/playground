@@ -51,7 +51,7 @@ _ESCALATION_RE = re.compile(
     r"speak\s+to\s+a\s+human"
     r"|talk\s+to\s+(a\s+)?support"
     r"|this\s+isn'?t\s+working"
-    r"|connect\s+me\s+(with|to)\s+(a\s+)?(human|person|agent|support)",
+    r"|connect\s+me\s+(with|to)\s+(an?\s+)?(human|person|agent|support)",
     re.IGNORECASE,
 )
 

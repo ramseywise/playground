@@ -30,14 +30,11 @@ invoice_agent = Agent(
         report_out_of_domain,
         MCPToolset(
             connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
+            # TODO(2): add create_invoice, edit_invoice, void_invoice, send_invoice_reminder (need test account)
             tool_filter=[
                 "get_invoice",
                 "list_invoices",
                 "get_invoice_summary",
-                "create_invoice",
-                "edit_invoice",
-                "void_invoice",
-                "send_invoice_reminder",
                 "get_invoice_dso_stats",
                 "list_customers",
                 "list_products",

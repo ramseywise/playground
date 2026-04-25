@@ -30,11 +30,9 @@ quote_agent = Agent(
         report_out_of_domain,
         MCPToolset(
             connection_params=SseConnectionParams(url=_BILLY_MCP_URL),
+            # TODO(2): add create_quote, edit_quote, create_invoice_from_quote (need test account)
             tool_filter=[
                 "list_quotes",
-                "create_quote",
-                "edit_quote",
-                "create_invoice_from_quote",
                 "get_quote_conversion_stats",
                 "list_customers",
                 "list_products",
