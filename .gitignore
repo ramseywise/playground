@@ -73,11 +73,14 @@ docs/
 /ts_google_adk
 /infra
 /frontend
-/.github
 /.claude/docs/archived
 
 # Local-only dirs (not part of this project)
 /librarian
+/rag_poc
+
+# DeepEval cache
+.deepeval/
 
 # SQLite WAL journals
 *.db-shm

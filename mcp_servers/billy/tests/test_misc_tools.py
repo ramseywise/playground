@@ -3,9 +3,9 @@
 from unittest.mock import patch
 
 import pytest
-from playground.agent_poc.mcp_servers.billy.app.tools.emails import send_invoice_by_email
-from playground.agent_poc.mcp_servers.billy.app.tools.invitations import _INVITATIONS, invite_user
-from playground.agent_poc.mcp_servers.billy.app.tools.support_knowledge import fetch_support_knowledge
+from app.tools.emails import send_invoice_by_email
+from app.tools.invitations import _INVITATIONS, invite_user
+from app.tools.support_knowledge import fetch_support_knowledge
 
 _FAKE_KB_RESULT = [
     {

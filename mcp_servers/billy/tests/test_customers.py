@@ -1,7 +1,7 @@
 """Unit tests for customer tools (no MCP transport needed)."""
 
 import pytest
-from playground.agent_poc.mcp_servers.billy.app.tools import customers as mod
+from app.tools import customers as mod
 
 
 class TestListCustomers:

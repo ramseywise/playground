@@ -1,131 +1,17 @@
 [project]
-name = "agents"
+name = "billy-va"
 version = "0.1.0"
+description = "Billy virtual assistant — Google ADK and LangGraph implementations"
 requires-python = ">=3.12"
-dependencies = [
-    "anthropic>=0.88.0",
-    "httpx>=0.27.0",
-    "pydantic>=2.12.5",
-    "pydantic-settings>=2.0.0",
-    "python-dotenv>=1.2.2",
-    "python-pptx>=1.0.0",
-    "pyyaml>=6.0",
-    "rich>=13.0.0",
-    "structlog>=25.5.0",
-]
-
-[project.optional-dependencies]
-replicate = ["replicate>=1.0.0"]
-librarian = [
-    "langgraph>=0.4.0",
-    # langchain-core is not a direct dependency; langgraph provides the message
-    # reducer contract we use via its own state machine APIs.
-    "opensearch-py>=2.7.0",
-    "sentence-transformers>=3.0.0",
-    "ragas>=0.2.0",
-    "deepeval>=2.0.0",
-    "langfuse>=2.0.0",
-    # Storage + retrieval backends
-    "chromadb>=0.6",
-    "duckdb>=1.0",
-    "numpy>=1.26",
-    "scikit-learn>=1.4",
-    "boto3>=1.35.0",
-    "langgraph-checkpoint-sqlite",
-]
-api = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.30.0",
-    "sse-starlette>=2.0.0",
-]
-frontend = [
-    "streamlit>=1.40.0",
-    "plotly>=5.18.0",
-]
-lambda = [
-    "mangum>=0.19.0",
-]
-mcp = [
-    "mcp>=1.0.0",
-    "snowflake-connector-python>=3.12.0",
-]
-gemini = ["google-genai>=1.0.0"]
-adk = [
-    "google-adk>=1.0.0",
-    "google-genai>=1.0.0",
-]
-otel = [
-    "opentelemetry-sdk>=1.25.0",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.25.0",
-    "arize-phoenix-otel>=0.6.0",
-    "openinference-instrumentation-langchain>=0.1.0",
-    "openinference-instrumentation-anthropic>=0.1.0",
-]
+dependencies = []
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build.targets.wheel]
-packages = [
-    "agents",
-    "src/core",
-    "src/clients",
-    "src/librarian",
-    "src/storage",
-    "src/orchestration",
-    "src/interfaces",
-    "src/eval",
-]
-
-[dependency-groups]
-dev = [
-    "boto3>=1.35.0",
-    "duckdb>=1.5.1",
-    "fastapi>=0.115.0",
-    "langgraph>=1.1.6",
-    "mcp>=1.0.0",
-    "mypy>=1.10.0",
-    "numpy>=2.4.4",
-    "pyright>=1.1.408",
-    "pytest>=9.0.2",
-    "pytest-asyncio>=1.3.0",
-    "pytest-mock>=3.15.1",
-]
-
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 asyncio_mode = "auto"
-markers = ["integration: tests that hit real binaries or external services"]
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
 ignore_missing_imports = true
-exclude = ["tests/", "\\.venv/", "build/"]
-
-[[tool.mypy.overrides]]
-module = [
-    "langfuse.*",
-    "chromadb.*",
-    "sentence_transformers.*",
-    "ragas.*",
-    "deepeval.*",
-    "langgraph.*",
-    "openinference.*",
-    "phoenix.*",
-    "arize_phoenix_otel.*",
-]
-ignore_missing_imports = true
-ignore_errors = true
-
-[project.scripts]
-research-agent = "agents.researcher.__main__:main"
-presenter = "agents.presenter.__main__:main"
-cartographer = "agents.cartographer.__main__:main"
-librarian-api = "interfaces.api.app:main"
-mcp-snowflake = "interfaces.mcp.snowflake_server:main"
-mcp-s3 = "interfaces.mcp.s3_server:main"
-mcp-librarian = "interfaces.mcp.librarian_server:main"

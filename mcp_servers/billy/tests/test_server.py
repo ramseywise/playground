@@ -1,7 +1,7 @@
 """End-to-end connectivity tests via FastMCP in-memory Client."""
 
 import pytest
-from playground.agent_poc.mcp_servers.billy.app.main_noauth import mcp
+from app.main_noauth import mcp
 from fastmcp import Client
 
 ALL_TOOLS = {

@@ -1,8 +1,8 @@
 """Unit tests for invoice tools."""
 
 import pytest
-from playground.agent_poc.mcp_servers.billy.app.tools import invoices as mod
-from playground.agent_poc.mcp_servers.billy.app.tools.invoices import InvoiceLine, InvoiceLineUpdate
+from app.tools import invoices as mod
+from app.tools.invoices import InvoiceLine, InvoiceLineUpdate
 
 
 class TestGetInvoice:

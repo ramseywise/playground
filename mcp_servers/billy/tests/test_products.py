@@ -1,7 +1,7 @@
 """Unit tests for product tools."""
 
 import pytest
-from playground.agent_poc.mcp_servers.billy.app.tools import products as mod
+from app.tools import products as mod
 
 
 class TestListProducts:
