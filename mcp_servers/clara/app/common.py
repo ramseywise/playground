@@ -8,6 +8,20 @@ import logging
 
 from fastmcp import FastMCP
 
+from app.tools.accounting import (
+    generate_handoff_doc,
+    get_audit_readiness_score,
+    get_period_summary,
+    get_unreconciled_transactions,
+    get_vat_summary,
+)
+from app.tools.banking import (
+    get_bank_balance,
+    get_cashflow_forecast,
+    get_runway_estimate,
+    list_bank_transactions,
+    match_transaction_to_invoice,
+)
 from app.tools.customers import (
     create_customer,
     edit_customer,
@@ -40,6 +54,14 @@ from app.tools.products import (
     edit_product,
     get_product,
     list_products,
+)
+from app.tools.insights import (
+    detect_anomaly,
+    get_break_even_estimate,
+    get_customer_concentration,
+    get_dso_trend,
+    get_margin_by_product,
+    get_net_margin,
 )
 from app.tools.quotes import (
     create_invoice_from_quote,
@@ -124,3 +146,25 @@ def register_all(mcp: FastMCP) -> None:
     mcp.tool()(_logged(get_vendor_spend))
     mcp.tool()(_logged(get_expenses_by_category))
     mcp.tool()(_logged(get_gross_margin))
+
+    # Banking
+    mcp.tool()(_logged(get_bank_balance))
+    mcp.tool()(_logged(list_bank_transactions))
+    mcp.tool()(_logged(match_transaction_to_invoice))  # [WRITE]
+    mcp.tool()(_logged(get_cashflow_forecast))
+    mcp.tool()(_logged(get_runway_estimate))
+
+    # Cross-domain insights
+    mcp.tool()(_logged(get_net_margin))
+    mcp.tool()(_logged(get_margin_by_product))
+    mcp.tool()(_logged(get_customer_concentration))
+    mcp.tool()(_logged(get_dso_trend))
+    mcp.tool()(_logged(get_break_even_estimate))
+    mcp.tool()(_logged(detect_anomaly))
+
+    # Accounting
+    mcp.tool()(_logged(get_vat_summary))
+    mcp.tool()(_logged(get_unreconciled_transactions))
+    mcp.tool()(_logged(get_audit_readiness_score))
+    mcp.tool()(_logged(get_period_summary))
+    mcp.tool()(_logged(generate_handoff_doc))
