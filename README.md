@@ -1,6 +1,6 @@
 # Billy VA
 
-Virtual assistant for [Billy](https://www.billy.dk/) — implemented in two frameworks for comparison.
+Virtual assistant template for comparison of PoCs with google-adk and LangGraph orchestration.
 
 ## Architecture
 
@@ -33,6 +33,7 @@ Services:
 |---------|-----|-------------|
 | Frontend | http://localhost:3000 | Chat UI |
 | Billy MCP | http://localhost:8765/sse | MCP server (SSE) |
+| Clara MCP | http://localhost:8767/sse | MCP server (SSE) |
 | Billy REST | http://localhost:8766/docs | Swagger / REST API |
 | VA Gateway (ADK) | http://localhost:8000 | Google ADK agent |
 | VA Gateway (LG) | http://localhost:8001 | LangGraph agent |
