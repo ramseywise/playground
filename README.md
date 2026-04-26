@@ -1,4 +1,4 @@
-# Billy VA
+# Playground
 
 Virtual assistant template for comparison of PoCs with google-adk and LangGraph orchestration.
 
