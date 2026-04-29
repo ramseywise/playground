@@ -22,11 +22,18 @@ from core.config import (
 )
 from core.observability import configure_runtime
 from orchestrator.runtime_protocol import AgentRuntime
-from orchestrator.schemas import AgentInput, AgentOutput, ResumeInput, StreamEvent
+from orchestrator.schemas import (
+    AgentInput,
+    AgentOutput,
+    RetrievalOutput,
+    ResumeInput,
+    StreamEvent,
+)
 
 log = structlog.get_logger(__name__)
 
-_runtime: AgentRuntime | None = None
+_runtime: AgentRuntime | None = None  # Full pipeline (answer synthesis)
+_retrieval_runtime: AgentRuntime | None = None  # Retrieval-only (documents)
 
 
 # ---------------------------------------------------------------------------
@@ -34,9 +41,11 @@ _runtime: AgentRuntime | None = None
 # ---------------------------------------------------------------------------
 
 
-async def _build_langgraph_runtime() -> tuple[AgentRuntime, object | None]:
-    """Build LangGraphRuntime with the configured checkpointer."""
-    from orchestrator.langgraph.graph import build_graph
+async def _build_langgraph_runtimes() -> tuple[
+    AgentRuntime, AgentRuntime, object | None
+]:
+    """Build two LangGraphRuntimes: full pipeline and retrieval-only."""
+    from orchestrator.langgraph.graph import build_graph, build_retrieval_subgraph
     from orchestrator.langgraph.runtime import LangGraphRuntime
 
     if CHECKPOINTER_BACKEND == "postgres":
@@ -57,7 +66,11 @@ async def _build_langgraph_runtime() -> tuple[AgentRuntime, object | None]:
         cp = await ctx.__aenter__()
         await cp.setup()
         log.info("startup.checkpointer", backend="postgres")
-        return LangGraphRuntime(graph=build_graph(cp)), ctx
+        return (
+            LangGraphRuntime(graph=build_graph(cp)),
+            LangGraphRuntime(graph=build_retrieval_subgraph(cp)),
+            ctx,
+        )
 
     if CHECKPOINTER_BACKEND == "sqlite":
         import os
@@ -67,12 +80,20 @@ async def _build_langgraph_runtime() -> tuple[AgentRuntime, object | None]:
         ctx = AsyncSqliteSaver.from_conn_string(SQLITE_PATH)
         cp = await ctx.__aenter__()
         log.info("startup.checkpointer", backend="sqlite", path=SQLITE_PATH)
-        return LangGraphRuntime(graph=build_graph(cp)), ctx
+        return (
+            LangGraphRuntime(graph=build_graph(cp)),
+            LangGraphRuntime(graph=build_retrieval_subgraph(cp)),
+            ctx,
+        )
 
     from langgraph.checkpoint.memory import MemorySaver
 
     log.info("startup.checkpointer", backend="memory")
-    return LangGraphRuntime(graph=build_graph(MemorySaver())), None
+    return (
+        LangGraphRuntime(graph=build_graph(MemorySaver())),
+        LangGraphRuntime(graph=build_retrieval_subgraph(MemorySaver())),
+        None,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -82,13 +103,13 @@ async def _build_langgraph_runtime() -> tuple[AgentRuntime, object | None]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    global _runtime
+    global _runtime, _retrieval_runtime
     configure_runtime()
 
     _cp_ctx: object | None = None
 
     log.info("startup", backend="langgraph", checkpointer=CHECKPOINTER_BACKEND)
-    _runtime, _cp_ctx = await _build_langgraph_runtime()
+    _runtime, _retrieval_runtime, _cp_ctx = await _build_langgraph_runtimes()
 
     if RAG_GUARDRAILS_ENABLED:
         log.info("startup.guardrails", enabled=True)
@@ -177,6 +198,12 @@ def _runtime_or_503() -> AgentRuntime:
     return _runtime
 
 
+def _retrieval_runtime_or_503() -> AgentRuntime:
+    if _retrieval_runtime is None:
+        raise HTTPException(status_code=503, detail="Runtime not ready")
+    return _retrieval_runtime
+
+
 # ---------------------------------------------------------------------------
 # Sessions
 # ---------------------------------------------------------------------------
@@ -203,6 +230,28 @@ async def chat(body: AgentInput) -> AgentOutput:
     result = await rt.run(body)
     log.info(
         "chat.done",
+        thread_id=body.thread_id,
+        elapsed_ms=round((time.perf_counter() - t0) * 1000, 1),
+    )
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Retrieval-only endpoint (for VA agents)
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/retrieval", response_model=RetrievalOutput)
+async def retrieval(body: AgentInput) -> RetrievalOutput:
+    """Retrieval pipeline only — returns documents + confidence for callers to synthesize answers."""
+    rt = _retrieval_runtime_or_503()
+    if not body.thread_id:
+        raise HTTPException(status_code=422, detail="thread_id is required")
+    t0 = time.perf_counter()
+    log.info("retrieval.request", thread_id=body.thread_id)
+    result = await rt.run_retrieval(body)
+    log.info(
+        "retrieval.done",
         thread_id=body.thread_id,
         elapsed_ms=round((time.perf_counter() - t0) * 1000, 1),
     )

@@ -14,7 +14,7 @@ from orchestrator.pipeline_failure import (
     stream_error_data,
 )
 from orchestrator.runtime_protocol import AgentRuntime  # noqa: F401 — Protocol, not base class
-from orchestrator.schemas import AgentInput, AgentOutput, StreamEvent
+from orchestrator.schemas import AgentInput, AgentOutput, RetrievalOutput, StreamEvent
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +68,18 @@ def _build_state(input: AgentInput) -> GraphState:
     )
 
 
+def _extract_ranked_chunks(result: dict) -> list[dict[str, Any]]:
+    """Convert RankedChunk objects to dicts for JSON serialization."""
+    ranked = result.get("reranked_chunks") or []
+    docs = []
+    for chunk in ranked:
+        if hasattr(chunk, "model_dump"):
+            docs.append(chunk.model_dump())
+        elif isinstance(chunk, dict):
+            docs.append(chunk)
+    return docs
+
+
 class LangGraphRuntime:
     """Implements AgentRuntime over a compiled LangGraph graph.
 
@@ -105,6 +117,34 @@ class LangGraphRuntime:
             mode=result.get("mode"),
             latency_ms=result.get("latency_ms") or {},
             escalated=result.get("qa_outcome") == "escalate",
+        )
+
+    async def run_retrieval(self, input: AgentInput) -> RetrievalOutput:
+        """Run retrieval-only graph and return structured documents."""
+        config: RunnableConfig = {"configurable": {"thread_id": input.thread_id}}
+        log.info(
+            "LangGraphRuntime.run_retrieval thread_id=%s query_len=%d",
+            input.thread_id,
+            len(input.query),
+        )
+        try:
+            result = await self._graph.ainvoke(_build_state(input), config=config)
+        except Exception:
+            log.exception(
+                "LangGraphRuntime.run_retrieval failed thread_id=%s", input.thread_id
+            )
+            return RetrievalOutput(
+                query=input.query,
+                pipeline_error=True,
+            )
+        return RetrievalOutput(
+            query=input.query,
+            retrieval_queries=result.get("retrieval_queries") or [],
+            documents=_extract_ranked_chunks(result),
+            confidence_score=result.get("confidence_score", 0.0),
+            escalated=result.get("qa_outcome") == "escalate",
+            escalation_reason=result.get("escalation_reason"),
+            latency_ms=result.get("latency_ms") or {},
         )
 
     async def stream(self, input: AgentInput) -> AsyncIterator[StreamEvent]:

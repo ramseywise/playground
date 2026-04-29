@@ -25,6 +25,19 @@ class AgentOutput(BaseModel):
     pipeline_error: bool = False
 
 
+class RetrievalOutput(BaseModel):
+    """Structured retrieval results for callers (VA agents) to synthesize answers."""
+
+    query: str
+    retrieval_queries: list[str] = []
+    documents: list[dict[str, Any]] = []
+    confidence_score: float = 0.0
+    escalated: bool = False
+    escalation_reason: str | None = None
+    latency_ms: dict[str, float] = {}
+    pipeline_error: bool = False
+
+
 class StreamEvent(BaseModel):
     kind: Literal["node_start", "node_end", "token", "interrupt", "done", "error"]
     node: str | None = None
@@ -36,4 +49,4 @@ class ResumeInput(BaseModel):
     value: Any
 
 
-__all__ = ["AgentInput", "AgentOutput", "ResumeInput", "StreamEvent"]
+__all__ = ["AgentInput", "AgentOutput", "RetrievalOutput", "ResumeInput", "StreamEvent"]

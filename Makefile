@@ -107,6 +107,10 @@ va-up-ui:
 va-rag-up:
 	$(COMPOSE) up --build va-support-rag postgres
 
+# LangGraph stack: va-gateway-lg + va-support-rag + billy-mcp + postgres (skips Google ADK)
+va-up-lg:
+	$(COMPOSE) up --build va-gateway-lg va-support-rag
+
 va-down:
 	$(COMPOSE) down
 

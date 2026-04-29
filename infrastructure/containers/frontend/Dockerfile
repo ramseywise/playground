@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:0.9.11 /uv /bin/uv
 WORKDIR /app
@@ -5,11 +6,14 @@ WORKDIR /app
 ENV UV_PYTHON_PREFERENCE=only-system
 ENV UV_PROJECT_ENVIRONMENT=/app/.venv
 
-# Install va-google-adk deps (cached layer)
+# Copy only dependency files first (separate layer for better caching)
 COPY va-google-adk/pyproject.toml va-google-adk/uv.lock ./va-google-adk/
-RUN cd va-google-adk && uv sync --frozen --no-dev --no-install-project
 
-# Copy agent source
+# Use BuildKit cache mount to persist uv cache between builds
+RUN --mount=type=cache,target=/root/.cache/uv \
+    UV_HTTP_TIMEOUT=180 bash -c "cd va-google-adk && uv sync --frozen --no-dev --no-install-project"
+
+# Copy agent source (only this layer rebuilds on code changes)
 COPY va-google-adk/ ./va-google-adk/
 
 # Copy static UI

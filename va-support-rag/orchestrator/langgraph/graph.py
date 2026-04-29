@@ -56,6 +56,45 @@ from orchestrator.langgraph.routing import (
 from orchestrator.langgraph.schemas.state import GraphState
 
 
+def _make_retrieval_state_graph() -> StateGraph:
+    """Build retrieval-only graph: planner → retriever → qa_policy → reranker.
+
+    Stops before answer synthesis. Used by VAs that inject context + answer themselves.
+    Skips: answer, post_answer_evaluator, summarizer, and rerank gates.
+    """
+    g = StateGraph(GraphState)
+
+    g.add_node("planner", planner_node)
+    g.add_node("retriever", retriever_node)
+    g.add_node("qa_policy_retrieval", qa_policy_retrieval_node)
+    g.add_node("reranker", reranker_node)
+    g.add_node("qa_policy_rerank", qa_policy_rerank_node)
+    g.add_node("escalation", escalation_node)
+
+    g.add_edge(START, "planner")
+    g.add_edge("planner", "retriever")
+
+    g.add_edge("retriever", "qa_policy_retrieval")
+
+    g.add_conditional_edges(
+        "qa_policy_retrieval",
+        route_after_qa_policy_retrieval,
+        {"rerank": "reranker", "gate": "escalation", "escalate": "escalation"},
+    )
+
+    g.add_edge("reranker", "qa_policy_rerank")
+
+    g.add_conditional_edges(
+        "qa_policy_rerank",
+        route_after_qa_policy_rerank,
+        {"answer": END, "gate": END, "escalate": "escalation"},
+    )
+
+    g.add_edge("escalation", END)
+
+    return g
+
+
 def _make_state_graph() -> StateGraph:
     """Build and return the uncompiled StateGraph (no checkpointer attached)."""
     g = StateGraph(GraphState)
@@ -116,11 +155,21 @@ def _make_state_graph() -> StateGraph:
     return g
 
 
+def build_retrieval_subgraph(checkpointer: Any = None) -> Any:
+    """Compile and return retrieval-only subgraph (no answer synthesis).
+
+    Used by VA agents (va-langgraph, va-google-adk) via POST /api/v1/retrieval.
+    Returns structured documents + confidence for the VA to synthesize an answer.
+    """
+    cp = checkpointer if checkpointer is not None else MemorySaver()
+    return _make_retrieval_state_graph().compile(checkpointer=cp)
+
+
 def build_rag_subgraph(checkpointer: Any = None) -> Any:
-    """Compile and return the RAG subgraph.
+    """Compile and return the RAG subgraph (full pipeline with answer synthesis).
 
     Used internally by the standalone HTTP server (main.py).
-    VAs reach the RAG pipeline via POST /api/v1/chat on the running hc-rag-agent service.
+    Provides full Q&A orchestration for direct users or evals.
     """
     cp = checkpointer if checkpointer is not None else MemorySaver()
     return _make_state_graph().compile(checkpointer=cp)
