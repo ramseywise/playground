@@ -216,22 +216,38 @@ async def banking_subgraph(state: AgentState) -> AgentState:
 
 
 async def support_subgraph(state: AgentState) -> AgentState:
-    """Q&A via hc-rag-agent HTTP service — ensemble retrieval → rerank → answer."""
+    """Retrieve support docs via hc-rag-agent HTTP service.
+
+    Calls retrieval-only endpoint (/api/v1/retrieval) which returns structured documents.
+    va-langgraph then synthesizes the answer using its own LLM.
+    """
     user_text = str(state["messages"][-1].content)
     page_url = state.get("page_url")
     query = f"[User is on page: {page_url}]\n{user_text}" if page_url else user_text
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(
-            f"{_HC_RAG_URL}/api/v1/chat",
+            f"{_HC_RAG_URL}/api/v1/retrieval",
             json={"thread_id": state.get("session_id", "default"), "query": query},
         )
         r.raise_for_status()
-    answer = r.json().get("answer") or ""
+
+    result = r.json()
+    documents = result.get("documents") or []
+    escalated = result.get("escalated", False)
+    confidence = result.get("confidence_score", 0.0)
 
     tool_results = list(state.get("tool_results", []))
     tool_results.append(
-        {"tool": "hc_rag_agent", "args": {"query": query}, "result": answer}
+        {
+            "tool": "support_retrieval",
+            "args": {"query": query},
+            "result": {
+                "documents": documents,
+                "confidence": confidence,
+                "escalated": escalated,
+            },
+        }
     )
     return {**state, "tool_results": tool_results}
 
