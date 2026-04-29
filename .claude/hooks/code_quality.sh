@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# PostToolUse hook for Write|Edit — enforces code standards in src/
+# PostToolUse hook for Write|Edit — enforces code standards in VA Python services.
+# Covers va-langgraph/, va-google-adk/ (both migrated to structlog).
+# va-support-rag/ and mcp_servers/ deferred — stdlib logging migration pending.
 # Blocks (exit 2) on violations. Agent must fix before proceeding.
 
 path=$(echo "$CLAUDE_TOOL_INPUT" | jq -r '.file_path // empty')
 [ -z "$path" ] && exit 0
-echo "$path" | grep -qE '/src/.*\.py$' || exit 0
+echo "$path" | grep -qE '/(va-langgraph|va-google-adk)/.*\.py$' || exit 0
 
 issues=""
 
@@ -16,8 +18,8 @@ line=$(grep -n 'print(' "$path" 2>/dev/null | grep -v '# noqa' | head -1 || true
 line=$(grep -nE '^[[:space:]]*except:' "$path" 2>/dev/null | head -1 || true)
 [ -n "$line" ] && issues="$issues  [bare-except] catch specific: $line\n"
 
-# [use-structlog] No stdlib logging — use structlog
-line=$(grep -nE '^import logging|^from logging ' "$path" 2>/dev/null | head -1 || true)
+# [use-structlog] No stdlib logging — use structlog (# noqa exempts intentional gateway use)
+line=$(grep -nE '^import logging|^from logging ' "$path" 2>/dev/null | grep -v '# noqa' | head -1 || true)
 [ -n "$line" ] && issues="$issues  [use-structlog] $line\n"
 
 # [use-polars] No pandas — use polars
