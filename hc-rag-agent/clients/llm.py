@@ -30,7 +30,7 @@ _USE_LIGHT_PLANNER = os.getenv("RAG_PLANNER_LIGHT_MODEL", "false").lower() == "t
 
 _GEMINI = {
     "small": "gemini-2.0-flash-lite",
-    "medium": "gemini-2.5-flash",
+    "medium": "gemini-2.0-flash",
     "large": "gemini-2.5-pro",
 }
 _ANTHROPIC = {
@@ -63,13 +63,13 @@ def resolve_chat_model(
     log.debug("llm.resolve", provider=_PROVIDER, size=size, model=model_id)
     if _PROVIDER == "gemini":
         from langchain_google_genai import ChatGoogleGenerativeAI
-        return ChatGoogleGenerativeAI(model=model_id, temperature=temperature)
+        return ChatGoogleGenerativeAI(model=model_id, temperature=temperature, streaming=True)
     if _PROVIDER == "anthropic":
         from langchain_anthropic import ChatAnthropic  # type: ignore[import]
-        return ChatAnthropic(model=model_id, temperature=temperature)
+        return ChatAnthropic(model=model_id, temperature=temperature, streaming=True)
     if _PROVIDER == "openai":
         from langchain_openai import ChatOpenAI  # type: ignore[import]
-        return ChatOpenAI(model=model_id, temperature=temperature)
+        return ChatOpenAI(model=model_id, temperature=temperature, streaming=True)
     raise ValueError(f"Unsupported LLM_PROVIDER: {_PROVIDER!r}. Use gemini | anthropic | openai")
 
 

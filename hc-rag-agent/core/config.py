@@ -101,7 +101,7 @@ RAG_ANSWER_CONTEXT_MAX_CHUNKS: int = int(
     os.getenv("RAG_ANSWER_CONTEXT_MAX_CHUNKS") or "12"
 )
 RAG_ENSEMBLE_TOP_K: int = int(os.getenv("RAG_ENSEMBLE_TOP_K") or "8")
-RERANKER_TOP_K: int = int(os.getenv("RERANKER_TOP_K") or "5")
+RERANKER_TOP_K: int = int(os.getenv("RERANKER_TOP_K") or "3")
 # passthrough | cross_encoder | llm_listwise — passthrough is fast; cross_encoder is local;
 # llm_listwise uses the chat LLM (extra latency + cost, best quality among rerank options).
 RERANKER_BACKEND: str = (os.getenv("RERANKER_BACKEND") or "passthrough").strip().lower()

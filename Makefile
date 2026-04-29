@@ -66,9 +66,9 @@ eval-experiment:
 	uv run python -m eval.experiment run
 
 # ── VA eval data pipeline ─────────────────────────────────────────────────────
-# Step 1: ingest + regex scrub → sevdesk_tickets.json (default n=280)
+# Step 1: ingest + regex scrub → clara_tickets.json (default n=280)
 va-eval-ingest:
-	cd va-langgraph && uv run python eval/ingest/sevdesk_ingest.py
+	cd va-langgraph && uv run python eval/ingest/clara_ingest.py
 
 # Step 2: LLM review pass → prints findings to stdout (review before committing)
 # Use --findings path/to/out.json to save; --sample N for calibration run

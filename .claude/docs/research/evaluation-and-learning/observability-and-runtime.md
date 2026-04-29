@@ -19,7 +19,7 @@
 | **GDPR** | Data sent to Langchain Inc (check DPA) | Self-host = no external data transfer |
 | **Best for** | Fast iteration, LangGraph-native teams | Production with data sovereignty requirements |
 
-**For Shine/Billy (EU, GDPR context): Langfuse self-hosted is the safer default.** LangSmith is fine for local dev and prototyping.
+**For EU, GDPR context: Langfuse self-hosted is the safer default.** LangSmith is fine for local dev and prototyping.
 
 **Swap pattern** — both can be activated via env var, no code changes:
 ```python

@@ -1,6 +1,5 @@
 # VA Product Patterns
 
-**Source:** ts_google_adk (Billy Shine Assistant) — production VA embedded in Billy.dk
 **Relevance:** Product design patterns for VA agents: interaction model, structured output, escalation
 
 ---

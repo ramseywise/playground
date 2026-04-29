@@ -27,7 +27,7 @@ How the project's dev tooling is configured.
 | Doc | What it covers |
 |---|---|
 | [hooks-architecture.md](tooling/hooks-architecture.md) | How the Claude Code hook suite works — lifecycle events, exit codes, per-hook responsibilities, how to add a new hook |
-| [eval-harness.md](tooling/eval-harness.md) | The `va-langgraph` eval framework — 278 real sevdesk fixtures, 4 graders (routing, safety, schema, message_quality), how to run and extend it |
+| [eval-harness.md](tooling/eval-harness.md) | The `va-langgraph` eval framework — 278 real Clara fixtures, 4 graders (routing, safety, schema, message_quality), how to run and extend it |
 | [observability-setup.md](tooling/observability-setup.md) | How tracing is wired for both VA implementations (LangSmith for both; Langfuse as the commented-out alternative). Also documents how to switch to Langfuse |
 | [adk-js.md](tooling/adk-js.md) | Google ADK JS patterns and conventions |
 | [demo.md](tooling/demo.md) | Demo setup and walkthrough |

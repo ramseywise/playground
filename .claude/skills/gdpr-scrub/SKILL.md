@@ -1,6 +1,6 @@
 ---
 name: gdpr-scrub
-description: GDPR/PII compliance process for ingesting real customer service tickets into eval fixtures. Covers German/Austrian-language sevdesk tickets: regex pre-pass, post-scrub quality review, placeholder convention, and commit checklist. Invoke AFTER the ingest script has run — never on raw ticket data.
+description: GDPR/PII compliance process for ingesting real customer service tickets into eval fixtures. Covers German/Austrian-language Clara tickets: regex pre-pass, post-scrub quality review, placeholder convention, and commit checklist. Invoke AFTER the ingest script has run — never on raw ticket data.
 ---
 
 # GDPR Scrub: Eval Data Ingestion
@@ -14,7 +14,7 @@ Use when ingesting real customer conversation data into the eval fixture pipelin
 ## Scope
 
 Currently applies to:
-- `help-support-rag-agent/data/single_engagement_tickets.csv` → Billy VA eval fixtures at `va-langgraph/tests/evalsuite/fixtures/sevdesk_tickets.json`
+- `help-support-rag-agent/data/single_engagement_tickets.csv` → Billy VA eval fixtures at `va-langgraph/tests/evalsuite/fixtures/clara_tickets.json`
 - Any future import of real CS ticket data
 
 ---
@@ -26,7 +26,7 @@ Run this first, before any LLM is involved.
 ```bash
 make va-eval-ingest
 # or directly:
-cd va-langgraph && uv run python eval/ingest/sevdesk_ingest.py
+cd va-langgraph && uv run python eval/ingest/clara_ingest.py
 ```
 
 The script automatically handles:
@@ -44,7 +44,7 @@ The script automatically handles:
 - Street addresses (Musterstraße 12, Hauptstr. 5a, Am Nelkenberg 13) → `[ADDRESS]`
 - Ticket/account refs (7+ digit IDs, `Kundennummer \d{6,}`, `Rechnung Nr. XXXXX`) → `[REF]`
 - Business registration IDs (UID, ATU, USt-IdNr, FN, HRA, HRB) → `[BIZ-ID]`
-- Skips subscription-cancellation tickets (sevdesk-meta, not Billy-relevant)
+- Skips subscription-cancellation tickets (CRM-meta, not Billy-relevant)
 
 ---
 
@@ -79,7 +79,7 @@ Read the post-regex fixtures and check for the following known regex gaps:
 - Public GitHub repository URLs — shared technical references, not personal PII
 - Known SaaS domains: sevdesk.de, stripe.com, help.sevdesk.de, etc.
 
-Apply fixes directly to `va-langgraph/tests/evalsuite/fixtures/sevdesk_tickets.json`.
+Apply fixes directly to `va-langgraph/tests/evalsuite/fixtures/clara_tickets.json`.
 
 > **Note on `gdpr_review.py`:** The repo contains `eval/ingest/gdpr_review.py`, which batches fixtures through Gemini 2.5 Flash. Do not use this script unless a DPA covering EU customer data is in place with Google. Even post-regex output may contain residual PII that regex missed — that is the whole point of the review pass, and sending it externally without a DPA is non-compliant. Prefer this Claude-based review (Step 2 above) or a local model (Ollama) as the default path.
 
@@ -98,14 +98,14 @@ and URL stripping to avoid false positives from error IDs). Must pass before `gi
 
 ---
 
-## Step 4: Domain Adaptation (deferred — first batch ships as `sevdesk_raw`)
+## Step 4: Domain Adaptation (deferred — first batch ships as `clara_raw`)
 
-Current fixtures use `"source": "sevdesk_raw"` — sevdesk product refs intact.
+Current fixtures use `"source": "clara_raw"` — sevdesk product refs intact.
 When adapting a batch for Billy context:
 - `sevdesk` → `Billy`
 - `Hilfe.sevdesk.de` URLs → remove or replace with `[HELP_URL]`
 - `"in sevdesk unter Einstellungen"` → `"in Billy unter Einstellungen"`
-- Update `"source"` → `"sevdesk_adapted"`
+- Update `"source"` → `"clara_adapted"`
 
 ---
 

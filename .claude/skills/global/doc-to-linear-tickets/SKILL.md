@@ -201,7 +201,7 @@ Before wrapping up, verify:
 
 ## Notes on this specific workstream
 
-This skill was built in the context of the HC/VA Eval & Improvement workstream at Shine. The document conventions used there are:
+Document conventions include:
 
 - Issues listed as bullets under initiative headings
 - Size in square brackets: `[S · High]`, `[M · Blocker]`, `[XS · Secondary]`

@@ -21,7 +21,7 @@ from orchestrator.langgraph.chains import get_answer_chain
 log = logging.getLogger(__name__)
 
 
-def answer_node(state: GraphState) -> dict:
+async def answer_node(state: GraphState) -> dict:
     response_language = locale_to_language(state.locale)
     log.info(
         "answer: start mode=%s query_len=%d locale=%s",
@@ -70,7 +70,7 @@ def answer_node(state: GraphState) -> dict:
     else:
         return {"final_answer": "I'm not sure how to handle this request."}
 
-    final_answer = get_answer_chain().invoke(
+    final_answer = await get_answer_chain().ainvoke(
         {"input": input_text, "response_language": response_language}
     )
     llm_ms = (time.perf_counter() - t0) * 1000

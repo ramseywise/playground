@@ -79,7 +79,7 @@ Answer these before touching the graph. Write answers as a short design note —
 - Where does it join/leave the main flow? Update `_DOMAIN_NODES` and `_route_intent` accordingly.
 
 **Testing**
-- New domain → new fixtures in `tests/evalsuite/fixtures/sevdesk_tickets.json`?
+- New domain → new fixtures in `tests/evalsuite/fixtures/clara_tickets.json`?
 - Can the subgraph be unit-tested with a mock `AgentState` dict before wiring into the graph?
 
 ---
