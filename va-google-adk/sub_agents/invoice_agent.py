@@ -12,7 +12,9 @@ from google.genai import types
 from schema import AssistantResponse
 from .shared_tools import THINKING_CONFIG, report_out_of_domain
 
-_INSTRUCTION = (Path(__file__).parent.parent / "prompts" / "invoice_agent.txt").read_text()
+_INSTRUCTION = (
+    Path(__file__).parent.parent / "prompts" / "invoice_agent.txt"
+).read_text()
 
 _BILLY_MCP_URL = os.getenv("BILLY_MCP_URL", "http://localhost:8765/sse")
 
@@ -23,7 +25,9 @@ invoice_agent = Agent(
         "Handles invoices: create, view, list, edit, approve, and summarize. "
         "Covers DKK amounts, VAT, payment terms, and draft vs approved states."
     ),
-    static_instruction=types.Content(role="user", parts=[types.Part(text=_INSTRUCTION)]),
+    static_instruction=types.Content(
+        role="user", parts=[types.Part(text=_INSTRUCTION)]
+    ),
     output_schema=AssistantResponse,
     output_key="response",
     tools=[

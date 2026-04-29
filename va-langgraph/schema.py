@@ -37,8 +37,12 @@ class NavButton(BaseModel):
     """A deep-link button rendered in the Billy app UI."""
 
     label: str = Field(description="Button label shown to the user.")
-    route: str = Field(description="Billy app route, e.g. '/invoices' or '/invoices/inv_001'.")
-    id: Optional[str] = Field(default=None, description="Entity ID for the button target.")
+    route: str = Field(
+        description="Billy app route, e.g. '/invoices' or '/invoices/inv_001'."
+    )
+    id: Optional[str] = Field(
+        default=None, description="Entity ID for the button target."
+    )
     document_type: Optional[str] = Field(
         default=None,
         description="Entity type, e.g. 'invoice', 'customer', 'quote'.",
@@ -55,9 +59,9 @@ class Source(BaseModel):
 class FormConfig(BaseModel):
     """Triggers an inline creation form in the UI."""
 
-    type: Literal["create_customer", "create_product", "create_invoice", "create_quote"] = Field(
-        description="The form type to render."
-    )
+    type: Literal[
+        "create_customer", "create_product", "create_invoice", "create_quote"
+    ] = Field(description="The form type to render.")
     defaults: Optional[dict] = Field(
         default=None,
         description="Pre-filled field values for the form, e.g. {'contactId': 'cus_001'}.",
@@ -68,7 +72,9 @@ class EmailFormConfig(BaseModel):
     """Triggers an editable email composition form in the UI."""
 
     to: Optional[str] = Field(default=None, description="Recipient email address.")
-    subject: Optional[str] = Field(default=None, description="Pre-filled email subject.")
+    subject: Optional[str] = Field(
+        default=None, description="Pre-filled email subject."
+    )
     body: Optional[str] = Field(default=None, description="Pre-filled email body.")
 
 
@@ -98,9 +104,11 @@ class AssistantResponse(BaseModel):
         default_factory=list,
         description="Support article links, populated by the support agent.",
     )
-    table_type: Optional[Literal["invoices", "customers", "products", "quotes"]] = Field(
-        default=None,
-        description="Set when the message contains a listing table of that entity type.",
+    table_type: Optional[Literal["invoices", "customers", "products", "quotes"]] = (
+        Field(
+            default=None,
+            description="Set when the message contains a listing table of that entity type.",
+        )
     )
     form: Optional[FormConfig] = Field(
         default=None,

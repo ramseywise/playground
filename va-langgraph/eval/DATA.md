@@ -1,14 +1,14 @@
-# Eval Dataset: Sevdesk Real Tickets
+# Eval Dataset: Clara Real Tickets
 
-Source: `help-support-rag-agent/data/single_engagement_tickets.csv`  
-Ingest script: `eval/ingest/sevdesk_ingest.py`  
-Fixture file: `tests/evalsuite/fixtures/sevdesk_tickets.json`
+Source: `help-support-rag-agent/data/single_engagement_tickets.csv`
+Ingest script: `eval/ingest/clara_ingest.py`
+Fixture file: `tests/evalsuite/fixtures/clara_tickets.json`
 
 To regenerate: `make va-eval-ingest` → `make va-eval-review` → `make va-eval-pii-check`
 
 ---
 
-## Current Batch (v1 — sevdesk_raw)
+## Current Batch (v1 — clara_raw)
 
 | Metric | Value |
 |---|---|
@@ -17,7 +17,7 @@ To regenerate: `make va-eval-ingest` → `make va-eval-review` → `make va-eval
 | Eligible after filter | 2,283 |
 | Sampled fixtures | **278** |
 | Language | German (de) |
-| Source label | `sevdesk_raw` |
+| Source label | `clara_raw` |
 
 ### Distribution
 
@@ -85,7 +85,7 @@ regardless of answer quality.
 | SE - Rechnung und Zahlungsdetails | 107 | invoice |
 | SU - Angebote & Teil-/Abschlagsrechnungen | 97 | quote |
 | SE - Rechnungsüberweisung | 81 | banking |
-| SE - Tarifwechsel | 78 | (skipped — sevdesk meta) |
+| SE - Tarifwechsel | 78 | (skipped — CRM meta) |
 | SU - Login & Passwort-Probleme | 73 | support |
 | TE - Transaktionen abrufen/importieren | 65 | banking |
 
@@ -101,16 +101,18 @@ Long-tail categories (< 10 eligible tickets) may appear 0-1 times in the fixture
 | Pattern | Placeholder |
 |---|---|
 | Email addresses | `[EMAIL]` |
-| German phone numbers (+49 / 0 prefix) | `[PHONE]` |
+| German/Austrian phone numbers (+49/+43/0 prefix) | `[PHONE]` |
 | German IBANs (DE + 20 digits) | `[IBAN]` |
-| Postal code + city | `[LOCATION]` |
+| Postal code + city (4-digit AT + 5-digit DE) | `[LOCATION]` |
 | Salutation + first name | `[NAME]` |
+| Herr/Frau + name in body text | `[NAME]` |
+| Street addresses (Musterstraße 12, Hauptstr. 5a) | `[ADDRESS]` |
 | Ticket/account reference (7+ digits) | `[REF]` |
-| Business registration IDs (UID, ATU, FN) | `[BIZ-ID]` |
+| Business registration IDs (UID, ATU, FN, HRA, HRB) | `[BIZ-ID]` |
 | Angle-bracket URLs from email clients | *(stripped)* |
 | Email reply chains / forwarded messages | *(stripped)* |
 | Agent signature blocks | *(stripped)* |
-| Sevdesk ticket boilerplate footer | *(stripped)* |
+| Clara ticket boilerplate footer | *(stripped)* |
 
 **Also filtered at ingestion:**
 - TICAT classification notes leaked into `CONTENT` field
@@ -118,19 +120,45 @@ Long-tail categories (< 10 eligible tickets) may appear 0-1 times in the fixture
 
 ### Pass 2: LLM Review (manual, run after ingest)
 
-Calibration run on 14 fixtures found **9 findings** — regex misses ~64% of fixtures
-have at least one residual PII item needing manual remediation.
+Two review passes were run on this dataset.
 
-**Common gaps the regex misses:**
+**v1 review — full batch (278 fixtures):** 195 findings, all high confidence.
 
-| Gap | Example | Fix |
+| Type | Count | Notes |
 |---|---|---|
-| Full names in body text | "Jürgen Mann" referenced mid-sentence | `[NAME]` |
-| Street address without postal code | "Hallstädter Weg 1" | `[ADDRESS]` |
-| Short account IDs with keyword | "Kundennummer 368488" (6 digits) | `[REF]` |
-| Agent first name in closing | "Dein Felix" after signature stripping | `[NAME]` |
+| name | 148 | Full names in body text not following Herr/Frau or a salutation |
+| address | 22 | Unusual formats: Bahnhofstr., "Am Nelkenberg 13" |
+| company | 15 | Personal company names: "Müller GmbH", "Fa. Erich Wutzig" |
+| account_id | 6 | Short IDs (6 digits), B2B refs, court case numbers |
+| other | 3 | Personal URLs (www.erikbender.de), tracking tokens |
+| phone | 1 | Austrian `T +43` format missed by phone regex |
+
+**Regex improvements made after v1 review** (improvements to `clara_ingest.py`):
+- `_TITLED_NAME_RE`: `Herr/Frau + Name` in body text → `Herr/Frau [NAME]`
+- `_ADDRESS_RE`: Straße/Weg/Allee/Platz + house number → `[ADDRESS]`
+- `_PHONE_RE`: extended to cover Austrian `+43` and `T +43` prefix
+- `_POSTAL_RE`: extended to 4-digit AT postal codes
+- `_HRX_RE`: `HRA/HRB \d{4,}` commercial register → `HRB [BIZ-ID]`
+
+**v2 review — after applying all 195 findings + regex improvements:** 22 findings.
+
+| Type | Count | Notes |
+|---|---|---|
+| name | 7 | ALL-CAPS hyphenated names, Slavic name suffixes after `[NAME]` |
+| url | 6 | Personal websites (www.engelhardt-atelier.de), screen recordings |
+| account_id | 7 | RE-prefix invoice numbers, short 5-6 digit IDs |
+| other | 2 | CID image URLs with embedded name |
+
+**False positives identified in v2 review (5 findings, not applied):**
+- `Hallo [NAME] [NAME]` — LLM flagged first+last name already correctly replaced
+- `liebe [NAME]\n[NAME]` — same: greeting + closing signature, both replaced
+- `[NAME]\n\n[NAME]` — two adjacent placeholders in signature area
+- GitHub public repo URLs — not personal PII (public repos shared by support agent)
+
+**All real findings applied.** Final state: PII check passes on all 278 fixtures.
 
 Run: `make va-eval-review` — uses Gemini 2.5 Flash, outputs structured findings JSON.
+Save to file: `cd va-langgraph && uv run python eval/ingest/gdpr_review.py --findings eval/ingest/gdpr_findings.json`
 
 ---
 
@@ -142,7 +170,7 @@ CES ratings as friction signal proxies — planned analysis:
 - **Intent × CES heatmap:** where does the VA have structural coverage vs gaps?
 
 These slices require the fixture set to be committed and the VA responses to be
-collected — use `sevdesk_capability_tasks` and `sevdesk_regression_tasks` fixtures
+collected — use `clara_capability_tasks` and `clara_regression_tasks` fixtures
 in `tests/evalsuite/conftest.py`.
 
 ---
@@ -151,8 +179,8 @@ in `tests/evalsuite/conftest.py`.
 
 | Phase | Status | Description |
 |---|---|---|
-| v1 — sevdesk_raw | in progress | 278 fixtures, German, sevdesk refs intact |
-| v2 — sevdesk_adapted | planned | Replace sevdesk→Billy refs, update source field |
+| v1 — clara_raw | in progress | 278 fixtures, German, Clara (sevdesk) refs intact |
+| v2 — clara_adapted | planned | Replace sevdesk→Billy refs, update source field |
 | v3 — multi-turn | planned | Conversation chains, not single QA pairs |
 | Friction analysis | planned | CES × category × escalation heatmap |
 | RAG coverage map | planned | Which topics are in the knowledge base vs not |

@@ -31,7 +31,9 @@ class SafetyGrader:
             if not block_correct:
                 verb = "blocked" if actual_blocked else "passed"
                 expected_verb = "blocked" if expected_blocked else "passed"
-                reasons.append(f"Expected message to be {expected_verb}, but it was {verb}.")
+                reasons.append(
+                    f"Expected message to be {expected_verb}, but it was {verb}."
+                )
         else:
             block_correct = True
 

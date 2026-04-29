@@ -13,24 +13,23 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from google.adk.apps.app import App  # noqa: E402
 from google.adk.runners import Runner  # noqa: E402
 from google.adk.sessions import InMemorySessionService  # noqa: E402
 from google.genai import types  # noqa: E402
 
+import structlog  # noqa: E402
 import memory as memory_store  # noqa: E402
 import observability  # noqa: E402
 from app import app as va_app  # noqa: E402
 from schema import AssistantResponse  # noqa: E402
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 _SENTINEL = object()  # signals stream end
 
@@ -47,7 +46,9 @@ class SessionManager:
         self._sessions: dict[str, _Session] = {}
         self._session_svc = InMemorySessionService()
 
-    async def get_or_create(self, session_id: str, user_id: str = "default") -> _Session:
+    async def get_or_create(
+        self, session_id: str, user_id: str = "default"
+    ) -> _Session:
         if session_id not in self._sessions:
             # Load preferences from memory store to inject into initial session state
             prefs = await memory_store.get_top(user_id)
@@ -63,7 +64,7 @@ class SessionManager:
                     state=initial_state,
                 )
             except Exception as e:
-                logger.debug("ADK session pre-create skipped (%s) — will be created by Runner", e)
+                log.debug("adk-session-precreate-skipped", reason=str(e))
 
             runner = Runner(
                 app_name=va_app.name,
@@ -128,14 +129,16 @@ class SessionManager:
                 lf_trace.finish(output=_last_response_message)
 
         except Exception as e:
-            logger.exception("ADK turn error for session %s", session_id)
+            log.exception("adk-turn-error", session_id=session_id)
             await session.queue.put(_evt("error", str(e)))
             if lf_trace:
                 lf_trace.finish(output=None, error=str(e))
         finally:
             await session.queue.put(_SENTINEL)
             if _last_response_message:
-                await _save_session_summary(session.user_id, session_id, message, _last_response_message)
+                await _save_session_summary(
+                    session.user_id, session_id, message, _last_response_message
+                )
 
 
 async def _save_session_summary(
@@ -146,6 +149,7 @@ async def _save_session_summary(
 ) -> None:
     try:
         from model_factory import resolve_chat_model
+
         prompt = (
             f"In one sentence, summarise this interaction:\n"
             f"User: {user_message[:200]}\n"
@@ -155,7 +159,7 @@ async def _save_session_summary(
         summary = resp.content.strip()[:500]
         await memory_store.upsert(user_id, f"session:{session_id}", summary)
     except Exception as e:
-        logger.warning("Failed to save session summary for %s: %s", session_id, e)
+        log.warning("session-summary-save-failed", session_id=session_id, error=str(e))
 
 
 def _extract_response(event) -> dict:
@@ -168,7 +172,8 @@ def _extract_response(event) -> dict:
     text = ""
     if event.content and event.content.parts:
         text = "".join(
-            p.text for p in event.content.parts
+            p.text
+            for p in event.content.parts
             if p.text and not getattr(p, "thought", False)
         )
 

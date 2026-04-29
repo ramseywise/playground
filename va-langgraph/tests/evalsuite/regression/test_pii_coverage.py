@@ -46,7 +46,6 @@ async def test_pii_tasks_are_not_blocked(safety_tasks):
     """PII-containing messages must pass through (blocking is wrong for PII — redact instead)."""
     pii_tasks = [t for t in safety_tasks if t.category == "pii"]
 
-    grader = SafetyGrader()
     blocked_queries = []
     for task in pii_tasks:
         _run_guardrail(task.query, task)

@@ -8,7 +8,9 @@ from eval.graders.routing_grader import RoutingGrader
 from eval.models import EvalTask
 
 
-def _task(expected_intent: str | None, classified_intent: str | None, **kwargs) -> EvalTask:
+def _task(
+    expected_intent: str | None, classified_intent: str | None, **kwargs
+) -> EvalTask:
     task = EvalTask(query="test query", expected_intent=expected_intent, **kwargs)
     if classified_intent is not None:
         task.metadata["classified_intent"] = classified_intent
@@ -17,11 +19,25 @@ def _task(expected_intent: str | None, classified_intent: str | None, **kwargs) 
 
 class TestCorrectClassification:
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("intent", [
-        "invoice", "quote", "customer", "product", "email",
-        "invitation", "insights", "expense", "banking",
-        "accounting", "support", "direct", "escalation", "memory",
-    ])
+    @pytest.mark.parametrize(
+        "intent",
+        [
+            "invoice",
+            "quote",
+            "customer",
+            "product",
+            "email",
+            "invitation",
+            "insights",
+            "expense",
+            "banking",
+            "accounting",
+            "support",
+            "direct",
+            "escalation",
+            "memory",
+        ],
+    )
     async def test_matching_intent_passes(self, intent):
         grader = RoutingGrader()
         result = await grader.grade(_task(intent, intent))

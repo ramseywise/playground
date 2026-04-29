@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import logging
-import os
 import re
 from pathlib import Path
 from typing import Any
+
+import structlog
 
 from google.adk.agents import Agent
 from google.adk.agents.callback_context import CallbackContext
@@ -29,7 +29,7 @@ from sub_agents.product_agent import product_agent
 from sub_agents.quote_agent import quote_agent
 from sub_agents.support_agent import support_agent
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 _PROMPTS = Path(__file__).parent / "prompts"
 _INSTRUCTION = (_PROMPTS / "va_assistant.txt").read_text()
@@ -87,7 +87,9 @@ def provide_router_instruction(ctx: ReadonlyContext) -> str:
     return "\n\n".join(parts)
 
 
-async def _before_agent_callback(callback_context: CallbackContext) -> types.Content | None:
+async def _before_agent_callback(
+    callback_context: CallbackContext,
+) -> types.Content | None:
     """Clear tried_agents once per invocation. Load user preferences on first turn."""
     invocation_id = callback_context._invocation_context.invocation_id
     if callback_context.state.get("_tried_agents_invocation") != invocation_id:
@@ -101,7 +103,7 @@ async def _before_agent_callback(callback_context: CallbackContext) -> types.Con
             prefs = await memory_store.get_top(user_id)
             callback_context.state["user_preferences"] = prefs
         except Exception as e:
-            logger.warning("Could not load user preferences: %s", e)
+            log.warning("prefs-load-failed", error=str(e))
             callback_context.state["user_preferences"] = []
 
     return None
@@ -128,7 +130,7 @@ def _guardrail_callback(
         text = "".join(getattr(p, "text", "") or "" for p in parts)
 
         if _ESCALATION_RE.search(text):
-            logger.info("Escalation trigger detected — routing to human supporter")
+            log.info("escalation-trigger-detected")
             return LlmResponse(
                 content=types.Content(
                     role="model",
@@ -137,7 +139,7 @@ def _guardrail_callback(
             )
 
         if _INJECTION_RE.search(text):
-            logger.warning("Injection pattern detected in user message")
+            log.warning("injection-pattern-detected")
             return LlmResponse(
                 content=types.Content(
                     role="model",
@@ -154,7 +156,9 @@ def _guardrail_callback(
 # ---------------------------------------------------------------------------
 
 
-async def update_user_preference(key: str, value: str, tool_context: Any = None) -> dict:
+async def update_user_preference(
+    key: str, value: str, tool_context: Any = None
+) -> dict:
     """Remember a user preference. Call when the user says 'remember that...' or 'don't forget...'."""
     user_id = "default"
     try:

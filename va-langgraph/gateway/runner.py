@@ -15,8 +15,11 @@ Event types emitted:
 from __future__ import annotations
 
 import asyncio
-import logging
+import os
 from dataclasses import dataclass, field
+
+import structlog
+from cachetools import TTLCache
 
 from langchain_core.messages import HumanMessage
 
@@ -24,9 +27,12 @@ import memory as memory_store
 from graph.builder import build_graph
 from schema import AssistantResponse
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 _SENTINEL = object()
+
+_SESSION_TTL = int(os.getenv("SESSION_TTL_SECONDS", "1800"))
+_SESSION_MAXSIZE = int(os.getenv("SESSION_MAXSIZE", "500"))
 
 # Nodes that produce the final response directly (no format_node pass)
 _TERMINAL_NODES = {"format", "direct", "blocked", "escalation", "memory"}
@@ -39,7 +45,9 @@ class _Session:
 
 class GraphRunner:
     def __init__(self) -> None:
-        self._sessions: dict[str, _Session] = {}
+        self._sessions: TTLCache[str, _Session] = TTLCache(
+            maxsize=_SESSION_MAXSIZE, ttl=_SESSION_TTL
+        )
         self._graph = None
 
     def init_graph(self, checkpointer) -> None:
@@ -115,7 +123,12 @@ class GraphRunner:
                             await session.queue.put(_evt("text", text))
 
                 # Forward tool results as debug events from domain subgraph completions
-                elif kind == "on_chain_end" and node and node not in _TERMINAL_NODES | {"guardrail", "analyze", "memory_load"}:
+                elif (
+                    kind == "on_chain_end"
+                    and node
+                    and node
+                    not in _TERMINAL_NODES | {"guardrail", "analyze", "memory_load"}
+                ):
                     output = event["data"].get("output", {})
                     if isinstance(output, dict):
                         for tr in output.get("tool_results", []):
@@ -127,21 +140,30 @@ class GraphRunner:
                     if isinstance(output, dict) and output.get("response") is not None:
                         raw = output["response"]
                         try:
-                            resp = AssistantResponse(**raw) if isinstance(raw, dict) else raw
+                            resp = (
+                                AssistantResponse(**raw)
+                                if isinstance(raw, dict)
+                                else raw
+                            )
                             await session.queue.put(_evt("response", resp.model_dump()))
                             _last_response_message = resp.message
                         except Exception:
                             await session.queue.put(
-                                _evt("response", AssistantResponse(message=str(raw)).model_dump())
+                                _evt(
+                                    "response",
+                                    AssistantResponse(message=str(raw)).model_dump(),
+                                )
                             )
 
         except Exception as e:
-            logger.exception("Graph turn error for session %s", session_id)
+            log.exception("graph.turn.error", session_id=session_id, error=str(e))
             await session.queue.put(_evt("error", str(e)))
         finally:
             await session.queue.put(_SENTINEL)
             if _last_response_message:
-                await _save_session_summary(user_id, session_id, message, _last_response_message)
+                await _save_session_summary(
+                    user_id, session_id, message, _last_response_message
+                )
 
 
 async def _save_session_summary(
@@ -152,6 +174,7 @@ async def _save_session_summary(
 ) -> None:
     try:
         from model_factory import resolve_chat_model
+
         prompt = (
             f"In one sentence, summarise this interaction:\n"
             f"User: {user_message[:200]}\n"
@@ -161,7 +184,7 @@ async def _save_session_summary(
         summary = resp.content.strip()[:500]
         await memory_store.upsert(user_id, f"session:{session_id}", summary)
     except Exception as e:
-        logger.warning("Failed to save session summary for %s: %s", session_id, e)
+        log.warning("session.summary.failed", session_id=session_id, error=str(e))
 
 
 runner = GraphRunner()

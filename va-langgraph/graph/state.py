@@ -13,7 +13,7 @@ class AgentState(TypedDict):
     # ── conversation ──────────────────────────────────────────────
     messages: Annotated[list[BaseMessage], add_messages]
     session_id: str
-    user_id: str                          # identifies user across sessions
+    user_id: str  # identifies user across sessions
     page_url: str | None
 
     # ── memory ────────────────────────────────────────────────────
@@ -24,10 +24,10 @@ class AgentState(TypedDict):
     routing_confidence: float
 
     # ── domain work ───────────────────────────────────────────────
-    tool_results: list[dict[str, Any]]   # accumulated tool call results
+    tool_results: list[dict[str, Any]]  # accumulated tool call results
 
     # ── final output ─────────────────────────────────────────────
-    response: dict | None                # serialised AssistantResponse
+    response: dict | None  # serialised AssistantResponse
 
     # ── safety ────────────────────────────────────────────────────
     blocked: bool

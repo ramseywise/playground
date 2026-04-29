@@ -24,13 +24,14 @@ Intent values:
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
+
+import structlog
 
 from model_factory import resolve_chat_model
 from ..state import AgentState
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 _SYSTEM = (Path(__file__).parent.parent.parent / "prompts" / "router.txt").read_text()
 
@@ -54,10 +55,12 @@ async def analyze_node(state: AgentState) -> AgentState:
         user_text = f"[User preferences: {pref_lines}]\n{user_text}"
 
     try:
-        resp = await resolve_chat_model("small").ainvoke([
-            {"role": "system", "content": _SYSTEM},
-            {"role": "user", "content": str(user_text)},
-        ])
+        resp = await resolve_chat_model("small").ainvoke(
+            [
+                {"role": "system", "content": _SYSTEM},
+                {"role": "user", "content": str(user_text)},
+            ]
+        )
         raw = resp.content.strip()
         # Strip markdown fences if present
         if raw.startswith("```"):
@@ -68,7 +71,7 @@ async def analyze_node(state: AgentState) -> AgentState:
         intent = parsed.get("intent", "support")
         confidence = float(parsed.get("confidence", 0.8))
     except Exception as e:
-        logger.warning("analyze_node failed: %s — defaulting to support", e)
+        log.warning("analyze_node.failed", error=str(e), default_intent="support")
         intent = "support"
         confidence = 0.5
 

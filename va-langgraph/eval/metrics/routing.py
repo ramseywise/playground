@@ -43,14 +43,24 @@ def compute_routing_metrics(
     per_intent: dict[str, dict[str, float]] = {}
 
     for intent in intents:
-        tp = sum(1 for t, p in zip(true_labels, pred_labels) if t == intent and p == intent)
-        fp = sum(1 for t, p in zip(true_labels, pred_labels) if t != intent and p == intent)
-        fn = sum(1 for t, p in zip(true_labels, pred_labels) if t == intent and p != intent)
+        tp = sum(
+            1 for t, p in zip(true_labels, pred_labels) if t == intent and p == intent
+        )
+        fp = sum(
+            1 for t, p in zip(true_labels, pred_labels) if t != intent and p == intent
+        )
+        fn = sum(
+            1 for t, p in zip(true_labels, pred_labels) if t == intent and p != intent
+        )
         support = sum(1 for t in true_labels if t == intent)
 
         precision = tp / (tp + fp) if (tp + fp) else 0.0
         recall = tp / (tp + fn) if (tp + fn) else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if (precision + recall)
+            else 0.0
+        )
 
         per_intent[intent] = {
             "precision": round(precision, 3),

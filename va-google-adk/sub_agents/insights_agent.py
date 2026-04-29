@@ -12,7 +12,9 @@ from google.genai import types
 from schema import AssistantResponse
 from .shared_tools import THINKING_CONFIG, report_out_of_domain
 
-_INSTRUCTION = (Path(__file__).parent.parent / "prompts" / "insights_agent.txt").read_text()
+_INSTRUCTION = (
+    Path(__file__).parent.parent / "prompts" / "insights_agent.txt"
+).read_text()
 
 _BILLY_MCP_URL = os.getenv("BILLY_MCP_URL", "http://localhost:8765/sse")
 
@@ -24,7 +26,9 @@ insights_agent = Agent(
         "top customers, AR aging, DSO stats, product revenue, net margin, customer concentration, "
         "break-even analysis, and anomaly detection."
     ),
-    static_instruction=types.Content(role="user", parts=[types.Part(text=_INSTRUCTION)]),
+    static_instruction=types.Content(
+        role="user", parts=[types.Part(text=_INSTRUCTION)]
+    ),
     output_schema=AssistantResponse,
     output_key="response",
     tools=[

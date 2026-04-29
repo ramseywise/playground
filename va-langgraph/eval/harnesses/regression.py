@@ -21,14 +21,12 @@ class RegressionThresholds:
 async def run_regression_eval(
     tasks: list[EvalTask],
     graders: list[Any],
-    thresholds: RegressionThresholds | None = None,
     config: EvalRunConfig | None = None,
 ) -> EvalReport:
     """Run regression evaluation and return report.
 
-    Callers are responsible for asserting metric floors against the returned
-    report — typically via compute_routing_metrics() or compute_safety_metrics().
+    Assert metric floors against the returned report using RegressionThresholds
+    — typically via compute_routing_metrics() or compute_safety_metrics().
     """
-    thresholds = thresholds or RegressionThresholds()
     runner = EvalRunner(graders=graders, config=config)
     return await runner.run_capability(tasks)

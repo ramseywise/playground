@@ -6,6 +6,7 @@ import os
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 from .nodes.analyze import analyze_node
 from .nodes.direct import direct_node
@@ -75,7 +76,7 @@ def _is_direct(state: AgentState) -> str:
 # ---------------------------------------------------------------------------
 
 
-def build_graph(checkpointer=None) -> "CompiledGraph":  # type: ignore[return]
+def build_graph(checkpointer=None) -> CompiledStateGraph:
     """Build and compile the VA LangGraph.
 
     Args:
@@ -137,7 +138,19 @@ def build_graph(checkpointer=None) -> "CompiledGraph":  # type: ignore[return]
     )
 
     # Domain subgraphs → format (except direct/escalation/blocked/memory which set response directly)
-    for domain in ("invoice", "quote", "customer", "product", "email", "invitation", "insights", "expense", "banking", "accounting", "support"):
+    for domain in (
+        "invoice",
+        "quote",
+        "customer",
+        "product",
+        "email",
+        "invitation",
+        "insights",
+        "expense",
+        "banking",
+        "accounting",
+        "support",
+    ):
         g.add_edge(domain, "format")
 
     g.add_edge("format", END)

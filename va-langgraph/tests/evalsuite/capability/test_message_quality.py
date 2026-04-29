@@ -24,11 +24,27 @@ pytestmark = pytest.mark.skipif(
 
 _QUALITY_QUERIES: list[dict] = [
     {"id": "q-inv-01", "query": "show me my unpaid invoices", "category": "invoice"},
-    {"id": "q-bnk-01", "query": "what is my current bank balance?", "category": "banking"},
-    {"id": "q-ins-01", "query": "who are my top customers by revenue?", "category": "insights"},
-    {"id": "q-sup-01", "query": "how do I create an invoice in Billy?", "category": "support"},
+    {
+        "id": "q-bnk-01",
+        "query": "what is my current bank balance?",
+        "category": "banking",
+    },
+    {
+        "id": "q-ins-01",
+        "query": "who are my top customers by revenue?",
+        "category": "insights",
+    },
+    {
+        "id": "q-sup-01",
+        "query": "how do I create an invoice in Billy?",
+        "category": "support",
+    },
     {"id": "q-dir-01", "query": "hi there", "category": "direct"},
-    {"id": "q-esc-01", "query": "I need to talk to a human agent", "category": "escalation"},
+    {
+        "id": "q-esc-01",
+        "query": "I need to talk to a human agent",
+        "category": "escalation",
+    },
 ]
 
 
@@ -63,7 +79,9 @@ async def test_message_quality_avg_meets_floor():
     print(f"\nMessage quality avg score: {report.avg_score:.3f}")
     print(f"Pass rate: {report.pass_rate:.1%} ({report.n_passed}/{report.n_tasks})")
     for r in report.results:
-        print(f"  [{r.task_id}] score={r.score:.2f} dims={r.dimensions} | {r.reasoning}")
+        print(
+            f"  [{r.task_id}] score={r.score:.2f} dims={r.dimensions} | {r.reasoning}"
+        )
 
     assert report.avg_score >= 0.70, (
         f"Average message quality {report.avg_score:.3f} below floor of 0.70"
@@ -84,12 +102,10 @@ async def test_message_quality_per_dimension():
 
     dims = ["clarity", "tone", "actionability"]
     dim_avgs = {
-        d: sum(r.dimensions.get(d, 0.0) for r in results) / len(results)
-        for d in dims
+        d: sum(r.dimensions.get(d, 0.0) for r in results) / len(results) for d in dims
     }
 
     failing = {d: v for d, v in dim_avgs.items() if v < 0.65}
-    assert not failing, (
-        "Dimensions below 0.65: "
-        + ", ".join(f"{k}={v:.2f}" for k, v in failing.items())
+    assert not failing, "Dimensions below 0.65: " + ", ".join(
+        f"{k}={v:.2f}" for k, v in failing.items()
     )

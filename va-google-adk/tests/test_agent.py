@@ -19,9 +19,17 @@ from sub_agents.quote_agent import quote_agent
 from sub_agents.support_agent import support_agent
 
 _ALL_SUB_AGENTS = [
-    accounting_agent, banking_agent, customer_agent, email_agent,
-    expense_agent, insights_agent, invitation_agent, invoice_agent,
-    product_agent, quote_agent, support_agent,
+    accounting_agent,
+    banking_agent,
+    customer_agent,
+    email_agent,
+    expense_agent,
+    insights_agent,
+    invitation_agent,
+    invoice_agent,
+    product_agent,
+    quote_agent,
+    support_agent,
 ]
 
 

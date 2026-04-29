@@ -10,12 +10,13 @@ Both user preferences and session summaries share this table:
 from __future__ import annotations
 
 import asyncio
-import logging
 import os
 import sqlite3
 from datetime import datetime, timezone
 
-logger = logging.getLogger(__name__)
+import structlog
+
+log = structlog.get_logger(__name__)
 
 _DB_PATH = os.getenv("MEMORY_DB_PATH", "memory.db")
 
@@ -80,7 +81,7 @@ def _get_top_sync(user_id: str, n: int) -> list[dict]:
 async def init_memory_db() -> None:
     """Create the preference_store table if it does not exist."""
     await asyncio.to_thread(_init_sync)
-    logger.info("Memory DB ready at %s", _DB_PATH)
+    log.info("memory-db-ready", path=_DB_PATH)
 
 
 async def upsert(user_id: str, key: str, value: str) -> None:

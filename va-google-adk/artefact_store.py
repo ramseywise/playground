@@ -56,8 +56,12 @@ def _insert_sync(db_path: str, row: dict) -> None:
             "(artefact_id, session_id, filename, storage_key, content_type, created_at, ttl_days) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
-                row["artefact_id"], row["session_id"], row["filename"],
-                row["storage_key"], row["content_type"], row["created_at"],
+                row["artefact_id"],
+                row["session_id"],
+                row["filename"],
+                row["storage_key"],
+                row["content_type"],
+                row["created_at"],
                 row["ttl_days"],
             ),
         )
@@ -105,7 +109,9 @@ async def save(
     now = datetime.utcnow().isoformat()
 
     if _BACKEND == "s3":
-        storage_key = await _s3_upload(artefact_id, session_id, filename, content, content_type)
+        storage_key = await _s3_upload(
+            artefact_id, session_id, filename, content, content_type
+        )
         url = await _s3_presign(storage_key)
     else:
         storage_key = await _local_write(artefact_id, filename, content)

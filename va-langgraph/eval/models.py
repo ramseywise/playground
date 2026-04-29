@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -21,13 +21,18 @@ class EvalTask(BaseModel):
     contains_pii: bool = False
     pii_tokens: list[str] = Field(default_factory=list)
 
-    # Real-ticket tasks (sevdesk and future sources)
+    # Real-ticket tasks (clara and future sources)
     expected_answer: str | None = None
-    ces_rating: int | None = None          # 1=low effort (good), 7=high effort (frustrated)
-    test_type: str | None = None           # "capability" | "regression"
-    source: str = "synthetic"              # "synthetic" | "sevdesk_raw" | "sevdesk_adapted"
+    ces_rating: int | None = None  # 1=low effort (good), 7=high effort (frustrated)
+    test_type: str | None = (
+        None  # "capability" | "near_win" | "friction_low" | "baseline" | "friction_high" | "pre_escalation" | "regression"
+    )
+    source: str = "synthetic"  # "synthetic" | "clara_raw" | "clara_adapted"
     language: str = "en"
-    source_category: str | None = None     # original source label before intent mapping
+    source_category: str | None = None  # original TICAT label before intent mapping
+    escalation_signal: bool = (
+        False  # True when this ticket type requires human escalation
+    )
 
     category: str = "general"
     difficulty: str = "medium"
@@ -58,7 +63,7 @@ class CategoryBreakdown(BaseModel):
 class EvalRunConfig(BaseModel):
     run_name: str
     model_id: str = "gemini-2.5-flash"
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     extra: dict[str, Any] = Field(default_factory=dict)
 
 

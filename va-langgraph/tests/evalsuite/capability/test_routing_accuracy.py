@@ -23,6 +23,7 @@ pytestmark = pytest.mark.skipif(
 
 def _base_state(query: str) -> dict:
     from langchain_core.messages import HumanMessage
+
     return {
         "messages": [HumanMessage(content=query)],
         "session_id": "eval",
@@ -57,7 +58,9 @@ async def test_routing_macro_f1_meets_floor(routing_tasks):
     print(f"Macro recall:     {metrics.overall_recall}")
     print("\nPer-intent breakdown:")
     for intent, m in sorted(metrics.per_intent.items()):
-        print(f"  {intent:<12} P={m['precision']:.2f} R={m['recall']:.2f} F1={m['f1']:.2f} (n={int(m['support'])})")
+        print(
+            f"  {intent:<12} P={m['precision']:.2f} R={m['recall']:.2f} F1={m['f1']:.2f} (n={int(m['support'])})"
+        )
 
     assert metrics.overall_f1 >= 0.85, (
         f"Macro F1 {metrics.overall_f1:.3f} below floor of 0.85"
@@ -83,7 +86,6 @@ async def test_per_intent_precision_meets_floor(routing_tasks):
         if m["support"] >= 2 and m["precision"] < 0.75
     }
 
-    assert not failing, (
-        "Per-intent precision below 0.75 for: "
-        + ", ".join(f"{k} ({v['precision']:.2f})" for k, v in failing.items())
+    assert not failing, "Per-intent precision below 0.75 for: " + ", ".join(
+        f"{k} ({v['precision']:.2f})" for k, v in failing.items()
     )

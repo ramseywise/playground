@@ -7,22 +7,22 @@ and the original user message to produce structured AssistantResponse JSON.
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from model_factory import resolve_chat_model
 from schema import AssistantResponse
 from ..state import AgentState
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 _SYSTEM = (Path(__file__).parent.parent.parent / "prompts" / "format.txt").read_text()
 
+
 def _get_structured_llm():
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
-    return llm.with_structured_output(AssistantResponse)
+    return resolve_chat_model("medium").with_structured_output(AssistantResponse)
 
 
 async def format_node(state: AgentState) -> AgentState:
@@ -35,7 +35,11 @@ async def format_node(state: AgentState) -> AgentState:
     if page_url:
         user_text = f"[User is on page: {page_url}]\n{user_text}"
 
-    tool_summary = json.dumps(tool_results, ensure_ascii=False, indent=2) if tool_results else "(no tool calls made)"
+    tool_summary = (
+        json.dumps(tool_results, ensure_ascii=False, indent=2)
+        if tool_results
+        else "(no tool calls made)"
+    )
 
     prompt = f"""User request: {user_text}
 
@@ -47,13 +51,15 @@ Tool results:
 Produce the AssistantResponse JSON."""
 
     try:
-        result = await _get_structured_llm().ainvoke([
-            SystemMessage(content=_SYSTEM),
-            HumanMessage(content=prompt),
-        ])
+        result = await _get_structured_llm().ainvoke(
+            [
+                SystemMessage(content=_SYSTEM),
+                HumanMessage(content=prompt),
+            ]
+        )
         response_dict = result.model_dump()
     except Exception as e:
-        logger.exception("format_node structured output failed: %s", e)
+        log.exception("format_node.failed", error=str(e))
         # Fallback: plain text from tool results
         response_dict = AssistantResponse(
             message=f"Done. {tool_summary[:500]}"

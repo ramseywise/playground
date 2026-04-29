@@ -48,12 +48,13 @@ Langfuse (reference — swap back by replacing deps/env vars and uncommenting be
 
 from __future__ import annotations
 
-import logging
 import os
 import uuid
 from datetime import datetime, timezone
 
-logger = logging.getLogger(__name__)
+import structlog
+
+log = structlog.get_logger(__name__)
 
 _langsmith_client = None
 
@@ -61,11 +62,11 @@ _langsmith_client = None
 def init_langsmith() -> None:
     global _langsmith_client
     if os.getenv("LANGSMITH_TRACING", "").lower() != "true":
-        logger.info("LangSmith tracing disabled (LANGSMITH_TRACING != true)")
+        log.info("langsmith-disabled", reason="LANGSMITH_TRACING != true")
         return
     api_key = os.getenv("LANGSMITH_API_KEY", "")
     if not api_key:
-        logger.warning("LANGSMITH_TRACING=true but LANGSMITH_API_KEY not set — skipping")
+        log.warning("langsmith-missing-api-key")
         return
     try:
         from langsmith import Client
@@ -74,9 +75,9 @@ def init_langsmith() -> None:
             api_url=os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com"),
             api_key=api_key,
         )
-        logger.info("LangSmith initialised (project=%s)", os.getenv("LANGSMITH_PROJECT", "billy-va"))
+        log.info("langsmith-ready", project=os.getenv("LANGSMITH_PROJECT", "billy-va"))
     except Exception:
-        logger.exception("LangSmith init failed — tracing disabled")
+        log.exception("langsmith-init-failed")
 
 
 def shutdown_langsmith() -> None:
@@ -101,7 +102,7 @@ class _Turn:
                 end_time=datetime.now(timezone.utc),
             )
         except Exception:
-            logger.exception("LangSmith run update failed")
+            log.exception("langsmith-run-update-failed")
 
 
 def start_trace(
@@ -127,5 +128,5 @@ def start_trace(
         )
         return _Turn(run_id)
     except Exception:
-        logger.exception("LangSmith start_trace failed")
+        log.exception("langsmith-start-trace-failed")
         return None

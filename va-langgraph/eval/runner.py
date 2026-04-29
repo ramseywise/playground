@@ -65,7 +65,9 @@ class EvalRunner:
             avg_score=avg_score,
             n_tasks=n_tasks,
             n_passed=n_passed,
-            by_category=self._breakdown_by(tasks, results, task_passed, lambda t: t.category),
+            by_category=self._breakdown_by(
+                tasks, results, task_passed, lambda t: t.category
+            ),
             by_grader=self._breakdown_by_grader(results),
             failure_details=failures,
         )
@@ -86,7 +88,11 @@ class EvalRunner:
             cat_results = [r for t in cat_tasks for r in results if r.task_id == t.id]
             n = len(cat_tasks)
             n_pass = sum(task_passed.get(t.id, False) for t in cat_tasks)
-            avg = sum(r.score for r in cat_results) / len(cat_results) if cat_results else 0.0
+            avg = (
+                sum(r.score for r in cat_results) / len(cat_results)
+                if cat_results
+                else 0.0
+            )
             breakdowns.append(
                 CategoryBreakdown(
                     category=cat,
@@ -98,7 +104,9 @@ class EvalRunner:
             )
         return breakdowns
 
-    def _breakdown_by_grader(self, results: list[GraderResult]) -> list[CategoryBreakdown]:
+    def _breakdown_by_grader(
+        self, results: list[GraderResult]
+    ) -> list[CategoryBreakdown]:
         groups: dict[str, list[GraderResult]] = defaultdict(list)
         for r in results:
             groups[r.grader_type].append(r)

@@ -27,30 +27,32 @@ def safety_tasks() -> list[EvalTask]:
 
 
 @pytest.fixture(scope="session")
-def sevdesk_tasks() -> list[EvalTask]:
-    """Real sevdesk tickets (GDPR-scrubbed). Empty list if fixture not yet generated.
+def clara_tasks() -> list[EvalTask]:
+    """Real Clara tickets (GDPR-scrubbed). Empty list if fixture not yet generated.
 
     Generate with:
         cd va-langgraph
-        uv run python eval/ingest/sevdesk_ingest.py
+        uv run python eval/ingest/clara_ingest.py
     Then run the LLM review pass per .claude/skills/gdpr-scrub/SKILL.md.
     """
-    fixture_path = FIXTURES / "sevdesk_tickets.json"
+    fixture_path = FIXTURES / "clara_tickets.json"
     if not fixture_path.exists():
-        pytest.skip("sevdesk_tickets.json not found — run eval/ingest/sevdesk_ingest.py first")
+        pytest.skip(
+            "clara_tickets.json not found — run eval/ingest/clara_ingest.py first"
+        )
         return []
     data = json.loads(fixture_path.read_text())
     return [EvalTask(**d) for d in data]
 
 
 @pytest.fixture(scope="session")
-def sevdesk_capability_tasks(sevdesk_tasks: list[EvalTask]) -> list[EvalTask]:
-    return [t for t in sevdesk_tasks if t.test_type == "capability"]
+def clara_capability_tasks(clara_tasks: list[EvalTask]) -> list[EvalTask]:
+    return [t for t in clara_tasks if t.test_type == "capability"]
 
 
 @pytest.fixture(scope="session")
-def sevdesk_regression_tasks(sevdesk_tasks: list[EvalTask]) -> list[EvalTask]:
-    return [t for t in sevdesk_tasks if t.test_type == "regression"]
+def clara_regression_tasks(clara_tasks: list[EvalTask]) -> list[EvalTask]:
+    return [t for t in clara_tasks if t.test_type == "regression"]
 
 
 def run_guardrail(query: str) -> dict:

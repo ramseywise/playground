@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
+import logging  # noqa: use-structlog — configures LangChain stdlib output via logging.basicConfig
 import os
 from contextlib import asynccontextmanager
 
+import structlog
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,8 +38,10 @@ import memory as memory_store
 
 from .runner import _SENTINEL, runner
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO
+)  # configure stdlib for LangChain/LangGraph output
+log = structlog.get_logger(__name__)
 
 _CHECKPOINTER_BACKEND = os.getenv("LANGGRAPH_CHECKPOINTER", "memory")
 _POSTGRES_URL = os.getenv("POSTGRES_URL", "")
@@ -57,13 +60,13 @@ async def lifespan(app: FastAPI):
             checkpointer = AsyncPostgresSaver(pool)
             await checkpointer.setup()
             runner.init_graph(checkpointer)
-            logger.info("LangGraph using AsyncPostgresSaver")
+            log.info("checkpointer.ready", backend="postgres")
             yield
     else:
         from langgraph.checkpoint.memory import MemorySaver
 
         runner.init_graph(MemorySaver())
-        logger.info("LangGraph using MemorySaver")
+        log.info("checkpointer.ready", backend="memory")
         yield
 
 

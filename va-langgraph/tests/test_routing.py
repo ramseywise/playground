@@ -5,7 +5,12 @@ from __future__ import annotations
 import pytest
 from langchain_core.messages import HumanMessage
 
-from graph.builder import _after_guardrail, _is_direct, _route_intent, _LOW_CONF_THRESHOLD
+from graph.builder import (
+    _after_guardrail,
+    _is_direct,
+    _route_intent,
+    _LOW_CONF_THRESHOLD,
+)
 
 
 def _state(**kwargs):
@@ -32,11 +37,25 @@ class TestAfterGuardrail:
 
 
 class TestRouteIntent:
-    @pytest.mark.parametrize("intent", [
-        "invoice", "quote", "customer", "product", "email",
-        "invitation", "insights", "expense", "banking",
-        "accounting", "support", "direct", "escalation", "memory",
-    ])
+    @pytest.mark.parametrize(
+        "intent",
+        [
+            "invoice",
+            "quote",
+            "customer",
+            "product",
+            "email",
+            "invitation",
+            "insights",
+            "expense",
+            "banking",
+            "accounting",
+            "support",
+            "direct",
+            "escalation",
+            "memory",
+        ],
+    )
     def test_known_intents_route_correctly(self, intent):
         result = _route_intent(_state(intent=intent, routing_confidence=1.0))
         assert result == intent
@@ -51,7 +70,9 @@ class TestRouteIntent:
         assert result == "direct"
 
     def test_confidence_at_threshold_routes_to_intent(self):
-        result = _route_intent(_state(intent="banking", routing_confidence=_LOW_CONF_THRESHOLD))
+        result = _route_intent(
+            _state(intent="banking", routing_confidence=_LOW_CONF_THRESHOLD)
+        )
         assert result == "banking"
 
 

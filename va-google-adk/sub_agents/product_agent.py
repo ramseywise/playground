@@ -12,7 +12,9 @@ from google.genai import types
 from schema import AssistantResponse
 from .shared_tools import THINKING_CONFIG, report_out_of_domain
 
-_INSTRUCTION = (Path(__file__).parent.parent / "prompts" / "product_agent.txt").read_text()
+_INSTRUCTION = (
+    Path(__file__).parent.parent / "prompts" / "product_agent.txt"
+).read_text()
 
 _BILLY_MCP_URL = os.getenv("BILLY_MCP_URL", "http://localhost:8765/sse")
 
@@ -20,7 +22,9 @@ product_agent = Agent(
     model="gemini-2.5-flash",
     name="product_agent",
     description="Handles products and services: create, view, list, and edit prices. Products are used in invoice and quote line items.",
-    static_instruction=types.Content(role="user", parts=[types.Part(text=_INSTRUCTION)]),
+    static_instruction=types.Content(
+        role="user", parts=[types.Part(text=_INSTRUCTION)]
+    ),
     output_schema=AssistantResponse,
     output_key="response",
     tools=[

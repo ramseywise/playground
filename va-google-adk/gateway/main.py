@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
+import logging  # noqa: use-structlog — configures stdlib log level for ADK/uvicorn output
 import os
 from contextlib import asynccontextmanager
 
@@ -125,7 +125,9 @@ async def post_chat(
     SSE events are not lost.
     """
     if len(req.message) > _MAX_MESSAGE_CHARS:
-        raise HTTPException(status_code=400, detail=f"Message exceeds {_MAX_MESSAGE_CHARS} characters")
+        raise HTTPException(
+            status_code=400, detail=f"Message exceeds {_MAX_MESSAGE_CHARS} characters"
+        )
 
     trace_id = x_trace_id or req.request_id
 

@@ -12,10 +12,10 @@ The format_node then converts tool_results → AssistantResponse.
 from __future__ import annotations
 
 import json
-import logging
 import os
 from typing import Any
 
+import structlog
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.messages import trim_messages
 from langchain_core.tools import BaseTool
@@ -23,7 +23,7 @@ from langchain_core.tools import BaseTool
 from model_factory import resolve_chat_model
 from ..state import AgentState
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 _MAX_HISTORY_TOKENS = int(os.getenv("MAX_HISTORY_TOKENS", "12000"))
 
@@ -105,10 +105,16 @@ async def run_domain(
                     else:
                         result = tool.invoke(tool_args)
                 except Exception as e:
-                    logger.exception("Tool %s failed", tool_name)
+                    log.exception("tool.failed", tool=tool_name, error=str(e))
                     result = {"error": str(e)}
 
-            tool_results.append({"tool": tool_name, "args": tool_args, "result": result})
-            loop_messages.append(ToolMessage(content=json.dumps(result, default=str), tool_call_id=tool_id))
+            tool_results.append(
+                {"tool": tool_name, "args": tool_args, "result": result}
+            )
+            loop_messages.append(
+                ToolMessage(
+                    content=json.dumps(result, default=str), tool_call_id=tool_id
+                )
+            )
 
     return {**state, "tool_results": tool_results}

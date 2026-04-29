@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import Any
 
+import structlog
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from ..models import EvalTask, GraderResult
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
 
 class LLMJudge:
@@ -29,10 +29,12 @@ class LLMJudge:
         user_msg = self._format_user_message(task)
 
         try:
-            resp = await self.llm.ainvoke([
-                {"role": "system", "content": self.system_prompt},
-                {"role": "user", "content": user_msg},
-            ])
+            resp = await self.llm.ainvoke(
+                [
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": user_msg},
+                ]
+            )
             raw = resp.content.strip()
             if raw.startswith("```"):
                 raw = raw.split("```")[1].strip()
@@ -41,7 +43,9 @@ class LLMJudge:
             parsed = json.loads(raw)
             return self._parse_result(parsed, task)
         except Exception as e:
-            logger.warning("%s failed for task %s: %s", self.grader_type, task.id, e)
+            log.warning(
+                "judge.failed", grader=self.grader_type, task_id=task.id, error=str(e)
+            )
             return GraderResult(
                 task_id=task.id,
                 grader_type=self.grader_type,
@@ -53,10 +57,7 @@ class LLMJudge:
     def _format_user_message(self, task: EvalTask) -> str:
         response = task.metadata.get("response", {})
         message = response.get("message", "") if isinstance(response, dict) else ""
-        return (
-            f"User query: {task.query}\n\n"
-            f"Assistant response:\n{message}"
-        )
+        return f"User query: {task.query}\n\nAssistant response:\n{message}"
 
     def _parse_result(self, parsed: dict[str, Any], task: EvalTask) -> GraderResult:
         score = float(parsed.get("score", 0.0))
@@ -66,5 +67,7 @@ class LLMJudge:
             is_correct=bool(parsed.get("is_correct", score >= 0.7)),
             score=score,
             reasoning=parsed.get("reasoning", ""),
-            dimensions={k: float(v) for k, v in parsed.items() if isinstance(v, (int, float))},
+            dimensions={
+                k: float(v) for k, v in parsed.items() if isinstance(v, (int, float))
+            },
         )

@@ -2,15 +2,8 @@
 
 from __future__ import annotations
 
-import json
-import logging
-
-from langchain_core.language_models.chat_models import BaseChatModel
-
 from ..models import EvalTask, GraderResult
 from .llm_judge import LLMJudge
-
-logger = logging.getLogger(__name__)
 
 _SYSTEM = """You are evaluating the quality of an AI accounting assistant's response.
 
@@ -34,7 +27,9 @@ class MessageQualityJudge(LLMJudge):
 
     def _format_user_message(self, task: EvalTask) -> str:
         response = task.metadata.get("response", {})
-        message = response.get("message", "") if isinstance(response, dict) else str(response)
+        message = (
+            response.get("message", "") if isinstance(response, dict) else str(response)
+        )
         return f"User query: {task.query}\n\nAssistant response:\n{message}"
 
     def _parse_result(self, parsed: dict, task: EvalTask) -> GraderResult:

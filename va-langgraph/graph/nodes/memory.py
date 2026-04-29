@@ -7,18 +7,20 @@ then persists the preference to the memory store.
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
 
+import structlog
 import memory as memory_store
 from model_factory import resolve_chat_model
 from schema import AssistantResponse
 
 from ..state import AgentState
 
-logger = logging.getLogger(__name__)
+log = structlog.get_logger(__name__)
 
-_EXTRACT_SYSTEM = (Path(__file__).parent.parent.parent / "prompts" / "memory_extract.txt").read_text()
+_EXTRACT_SYSTEM = (
+    Path(__file__).parent.parent.parent / "prompts" / "memory_extract.txt"
+).read_text()
 
 
 async def memory_node(state: AgentState) -> AgentState:
@@ -27,10 +29,12 @@ async def memory_node(state: AgentState) -> AgentState:
     user_text = str(messages[-1].content) if messages else ""
 
     try:
-        resp = await resolve_chat_model("small").ainvoke([
-            {"role": "system", "content": _EXTRACT_SYSTEM},
-            {"role": "user", "content": user_text},
-        ])
+        resp = await resolve_chat_model("small").ainvoke(
+            [
+                {"role": "system", "content": _EXTRACT_SYSTEM},
+                {"role": "user", "content": user_text},
+            ]
+        )
         raw = resp.content.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1].strip().lstrip("json").strip()
@@ -45,6 +49,7 @@ async def memory_node(state: AgentState) -> AgentState:
             import asyncio
             import sqlite3
             import os
+
             db_path = os.getenv("MEMORY_DB_PATH", "memory.db")
 
             def _clear_all():
@@ -65,13 +70,16 @@ async def memory_node(state: AgentState) -> AgentState:
             msg = f"Got it — I'll remember that **{key}** is **{value}**."
 
     except Exception as e:
-        logger.warning("memory_node failed: %s", e)
+        log.warning("memory_node.failed", error=str(e))
         msg = "I had trouble saving that preference. Please try again."
 
     return {
         **state,
         "response": AssistantResponse(
             message=msg,
-            suggestions=["What have you remembered about me?", "Forget all my preferences"],
+            suggestions=[
+                "What have you remembered about me?",
+                "Forget all my preferences",
+            ],
         ).model_dump(),
     }

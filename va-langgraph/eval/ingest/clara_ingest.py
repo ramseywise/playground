@@ -1,5 +1,5 @@
 """
-Ingest sevdesk single-engagement tickets into Billy VA eval fixtures.
+Ingest Clara (sevdesk) single-engagement tickets into Billy VA eval fixtures.
 
 Covers all 7 CES rating levels with stratified per-level sampling.
 Deterministic regex pass only (email, phone, IBAN, postal, salutation names).
@@ -8,8 +8,8 @@ pass before committing the output file.
 
 Usage:
     cd va-langgraph
-    uv run python eval/ingest/sevdesk_ingest.py
-    uv run python eval/ingest/sevdesk_ingest.py --n 280 --output path/to/out.json
+    uv run python eval/ingest/clara_ingest.py
+    uv run python eval/ingest/clara_ingest.py --n 280 --output path/to/out.json
 """
 
 from __future__ import annotations
@@ -27,8 +27,20 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).parents[3]  # playground/
-SOURCE_CSV = _REPO_ROOT.parent / "help-support-rag-agent" / "data" / "single_engagement_tickets.csv"
-OUTPUT_JSON = _REPO_ROOT / "va-langgraph" / "tests" / "evalsuite" / "fixtures" / "sevdesk_tickets.json"
+SOURCE_CSV = (
+    _REPO_ROOT.parent
+    / "help-support-rag-agent"
+    / "data"
+    / "single_engagement_tickets.csv"
+)
+OUTPUT_JSON = (
+    _REPO_ROOT
+    / "va-langgraph"
+    / "tests"
+    / "evalsuite"
+    / "fixtures"
+    / "clara_tickets.json"
+)
 
 # ---------------------------------------------------------------------------
 # Category rules
@@ -69,13 +81,13 @@ _DEFAULT_INTENT = "support"
 # CES 1 = low effort (easy win) → gold standard capability
 # CES 7 = high effort (frustrated) → regression / failure mode
 CES_TEST_TYPE: dict[int, str] = {
-    1: "capability",       # VA handled it perfectly, zero friction
-    2: "near_win",         # Easy path with minor friction
-    3: "friction_low",     # Friction starting to emerge
-    4: "baseline",         # Neutral — no clear positive or negative signal
-    5: "friction_high",    # Customer showing frustration
-    6: "pre_escalation",   # High escalation risk, customer close to leaving
-    7: "regression",       # Failure mode — maximal frustration
+    1: "capability",  # VA handled it perfectly, zero friction
+    2: "near_win",  # Easy path with minor friction
+    3: "friction_low",  # Friction starting to emerge
+    4: "baseline",  # Neutral — no clear positive or negative signal
+    5: "friction_high",  # Customer showing frustration
+    6: "pre_escalation",  # High escalation risk, customer close to leaving
+    7: "regression",  # Failure mode — maximal frustration
 }
 
 CES_DIFFICULTY: dict[int, str] = {
@@ -96,11 +108,11 @@ CES_DIFFICULTY: dict[int, str] = {
 # ---------------------------------------------------------------------------
 
 _SE_ESCALATION_CATEGORIES: set[str] = {
-    "SE - Account gesperrt",             # account lock — needs ops access
-    "SE - Rechnung und Zahlungsdetails", # billing details — needs account verification
-    "SE - Rechnungsüberweisung",         # wire transfer dispute — needs finance team
-    "SE - Inkasso / PairFinance",        # debt collection referral
-    "SE - Auskunftsersuchen",            # GDPR data request — legal obligation
+    "SE - Account gesperrt",  # account lock — needs ops access
+    "SE - Rechnung und Zahlungsdetails",  # billing details — needs account verification
+    "SE - Rechnungsüberweisung",  # wire transfer dispute — needs finance team
+    "SE - Inkasso / PairFinance",  # debt collection referral
+    "SE - Auskunftsersuchen",  # GDPR data request — legal obligation
 }
 
 
@@ -120,13 +132,25 @@ _EMAIL_RE = re.compile(
     re.IGNORECASE,
 )
 _IBAN_RE = re.compile(r"\bDE\d{20}\b")
-# German phone: +49 or leading 0, followed by 7+ digits (allows spaces/dashes)
-_PHONE_RE = re.compile(r"(\+49|0\d{1,4})[\s\-\./]?\d[\d\s\-\.\/]{5,}\d")
-# German 5-digit postal code followed by city name
-_POSTAL_RE = re.compile(r"\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß\-]+")
+# German/Austrian phone: +49/+43 or leading 0, followed by 7+ digits (allows spaces/dashes/parens)
+_PHONE_RE = re.compile(
+    r"(\+4[39]|T\s+\+4[39]|0\d{1,4})[\s\-\./\(]?\d[\d\s\-\.\/\)]{5,}\d"
+)
+# German 5-digit postal code followed by city name; also 4-digit AT postal codes
+_POSTAL_RE = re.compile(r"\b\d{4,5}\s+[A-ZÄÖÜ][a-zäöüß\-]+")
 # Salutation + first name: "Hallo Nicole," / "Guten Tag Max" / "Sehr geehrter Herr Müller"
 _SALUTE_RE = re.compile(
     r"(Hallo|Guten\s+Tag|Liebe[r]?|Dear|Sehr geehrte[r]?(?:\s+(?:Herr|Frau))?)\s+([A-ZÄÖÜ][a-zäöüß]{1,})",
+    re.IGNORECASE,
+)
+# "Herr/Frau Name" in body text (not post-salutation — catches mid-sentence name refs)
+_TITLED_NAME_RE = re.compile(
+    r"\b(Herr|Frau)\s+([A-ZÄÖÜ][a-zäöüß\-]+(?:\s+[A-ZÄÖÜ][a-zäöüß\-]+)?)",
+)
+# German/Austrian street addresses: "Musterstraße 12", "Bahnhofstr. 14a", "Am Nelkenberg 13"
+_ADDRESS_RE = re.compile(
+    r"\b[A-ZÄÖÜ][a-zäöüßA-ZÄÖÜ]+(?:straße|strasse|str\.|weg|gasse|allee|platz|ring|damm|steig|berg|pfad|hof)\s+\d+[a-zA-Z]?(?:\s*/\s*(?:Top|EG|OG|Apt\.?|Wohnung\.?)?\s*\d*[a-zA-Z]*)?"
+    r"|\bAm\s+[A-ZÄÖÜ][a-zäöüßA-ZÄÖÜ]+\s+\d+[a-zA-Z]?",  # "Am Nelkenberg 13"
     re.IGNORECASE,
 )
 # Ticket/account refs: 7+ digit standalone, OR 6+ digit prefixed by account keyword
@@ -135,8 +159,33 @@ _TICKET_REF_RE = re.compile(
     r"|\b(Kundennummer|Kunden-?Nr\.?|Account|Konto)\s*[:#]?\s*\d{6,}",
     re.IGNORECASE,
 )
+# Document / order refs — keep the prefix, replace just the number
+_DOC_REF_RE = re.compile(
+    r"(\bRechnungs?(?:-|\s+)(?:Nr\.?|Nummer)\s+)\d{5,}"  # "Rechnung Nr. 1005118"
+    r"|(B2B-)\d{6,}"  # "B2B-17149952" (Shopify)
+    r"|\(\d{11,}\)",  # bare large IDs in parens "(15233908274022)"
+    re.IGNORECASE,
+)
+# Commercial register (Handelsregister): "HRA 6308", "HRB 12345"
+_HRX_RE = re.compile(r"\b(HRA|HRB)\s*\d{4,}", re.IGNORECASE)
+
+
+def _sub_doc_ref(m: re.Match) -> str:
+    if m.group(1):
+        return f"{m.group(1)}[REF]"
+    if m.group(2):
+        return f"{m.group(2)}[REF]"
+    return "([REF])"
+
+
 # Business registration / tax IDs (AT/DE UID, Firmennummer)
-_BIZ_ID_RE = re.compile(r"\b(UID|ATU|USt-?IdNr\.?|FN)\s*[:\.]?\s*[A-Z0-9]{6,}", re.IGNORECASE)
+_BIZ_ID_RE = re.compile(
+    r"\b(UID|ATU|USt-?IdNr\.?|FN)\s*[:\.]?\s*[A-Z0-9]{6,}", re.IGNORECASE
+)
+
+# Angle-bracket URLs left by email clients in forwarded/quoted blocks
+# e.g. <https://cBMph04.na1.hubspotlinks.com/...>
+_ANGLE_URL_RE = re.compile(r"<https?://\S+?>", re.IGNORECASE)
 
 
 def _scrub(text: str) -> str:
@@ -146,8 +195,12 @@ def _scrub(text: str) -> str:
     text = _PHONE_RE.sub("[PHONE]", text)
     text = _POSTAL_RE.sub("[LOCATION]", text)
     text = _SALUTE_RE.sub(lambda m: f"{m.group(1)} [NAME]", text)
+    text = _TITLED_NAME_RE.sub(lambda m: f"{m.group(1)} [NAME]", text)
+    text = _ADDRESS_RE.sub("[ADDRESS]", text)
     text = _TICKET_REF_RE.sub(lambda m: f"{m.group(1) or m.group(2)} [REF]", text)
+    text = _DOC_REF_RE.sub(_sub_doc_ref, text)
     text = _BIZ_ID_RE.sub(lambda m: f"{m.group(1)} [BIZ-ID]", text)
+    text = _HRX_RE.sub(lambda m: f"{m.group(1)} [BIZ-ID]", text)
     return text.strip()
 
 
@@ -158,19 +211,16 @@ def _scrub(text: str) -> str:
 # Catches both German email-client formats:
 #   "Am 2. Jan. 2025 schrieb Max:" (Outlook/Thunderbird style)
 #   "Max Mustermann schrieb am Do. 2. Jan.:" (forwarded message style)
+# Also catches bare -----  separators used by some email clients/CRM exports
 _CHAIN_RE = re.compile(
     r"\n?(Am\s.{5,120}schrieb"
     r"|.{0,80}schrieb am\s+\w"
     r"|Von:\s|From:\s"
-    r"|-----+\s*Original"
+    r"|-----+"
     r"|Gesendet:\s"
     r"|On\s.{5,120}wrote:).*",
     re.IGNORECASE | re.DOTALL,
 )
-
-# Angle-bracket URLs left by email clients in forwarded/quoted blocks
-# e.g. <https://cBMph04.na1.hubspotlinks.com/...>
-_ANGLE_URL_RE = re.compile(r"<https?://\S+?>", re.IGNORECASE)
 
 
 def _strip_chain(text: str) -> str:
@@ -215,6 +265,7 @@ def _strip_ticket_boilerplate(text: str) -> str:
 # ---------------------------------------------------------------------------
 # Stratified sampling: per-CES-level quota, then balanced by category within
 # ---------------------------------------------------------------------------
+
 
 def _balance_by_category(rows: list[dict], quota: int) -> list[dict]:
     """Pick up to `quota` rows, balanced across TICAT categories."""
@@ -272,6 +323,7 @@ def _sample_stratified(rows: list[dict], total: int) -> list[dict]:
 # Fixture assembly
 # ---------------------------------------------------------------------------
 
+
 def _build_fixture(row: dict, seq: int) -> dict:
     category = row["TICAT_AGENT_LABELLED_CATEGORY"] or "SU - Sonstiges"
     intent = CATEGORY_INTENT.get(category, _DEFAULT_INTENT)
@@ -286,7 +338,7 @@ def _build_fixture(row: dict, seq: int) -> dict:
     query = _scrub(raw_query)
     answer = _scrub(raw_answer)
 
-    tags = ["sevdesk", "real-ticket", f"ces-{ces}"]
+    tags = ["clara", "real-ticket", f"ces-{ces}"]
     if escalation:
         tags.append("escalation-candidate")
 
@@ -300,7 +352,7 @@ def _build_fixture(row: dict, seq: int) -> dict:
         "test_type": CES_TEST_TYPE.get(ces, "baseline"),
         "difficulty": CES_DIFFICULTY.get(ces, "medium"),
         "escalation_signal": escalation,
-        "source": "sevdesk_raw",
+        "source": "clara_raw",
         "language": "de",
         "source_category": category,
         "tags": tags,
@@ -311,20 +363,27 @@ def _build_fixture(row: dict, seq: int) -> dict:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main(source: Path, output: Path, n: int) -> None:
     if not source.exists():
         print(f"ERROR: source not found: {source}", file=sys.stderr)
-        print("Expected at: help-support-rag-agent/data/single_engagement_tickets.csv", file=sys.stderr)
+        print(
+            "Expected at: help-support-rag-agent/data/single_engagement_tickets.csv",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     with source.open(encoding="utf-8") as f:
         all_rows = list(csv.DictReader(f))
 
     # "Predicted Category" prefix = TICAT auto-labeller reasoning leaked into CONTENT
-    _CLASSIFICATION_NOTE_RE = re.compile(r"(Predicted Category|I've chosen\s+')", re.IGNORECASE)
+    _CLASSIFICATION_NOTE_RE = re.compile(
+        r"(Predicted Category|I've chosen\s+')", re.IGNORECASE
+    )
 
     eligible = [
-        r for r in all_rows
+        r
+        for r in all_rows
         if r["CES_RATING_LAST"].strip()
         and (r["TICAT_AGENT_LABELLED_CATEGORY"] or "") not in SKIP_CATEGORIES
         and (r["CONTENT"] or "").strip()
@@ -333,18 +392,26 @@ def main(source: Path, output: Path, n: int) -> None:
     ]
 
     print(f"Total rows:     {len(all_rows):>6}", file=sys.stderr)
-    print(f"CES-rated:      {sum(1 for r in all_rows if r['CES_RATING_LAST'].strip()):>6}", file=sys.stderr)
+    print(
+        f"CES-rated:      {sum(1 for r in all_rows if r['CES_RATING_LAST'].strip()):>6}",
+        file=sys.stderr,
+    )
     print(f"Eligible:       {len(eligible):>6}", file=sys.stderr)
 
     by_ces_raw = Counter(r["CES_RATING_LAST"] for r in eligible)
-    print(f"By CES (eligible): {dict(sorted(by_ces_raw.items(), key=lambda x: int(x[0])))}", file=sys.stderr)
+    print(
+        f"By CES (eligible): {dict(sorted(by_ces_raw.items(), key=lambda x: int(x[0])))}",
+        file=sys.stderr,
+    )
 
     sampled = _sample_stratified(eligible, n)
     print(f"Sampled:        {len(sampled):>6}", file=sys.stderr)
 
     raw_fixtures = [_build_fixture(r, i + 1) for i, r in enumerate(sampled)]
     # Drop anything that cleaned down to nothing — usually an all-chain forwarded message
-    fixtures = [f for f in raw_fixtures if f["query"].strip() and f["expected_answer"].strip()]
+    fixtures = [
+        f for f in raw_fixtures if f["query"].strip() and f["expected_answer"].strip()
+    ]
     n_dropped = len(raw_fixtures) - len(fixtures)
     if n_dropped:
         print(f"Dropped (empty after clean): {n_dropped}", file=sys.stderr)
@@ -361,14 +428,29 @@ def main(source: Path, output: Path, n: int) -> None:
     print(f"\nBy CES rating:  {dict(sorted(by_ces.items()))}", file=sys.stderr)
     print(f"By test_type:   {dict(sorted(by_type.items()))}", file=sys.stderr)
     print(f"By intent:      {dict(sorted(by_intent.items()))}", file=sys.stderr)
-    print(f"Escalation:     {n_escalation} of {len(fixtures)} ({100*n_escalation//len(fixtures)}%)", file=sys.stderr)
-    print(f"\nNext step: follow .claude/skills/gdpr-scrub/SKILL.md — LLM review pass", file=sys.stderr)
+    print(
+        f"Escalation:     {n_escalation} of {len(fixtures)} ({100 * n_escalation // len(fixtures)}%)",
+        file=sys.stderr,
+    )
+    print(
+        "\nNext step: follow .claude/skills/gdpr-scrub/SKILL.md — LLM review pass",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=SOURCE_CSV, help="Path to single_engagement_tickets.csv")
-    parser.add_argument("--output", type=Path, default=OUTPUT_JSON, help="Output fixture JSON path")
-    parser.add_argument("--n", type=int, default=280, help="Number of fixtures to sample (default: 280)")
+    parser.add_argument(
+        "--source",
+        type=Path,
+        default=SOURCE_CSV,
+        help="Path to single_engagement_tickets.csv",
+    )
+    parser.add_argument(
+        "--output", type=Path, default=OUTPUT_JSON, help="Output fixture JSON path"
+    )
+    parser.add_argument(
+        "--n", type=int, default=280, help="Number of fixtures to sample (default: 280)"
+    )
     args = parser.parse_args()
     main(args.source, args.output, args.n)

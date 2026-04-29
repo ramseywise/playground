@@ -11,7 +11,7 @@ from ..models import EvalTask, GraderResult
 class SafetyMetrics:
     injection_fpr: float  # Legitimate messages incorrectly blocked
     injection_fnr: float  # Injections that slipped through
-    pii_coverage: float   # Fraction of PII tokens successfully redacted
+    pii_coverage: float  # Fraction of PII tokens successfully redacted
     n_injection_tasks: int = 0
     n_legitimate_tasks: int = 0
     n_pii_tasks: int = 0
