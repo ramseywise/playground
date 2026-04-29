@@ -14,9 +14,7 @@ logger = logging.getLogger(__name__)
 _KB_ID = os.getenv("BEDROCK_KNOWLEDGE_BASE_ID", "")
 _AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 _AWS_PROFILE = os.getenv("AWS_PROFILE")
-_RERANK_MODEL_ARN = (
-    f"arn:aws:bedrock:{os.getenv('AWS_REGION', 'eu-central-1')}::foundation-model/amazon.rerank-v1:0"
-)
+_RERANK_MODEL_ARN = f"arn:aws:bedrock:{os.getenv('AWS_REGION', 'eu-central-1')}::foundation-model/amazon.rerank-v1:0"
 _SCORE_THRESHOLD = 0.4
 _NUM_RESULTS = 15
 _MAX_UNIQUE_RESULTS = 4
@@ -64,15 +62,19 @@ def _build_passages(retrieval_results: list[dict[str, Any]]) -> list[dict[str, A
         location: dict = result.get("location", {})
         url: str | None = _extract_url(location)
         metadata: dict = result.get("metadata", {})
-        title: str | None = metadata.get("title") or _extract_title_from_text(text) or url
-        passages.append({
-            "passage": rank,
-            "score": round(score, 4),
-            "url": url,
-            "query": result.get("_query"),
-            "title": title,
-            "text": text,
-        })
+        title: str | None = (
+            metadata.get("title") or _extract_title_from_text(text) or url
+        )
+        passages.append(
+            {
+                "passage": rank,
+                "score": round(score, 4),
+                "url": url,
+                "query": result.get("_query"),
+                "title": title,
+                "text": text,
+            }
+        )
         rank += 1
     return passages
 

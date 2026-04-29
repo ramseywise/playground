@@ -86,13 +86,19 @@ class TestInviteUser:
 
 class TestFetchSupportKnowledge:
     async def test_returns_list(self):
-        with patch("app.tools.support_knowledge._retrieve_from_kb_raw", return_value=_FAKE_KB_RESULT):
+        with patch(
+            "app.tools.support_knowledge._retrieve_from_kb_raw",
+            return_value=_FAKE_KB_RESULT,
+        ):
             result = await fetch_support_knowledge(["faktura"])
         assert isinstance(result, list)
         assert len(result) > 0
 
     async def test_passage_structure(self):
-        with patch("app.tools.support_knowledge._retrieve_from_kb_raw", return_value=_FAKE_KB_RESULT):
+        with patch(
+            "app.tools.support_knowledge._retrieve_from_kb_raw",
+            return_value=_FAKE_KB_RESULT,
+        ):
             result = await fetch_support_knowledge(["opret faktura"])
         passage = result[0]
         assert "passage" in passage
@@ -102,17 +108,25 @@ class TestFetchSupportKnowledge:
         assert "text" in passage
 
     async def test_relevant_passage_returned(self):
-        with patch("app.tools.support_knowledge._retrieve_from_kb_raw", return_value=_FAKE_KB_RESULT):
+        with patch(
+            "app.tools.support_knowledge._retrieve_from_kb_raw",
+            return_value=_FAKE_KB_RESULT,
+        ):
             result = await fetch_support_knowledge(["opret faktura"])
         assert any("faktura" in p["text"].lower() for p in result)
 
     async def test_fallback_when_no_match(self):
-        with patch("app.tools.support_knowledge._retrieve_from_kb_raw", return_value=[]):
+        with patch(
+            "app.tools.support_knowledge._retrieve_from_kb_raw", return_value=[]
+        ):
             result = await fetch_support_knowledge(["xyzzy_no_match_abc"])
         assert isinstance(result, list)
         assert len(result) == 0
 
     async def test_multiple_queries(self):
-        with patch("app.tools.support_knowledge._retrieve_from_kb_raw", return_value=_FAKE_KB_RESULT):
+        with patch(
+            "app.tools.support_knowledge._retrieve_from_kb_raw",
+            return_value=_FAKE_KB_RESULT,
+        ):
             result = await fetch_support_knowledge(["send", "email", "mail"])
         assert isinstance(result, list)

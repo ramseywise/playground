@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
-from app.db import get_conn, next_id
+from app.db import get_conn
 
 
 def get_bank_balance() -> dict:

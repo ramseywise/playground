@@ -10,9 +10,7 @@ logger = logging.getLogger(__name__)
 _KB_ID = os.getenv("BEDROCK_KNOWLEDGE_BASE_ID", "C36YGJVEQP")
 _AWS_REGION = os.getenv("AWS_REGION", "eu-central-1")
 _AWS_PROFILE = os.getenv("AWS_PROFILE")
-_RERANK_MODEL_ARN = (
-    f"arn:aws:bedrock:{os.getenv('AWS_REGION', 'eu-central-1')}::foundation-model/amazon.rerank-v1:0"
-)
+_RERANK_MODEL_ARN = f"arn:aws:bedrock:{os.getenv('AWS_REGION', 'eu-central-1')}::foundation-model/amazon.rerank-v1:0"
 # Minimum relevance score — passages below this threshold are discarded as noise
 _SCORE_THRESHOLD = 0.4
 # Candidates pulled before reranking; more candidates improve reranker quality

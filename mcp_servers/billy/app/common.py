@@ -9,7 +9,12 @@ import logging
 
 from fastmcp import FastMCP
 
-from app.tools.customers import create_customer, edit_customer, get_customer, list_customers
+from app.tools.customers import (
+    create_customer,
+    edit_customer,
+    get_customer,
+    list_customers,
+)
 from app.tools.emails import send_invoice_by_email, send_quote_by_email
 from app.tools.invitations import invite_user
 from app.tools.invoices import (
@@ -76,6 +81,7 @@ _log = logging.getLogger("billy.tools")
 
 def _logged(fn):
     """Wrap a tool function with entry/exit logging to stderr."""
+
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
         _log.info("[MCP] ▶ %s  args=%s kwargs=%s", fn.__name__, args, kwargs)
@@ -86,6 +92,7 @@ def _logged(fn):
         except Exception:
             _log.exception("[MCP] ✗ %s raised", fn.__name__)
             raise
+
     return wrapper
 
 
@@ -107,16 +114,16 @@ def register_all(mcp: FastMCP) -> None:
     # Customers
     mcp.tool()(_logged(list_customers))
     mcp.tool()(_logged(get_customer))
-    mcp.tool()(_logged(create_customer))   # [WRITE]
-    mcp.tool()(_logged(edit_customer))     # [WRITE]
+    mcp.tool()(_logged(create_customer))  # [WRITE]
+    mcp.tool()(_logged(edit_customer))  # [WRITE]
 
     # Invoices
     mcp.tool()(_logged(get_invoice))
     mcp.tool()(_logged(list_invoices))
     mcp.tool()(_logged(get_invoice_summary))
-    mcp.tool()(_logged(create_invoice))         # [WRITE]
-    mcp.tool()(_logged(edit_invoice))           # [WRITE]
-    mcp.tool()(_logged(void_invoice))           # [WRITE]
+    mcp.tool()(_logged(create_invoice))  # [WRITE]
+    mcp.tool()(_logged(edit_invoice))  # [WRITE]
+    mcp.tool()(_logged(void_invoice))  # [WRITE]
     mcp.tool()(_logged(send_invoice_reminder))  # [WRITE]
     mcp.tool()(_logged(get_invoice_dso_stats))
 
@@ -134,18 +141,18 @@ def register_all(mcp: FastMCP) -> None:
     mcp.tool()(_logged(list_products))
     mcp.tool()(_logged(get_product))
     mcp.tool()(_logged(create_product))  # [WRITE]
-    mcp.tool()(_logged(edit_product))    # [WRITE]
+    mcp.tool()(_logged(edit_product))  # [WRITE]
 
     # Quotes
     mcp.tool()(_logged(list_quotes))
-    mcp.tool()(_logged(create_quote))              # [WRITE]
-    mcp.tool()(_logged(edit_quote))                # [WRITE]
-    mcp.tool()(_logged(create_invoice_from_quote)) # [WRITE]
+    mcp.tool()(_logged(create_quote))  # [WRITE]
+    mcp.tool()(_logged(edit_quote))  # [WRITE]
+    mcp.tool()(_logged(create_invoice_from_quote))  # [WRITE]
     mcp.tool()(_logged(get_quote_conversion_stats))
 
     # Emails — [WRITE] sends real emails; requires live account
     mcp.tool()(_logged(send_invoice_by_email))  # [WRITE]
-    mcp.tool()(_logged(send_quote_by_email))    # [WRITE]
+    mcp.tool()(_logged(send_quote_by_email))  # [WRITE]
 
     # Invitations — [WRITE] sends real invites; requires live account
     mcp.tool()(_logged(invite_user))  # [WRITE]

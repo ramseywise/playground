@@ -270,9 +270,7 @@ def get_period_summary(year: int, quarter: Optional[int] = None) -> dict:
             "CAST(strftime('%m', entry_date) AS INTEGER) BETWEEN ? AND ?"
         )
         inv_params.extend([month_start, month_end])
-        exp_conditions.append(
-            "CAST(strftime('%m', date) AS INTEGER) BETWEEN ? AND ?"
-        )
+        exp_conditions.append("CAST(strftime('%m', date) AS INTEGER) BETWEEN ? AND ?")
         exp_params.extend([month_start, month_end])
 
     inv_where = "WHERE " + " AND ".join(inv_conditions)

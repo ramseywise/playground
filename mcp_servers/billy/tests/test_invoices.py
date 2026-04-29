@@ -1,6 +1,5 @@
 """Unit tests for invoice tools."""
 
-import pytest
 from app.tools import invoices as mod
 from app.tools.invoices import InvoiceLine, InvoiceLineUpdate
 
@@ -73,7 +72,11 @@ class TestEditInvoice:
         assert result["state"] == "approved"
 
     def test_update_lines_recalculates_totals(self):
-        new_lines = [InvoiceLineUpdate(product_id="prod_001", description="x", quantity=2, unit_price=500)]
+        new_lines = [
+            InvoiceLineUpdate(
+                product_id="prod_001", description="x", quantity=2, unit_price=500
+            )
+        ]
         result = mod.edit_invoice("inv_003", lines=new_lines)
         assert result["amount"] == 1000.0
         assert result["tax"] == 250.0
@@ -86,13 +89,21 @@ class TestEditInvoice:
 
 class TestCreateInvoice:
     def test_creates_invoice(self):
-        lines = [InvoiceLine(product_id="prod_001", description="Work", quantity=1, unit_price=2000)]
+        lines = [
+            InvoiceLine(
+                product_id="prod_001", description="Work", quantity=1, unit_price=2000
+            )
+        ]
         result = mod.create_invoice("cus_001", lines)
         assert result["id"].startswith("inv_")
         assert result["contact_id"] == "cus_001"
 
     def test_calculates_totals(self):
-        lines = [InvoiceLine(product_id="prod_001", description="X", quantity=4, unit_price=1000)]
+        lines = [
+            InvoiceLine(
+                product_id="prod_001", description="X", quantity=4, unit_price=1000
+            )
+        ]
         result = mod.create_invoice("cus_001", lines)
         assert result["amount"] == 4000.0
         assert result["gross_amount"] == 5000.0

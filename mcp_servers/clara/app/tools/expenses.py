@@ -8,7 +8,11 @@ from typing import Optional
 import httpx
 
 from app.client import get_client
-from app.tools.invoices import _fetch_all_invoices_for_year, _normalize_date, _sevdesk_date
+from app.tools.invoices import (
+    _fetch_all_invoices_for_year,
+    _normalize_date,
+    _sevdesk_date,
+)
 
 _VOUCHER_STATUS = {"50": "draft", "100": "open", "1000": "paid"}
 _STATUS_TO_CODE = {v: k for k, v in _VOUCHER_STATUS.items()}
@@ -217,7 +221,9 @@ async def get_vendor_spend(
 
     if vendor:
         vendor_lower = vendor.lower()
-        vouchers = [v for v in vouchers if vendor_lower in (v.get("vendor") or "").lower()]
+        vouchers = [
+            v for v in vouchers if vendor_lower in (v.get("vendor") or "").lower()
+        ]
 
     spend: dict[str, dict] = {}
     for v in vouchers:
@@ -263,7 +269,10 @@ async def get_gross_margin(year: Optional[int] = None) -> dict:
     """
     target_year = year or date.today().year
 
-    invoices, vouchers = await _fetch_all_invoices_for_year(target_year), await _fetch_all_vouchers_for_year(target_year)
+    invoices, vouchers = (
+        await _fetch_all_invoices_for_year(target_year),
+        await _fetch_all_vouchers_for_year(target_year),
+    )
 
     revenue = sum(
         float(inv.get("amount") or 0)

@@ -190,7 +190,9 @@ async def create_invoice(
         The newly created invoice record, or an error dict.
     """
     inv_date = entry_date or date.today().isoformat()
-    due_date = (date.fromisoformat(inv_date) + timedelta(days=payment_terms_days)).isoformat()
+    due_date = (
+        date.fromisoformat(inv_date) + timedelta(days=payment_terms_days)
+    ).isoformat()
     status_code = _STATE_TO_STATUS.get(state, "200")
 
     payload = {
@@ -245,9 +247,7 @@ async def void_invoice(invoice_id: str) -> dict:
         Dict with voided=True and invoice_id, or an error dict.
     """
     try:
-        resp = await get_client().put(
-            f"/Invoice/{invoice_id}/cancelInvoice"
-        )
+        resp = await get_client().put(f"/Invoice/{invoice_id}/cancelInvoice")
         resp.raise_for_status()
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
@@ -300,6 +300,7 @@ async def send_invoice_by_email(
 # Insight helpers — computed from live API data
 # ---------------------------------------------------------------------------
 
+
 async def _fetch_all_invoices_for_year(fiscal_year: int) -> list[dict]:
     """Fetches all invoices for the given year (paginates up to 500)."""
     start = f"{fiscal_year}-01-01"
@@ -327,7 +328,9 @@ async def get_invoice_summary(
 
     if month is not None:
         prefix = f"{year}-{month:02d}"
-        invoices = [inv for inv in invoices if inv.get("invoice_date", "").startswith(prefix)]
+        invoices = [
+            inv for inv in invoices if inv.get("invoice_date", "").startswith(prefix)
+        ]
 
     def _agg(subset: list[dict]) -> dict:
         return {
@@ -340,8 +343,7 @@ async def get_invoice_summary(
     open_ = [i for i in invoices if i["state"] == "open"]
     paid = [i for i in invoices if i["state"] == "paid"]
     overdue = [
-        i for i in invoices
-        if i["state"] == "open" and i.get("due_date", "") < today
+        i for i in invoices if i["state"] == "open" and i.get("due_date", "") < today
     ]
 
     result: dict = {
@@ -377,10 +379,10 @@ async def get_insight_revenue_summary(
         "fiscalYear": year,
         "currency": "EUR",
         "cards": [
-            {"label": "Total invoiced", "amount": cur["all"]["amount"],     "delta": None},
-            {"label": "Collected",      "amount": cur["paid"]["amount"],    "delta": None},
-            {"label": "Outstanding",    "amount": cur["open"]["amount"],    "delta": None},
-            {"label": "Overdue",        "amount": cur["overdue"]["amount"], "delta": None},
+            {"label": "Total invoiced", "amount": cur["all"]["amount"], "delta": None},
+            {"label": "Collected", "amount": cur["paid"]["amount"], "delta": None},
+            {"label": "Outstanding", "amount": cur["open"]["amount"], "delta": None},
+            {"label": "Overdue", "amount": cur["overdue"]["amount"], "delta": None},
         ],
     }
     if month is not None:
@@ -403,10 +405,26 @@ async def get_insight_invoice_status(fiscal_year: Optional[int] = None) -> dict:
         "fiscalYear": year,
         "currency": "EUR",
         "segments": [
-            {"label": "Draft", "count": s["draft"]["count"], "amount": s["draft"]["amount"]},
-            {"label": "Open",  "count": s["open"]["count"],  "amount": s["open"]["amount"]},
-            {"label": "Paid",  "count": s["paid"]["count"],  "amount": s["paid"]["amount"]},
-            {"label": "Overdue", "count": s["overdue"]["count"], "amount": s["overdue"]["amount"]},
+            {
+                "label": "Draft",
+                "count": s["draft"]["count"],
+                "amount": s["draft"]["amount"],
+            },
+            {
+                "label": "Open",
+                "count": s["open"]["count"],
+                "amount": s["open"]["amount"],
+            },
+            {
+                "label": "Paid",
+                "count": s["paid"]["count"],
+                "amount": s["paid"]["amount"],
+            },
+            {
+                "label": "Overdue",
+                "count": s["overdue"]["count"],
+                "amount": s["overdue"]["amount"],
+            },
         ],
     }
 
@@ -494,13 +512,15 @@ async def get_insight_aging_report(contact_id: Optional[str] = None) -> dict:
         else:
             bucket = "90+ days"
 
-        buckets[bucket].append({
-            "invoiceNo": inv.get("invoice_no"),
-            "customer": inv.get("customer_name"),
-            "dueDate": due,
-            "amount": round(inv["gross_amount"], 2),
-            "daysOverdue": days_over,
-        })
+        buckets[bucket].append(
+            {
+                "invoiceNo": inv.get("invoice_no"),
+                "customer": inv.get("customer_name"),
+                "dueDate": due,
+                "amount": round(inv["gross_amount"], 2),
+                "daysOverdue": days_over,
+            }
+        )
 
     result_buckets = [
         {

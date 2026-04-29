@@ -78,6 +78,7 @@ _log = logging.getLogger("clara.tools")
 def _logged(fn):
     """Wrap a tool function with entry/exit logging — async-aware."""
     if asyncio.iscoroutinefunction(fn):
+
         @functools.wraps(fn)
         async def _async(*args, **kwargs):
             _log.info("[MCP] ▶ %s  kwargs=%s", fn.__name__, kwargs)
@@ -88,6 +89,7 @@ def _logged(fn):
             except Exception:
                 _log.exception("[MCP] ✗ %s raised", fn.__name__)
                 raise
+
         return _async
 
     @functools.wraps(fn)
@@ -100,6 +102,7 @@ def _logged(fn):
         except Exception:
             _log.exception("[MCP] ✗ %s raised", fn.__name__)
             raise
+
     return _sync
 
 
@@ -109,16 +112,16 @@ def register_all(mcp: FastMCP) -> None:
     # Customers
     mcp.tool()(_logged(list_customers))
     mcp.tool()(_logged(get_customer))
-    mcp.tool()(_logged(create_customer))   # [WRITE]
-    mcp.tool()(_logged(edit_customer))     # [WRITE]
+    mcp.tool()(_logged(create_customer))  # [WRITE]
+    mcp.tool()(_logged(edit_customer))  # [WRITE]
 
     # Invoices
     mcp.tool()(_logged(list_invoices))
     mcp.tool()(_logged(get_invoice))
     mcp.tool()(_logged(get_invoice_summary))
-    mcp.tool()(_logged(create_invoice))        # [WRITE]
-    mcp.tool()(_logged(void_invoice))          # [WRITE]
-    mcp.tool()(_logged(send_invoice_by_email)) # [WRITE] sends real email
+    mcp.tool()(_logged(create_invoice))  # [WRITE]
+    mcp.tool()(_logged(void_invoice))  # [WRITE]
+    mcp.tool()(_logged(send_invoice_by_email))  # [WRITE] sends real email
 
     # Invoice insights
     mcp.tool()(_logged(get_insight_revenue_summary))
@@ -130,19 +133,19 @@ def register_all(mcp: FastMCP) -> None:
     mcp.tool()(_logged(list_products))
     mcp.tool()(_logged(get_product))
     mcp.tool()(_logged(create_product))  # [WRITE]
-    mcp.tool()(_logged(edit_product))    # [WRITE]
+    mcp.tool()(_logged(edit_product))  # [WRITE]
 
     # Quotes
     mcp.tool()(_logged(list_quotes))
-    mcp.tool()(_logged(create_quote))              # [WRITE]
-    mcp.tool()(_logged(edit_quote))                # [WRITE]
-    mcp.tool()(_logged(create_invoice_from_quote)) # [WRITE]
+    mcp.tool()(_logged(create_quote))  # [WRITE]
+    mcp.tool()(_logged(edit_quote))  # [WRITE]
+    mcp.tool()(_logged(create_invoice_from_quote))  # [WRITE]
     mcp.tool()(_logged(get_quote_conversion_stats))
 
     # Expenses
     mcp.tool()(_logged(list_expenses))
     mcp.tool()(_logged(get_expense))
-    mcp.tool()(_logged(create_expense))          # [WRITE]
+    mcp.tool()(_logged(create_expense))  # [WRITE]
     mcp.tool()(_logged(get_expense_summary))
     mcp.tool()(_logged(get_vendor_spend))
     mcp.tool()(_logged(get_expenses_by_category))

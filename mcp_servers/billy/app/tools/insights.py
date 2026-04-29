@@ -44,11 +44,15 @@ def get_net_margin(
             month_end = q * 3
             inv_conditions.append("strftime('%Y', entry_date) = ?")
             inv_params.append(yr)
-            inv_conditions.append("CAST(strftime('%m', entry_date) AS INTEGER) BETWEEN ? AND ?")
+            inv_conditions.append(
+                "CAST(strftime('%m', entry_date) AS INTEGER) BETWEEN ? AND ?"
+            )
             inv_params.extend([month_start, month_end])
             exp_conditions.append("strftime('%Y', date) = ?")
             exp_params.append(yr)
-            exp_conditions.append("CAST(strftime('%m', date) AS INTEGER) BETWEEN ? AND ?")
+            exp_conditions.append(
+                "CAST(strftime('%m', date) AS INTEGER) BETWEEN ? AND ?"
+            )
             exp_params.extend([month_start, month_end])
         except Exception:
             pass
@@ -135,15 +139,17 @@ def get_margin_by_product(year: Optional[int] = None) -> dict:
         cogs = round(total_expenses * share, 2)
         gross_profit = round(rev - cogs, 2)
         margin_pct = round(gross_profit / rev * 100, 1) if rev > 0 else 0.0
-        products.append({
-            "product_id": r["product_id"],
-            "product_name": r["product_name"],
-            "revenue": round(rev, 2),
-            "qty_sold": round(r["qty_sold"], 2),
-            "cogs": cogs,
-            "gross_profit": gross_profit,
-            "margin_pct": margin_pct,
-        })
+        products.append(
+            {
+                "product_id": r["product_id"],
+                "product_name": r["product_name"],
+                "revenue": round(rev, 2),
+                "qty_sold": round(r["qty_sold"], 2),
+                "cogs": cogs,
+                "gross_profit": gross_profit,
+                "margin_pct": margin_pct,
+            }
+        )
 
     return {
         "year": target_year,
@@ -195,8 +201,12 @@ def get_customer_concentration(year: Optional[int] = None) -> dict:
         }
 
     total_revenue = sum(r["revenue"] for r in rows)
-    shares = [r["revenue"] / total_revenue for r in rows] if total_revenue > 0 else [0.0] * len(rows)
-    hhi = round(sum(s ** 2 for s in shares) * 10000, 1)
+    shares = (
+        [r["revenue"] / total_revenue for r in rows]
+        if total_revenue > 0
+        else [0.0] * len(rows)
+    )
+    hhi = round(sum(s**2 for s in shares) * 10000, 1)
     top_1_pct = round(shares[0] * 100, 1) if shares else 0.0
     top_3_pct = round(sum(shares[:3]) * 100, 1)
 
@@ -312,7 +322,9 @@ def get_break_even_estimate() -> dict:
     num_months = max(fixed_row["num_months"], 1)
     monthly_fixed = round(total_fixed / num_months, 2)
 
-    variable_rate = round(total_variable / total_revenue, 4) if total_revenue > 0 else 0.0
+    variable_rate = (
+        round(total_variable / total_revenue, 4) if total_revenue > 0 else 0.0
+    )
 
     break_even: Optional[float] = None
     if variable_rate < 1.0:
@@ -412,8 +424,7 @@ def detect_anomaly(
             ).fetchall()
 
     data_points = [
-        {"month": r["month"], "value": round(float(r["value"] or 0.0), 2)}
-        for r in rows
+        {"month": r["month"], "value": round(float(r["value"] or 0.0), 2)} for r in rows
     ]
 
     if len(data_points) < 3:
@@ -427,18 +438,20 @@ def detect_anomaly(
     values = [p["value"] for p in data_points]
     mean = sum(values) / len(values)
     variance = sum((v - mean) ** 2 for v in values) / len(values)
-    std = variance ** 0.5
+    std = variance**0.5
 
     anomalies = []
     for p in data_points:
         z = (p["value"] - mean) / std if std > 0 else 0.0
         if abs(z) >= 1.5:
-            anomalies.append({
-                "month": p["month"],
-                "value": p["value"],
-                "z_score": round(z, 2),
-                "direction": "high" if z > 0 else "low",
-            })
+            anomalies.append(
+                {
+                    "month": p["month"],
+                    "value": p["value"],
+                    "z_score": round(z, 2),
+                    "direction": "high" if z > 0 else "low",
+                }
+            )
 
     return {
         "metric": metric,

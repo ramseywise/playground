@@ -100,13 +100,17 @@ def list_invoices(
         conditions.append(f"state IN ({placeholders})")
         params.extend(states)
     if min_entry_date:
-        conditions.append("entry_date >= ?"); params.append(min_entry_date)
+        conditions.append("entry_date >= ?")
+        params.append(min_entry_date)
     if max_entry_date:
-        conditions.append("entry_date <= ?"); params.append(max_entry_date)
+        conditions.append("entry_date <= ?")
+        params.append(max_entry_date)
     if contact_id:
-        conditions.append("contact_id = ?"); params.append(contact_id)
+        conditions.append("contact_id = ?")
+        params.append(contact_id)
     if currency_id:
-        conditions.append("currency = ?"); params.append(currency_id)
+        conditions.append("currency = ?")
+        params.append(currency_id)
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
@@ -123,21 +127,23 @@ def list_invoices(
     invoices = []
     for r in rows:
         i = dict(r)
-        invoices.append({
-            "id": i["id"],
-            "invoice_no": i["invoice_no"],
-            "customer_name": i["customer_name"],
-            "entry_date": i["entry_date"],
-            "due_date": i["due_date"],
-            "state": i["state"],
-            "amount": i["amount"],
-            "tax": i["tax"],
-            "gross_amount": i["gross_amount"],
-            "currency": i["currency"],
-            "balance": i["balance"],
-            "is_paid": bool(i["is_paid"]),
-            "line_description": i["line_description"],
-        })
+        invoices.append(
+            {
+                "id": i["id"],
+                "invoice_no": i["invoice_no"],
+                "customer_name": i["customer_name"],
+                "entry_date": i["entry_date"],
+                "due_date": i["due_date"],
+                "state": i["state"],
+                "amount": i["amount"],
+                "tax": i["tax"],
+                "gross_amount": i["gross_amount"],
+                "currency": i["currency"],
+                "balance": i["balance"],
+                "is_paid": bool(i["is_paid"]),
+                "line_description": i["line_description"],
+            }
+        )
 
     return {
         "total": total,
@@ -147,7 +153,9 @@ def list_invoices(
     }
 
 
-def get_invoice_summary(fiscal_year: Optional[int] = None, month: Optional[int] = None) -> dict:
+def get_invoice_summary(
+    fiscal_year: Optional[int] = None, month: Optional[int] = None
+) -> dict:
     """Returns aggregate statistics about invoices.
 
     Returns total counts and amounts for all, draft, approved, overdue, unpaid,
@@ -169,6 +177,7 @@ def get_invoice_summary(fiscal_year: Optional[int] = None, month: Optional[int] 
         date_pattern = f"{year}-%"
 
     with get_conn() as conn:
+
         def _agg(extra_where: str, extra_params: list) -> dict:
             base = "FROM invoices WHERE entry_date LIKE ?"
             row = conn.execute(
@@ -187,12 +196,12 @@ def get_invoice_summary(fiscal_year: Optional[int] = None, month: Optional[int] 
 
         return {
             "fiscal_year": year,
-            "all":      _agg("", []),
-            "draft":    _agg("AND state = ?", ["draft"]),
+            "all": _agg("", []),
+            "draft": _agg("AND state = ?", ["draft"]),
             "approved": _agg("AND state = ?", ["approved"]),
-            "paid":     _agg("AND is_paid = 1", []),
-            "unpaid":   _agg_balance("AND is_paid = 0 AND state = 'approved'", []),
-            "overdue":  _agg_balance(
+            "paid": _agg("AND is_paid = 1", []),
+            "unpaid": _agg_balance("AND is_paid = 0 AND state = 'approved'", []),
+            "overdue": _agg_balance(
                 "AND is_paid = 0 AND state = 'approved' AND due_date < ?", [today]
             ),
         }
@@ -290,14 +299,17 @@ def edit_invoice(
         updates: list[str] = []
         uparams: list = []
         if contact_id is not None:
-            updates.append("contact_id = ?"); uparams.append(contact_id)
+            updates.append("contact_id = ?")
+            uparams.append(contact_id)
         if entry_date is not None:
-            updates.append("entry_date = ?"); uparams.append(entry_date)
+            updates.append("entry_date = ?")
+            uparams.append(entry_date)
         if payment_terms_days is not None:
             updates.append("payment_terms = ?")
             uparams.append(f"net {payment_terms_days} days")
         if state is not None:
-            updates.append("state = ?"); uparams.append(state)
+            updates.append("state = ?")
+            uparams.append(state)
             if state == "approved":
                 updates.append("approved_time = ?")
                 uparams.append(datetime.now(timezone.utc).isoformat())
@@ -315,76 +327,100 @@ def edit_invoice(
             for i, ln in enumerate(lines):
                 if ln.id and ln.id in existing:
                     ex = existing[ln.id]
-                    if ln.product_id is not None: ex["product_id"] = ln.product_id
-                    if ln.quantity is not None:   ex["quantity"]   = ln.quantity
-                    if ln.unit_price is not None: ex["unit_price"] = ln.unit_price
-                    if ln.description is not None: ex["description"] = ln.description
+                    if ln.product_id is not None:
+                        ex["product_id"] = ln.product_id
+                    if ln.quantity is not None:
+                        ex["quantity"] = ln.quantity
+                    if ln.unit_price is not None:
+                        ex["unit_price"] = ln.unit_price
+                    if ln.description is not None:
+                        ex["description"] = ln.description
                     ex["amount"] = ex["quantity"] * ex["unit_price"]
-                    ex["tax"]    = ex["amount"] * 0.25
+                    ex["tax"] = ex["amount"] * 0.25
                     new_lines.append(ex)
                 else:
-                    qty   = ln.quantity   if ln.quantity   is not None else 1.0
+                    qty = ln.quantity if ln.quantity is not None else 1.0
                     price = ln.unit_price if ln.unit_price is not None else 0.0
-                    new_lines.append({
-                        "id":          f"line_{invoice_id}_{i}",
-                        "invoice_id":  invoice_id,
-                        "product_id":  ln.product_id or "",
-                        "description": ln.description or "",
-                        "quantity":    qty,
-                        "unit_price":  price,
-                        "unit":        "pcs",
-                        "amount":      qty * price,
-                        "tax":         qty * price * 0.25,
-                    })
+                    new_lines.append(
+                        {
+                            "id": f"line_{invoice_id}_{i}",
+                            "invoice_id": invoice_id,
+                            "product_id": ln.product_id or "",
+                            "description": ln.description or "",
+                            "quantity": qty,
+                            "unit_price": price,
+                            "unit": "pcs",
+                            "amount": qty * price,
+                            "tax": qty * price * 0.25,
+                        }
+                    )
 
-            conn.execute("DELETE FROM invoice_lines WHERE invoice_id = ?", (invoice_id,))
+            conn.execute(
+                "DELETE FROM invoice_lines WHERE invoice_id = ?", (invoice_id,)
+            )
             for nl in new_lines:
                 conn.execute(
                     """INSERT INTO invoice_lines
                        (id, invoice_id, product_id, description, quantity,
                         unit_price, unit, amount, tax)
                        VALUES (?,?,?,?,?,?,?,?,?)""",
-                    (nl["id"], nl["invoice_id"], nl["product_id"], nl["description"],
-                     nl["quantity"], nl["unit_price"], nl["unit"], nl["amount"], nl["tax"]),
+                    (
+                        nl["id"],
+                        nl["invoice_id"],
+                        nl["product_id"],
+                        nl["description"],
+                        nl["quantity"],
+                        nl["unit_price"],
+                        nl["unit"],
+                        nl["amount"],
+                        nl["tax"],
+                    ),
                 )
 
             total_amount = sum(nl["amount"] for nl in new_lines)
-            total_tax    = sum(nl["tax"]    for nl in new_lines)
-            gross        = total_amount + total_tax
+            total_tax = sum(nl["tax"] for nl in new_lines)
+            gross = total_amount + total_tax
             conn.execute(
                 """UPDATE invoices SET amount=?, tax=?, gross_amount=?, balance=?
                    WHERE id=?""",
-                (total_amount, total_tax, gross,
-                 gross if not invoice["is_paid"] else 0.0, invoice_id),
+                (
+                    total_amount,
+                    total_tax,
+                    gross,
+                    gross if not invoice["is_paid"] else 0.0,
+                    invoice_id,
+                ),
             )
 
         # Re-fetch final state.
-        updated = dict(conn.execute(
-            "SELECT * FROM invoices WHERE id = ?", (invoice_id,)
-        ).fetchone())
+        updated = dict(
+            conn.execute(
+                "SELECT * FROM invoices WHERE id = ?", (invoice_id,)
+            ).fetchone()
+        )
         final_lines = _fetch_lines(conn, invoice_id)
 
     return {
-        "id":               updated["id"],
-        "invoice_no":       updated["invoice_no"],
-        "contact_id":       updated["contact_id"],
-        "entry_date":       updated["entry_date"],
-        "due_date":         updated["due_date"],
-        "state":            updated["state"],
-        "amount":           updated["amount"],
-        "tax":              updated["tax"],
-        "gross_amount":     updated["gross_amount"],
-        "currency":         updated["currency"],
+        "id": updated["id"],
+        "invoice_no": updated["invoice_no"],
+        "contact_id": updated["contact_id"],
+        "entry_date": updated["entry_date"],
+        "due_date": updated["due_date"],
+        "state": updated["state"],
+        "amount": updated["amount"],
+        "tax": updated["tax"],
+        "gross_amount": updated["gross_amount"],
+        "currency": updated["currency"],
         "line_description": updated["line_description"],
         "lines": [
             {
-                "id":          ln["id"],
-                "product_id":  ln["product_id"],
+                "id": ln["id"],
+                "product_id": ln["product_id"],
                 "description": ln["description"],
-                "quantity":    ln["quantity"],
-                "unit_price":  ln["unit_price"],
-                "amount":      ln["amount"],
-                "tax":         ln["tax"],
+                "quantity": ln["quantity"],
+                "unit_price": ln["unit_price"],
+                "amount": ln["amount"],
+                "tax": ln["tax"],
             }
             for ln in final_lines
         ],
@@ -416,32 +452,38 @@ def create_invoice(
         The newly created invoice record with lines.
     """
     inv_date = entry_date or date.today().isoformat()
-    due = (date.fromisoformat(inv_date) + timedelta(days=payment_terms_days)).isoformat()
+    due = (
+        date.fromisoformat(inv_date) + timedelta(days=payment_terms_days)
+    ).isoformat()
     now = datetime.now(timezone.utc).isoformat()
 
     invoice_lines: list[dict] = []
     for i, ln in enumerate(lines):
         amount = ln.quantity * ln.unit_price
-        invoice_lines.append({
-            "product_id":  ln.product_id,
-            "description": ln.description or "",
-            "quantity":    ln.quantity,
-            "unit_price":  ln.unit_price,
-            "unit":        "pcs",
-            "amount":      amount,
-            "tax":         amount * 0.25,
-        })
+        invoice_lines.append(
+            {
+                "product_id": ln.product_id,
+                "description": ln.description or "",
+                "quantity": ln.quantity,
+                "unit_price": ln.unit_price,
+                "unit": "pcs",
+                "amount": amount,
+                "tax": amount * 0.25,
+            }
+        )
 
     total_amount = sum(ln["amount"] for ln in invoice_lines)
-    total_tax    = sum(ln["tax"]    for ln in invoice_lines)
-    gross        = total_amount + total_tax
+    total_tax = sum(ln["tax"] for ln in invoice_lines)
+    gross = total_amount + total_tax
 
     with get_conn() as conn:
         n = next_id(conn, "invoice")
         inv_id = f"inv_{n:03d}"
         inv_no = f"2026-{n:03d}"
 
-        row = conn.execute("SELECT name FROM customers WHERE id = ?", (contact_id,)).fetchone()
+        row = conn.execute(
+            "SELECT name FROM customers WHERE id = ?", (contact_id,)
+        ).fetchone()
         customer_name = row["name"] if row else contact_id
 
         conn.execute(
@@ -452,13 +494,28 @@ def create_invoice(
                 download_url, contact_message, line_description)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                inv_id, inv_no, contact_id, customer_name,
-                inv_date, due, state, "unsent",
-                total_amount, total_tax, gross, currency_id, 1.0,
-                gross if state != "paid" else 0.0, 0,
-                f"net {payment_terms_days} days", "excl",
-                now if state == "approved" else None, now,
-                f"https://app.billy.dk/invoices/{inv_id}/download" if state == "approved" else None,
+                inv_id,
+                inv_no,
+                contact_id,
+                customer_name,
+                inv_date,
+                due,
+                state,
+                "unsent",
+                total_amount,
+                total_tax,
+                gross,
+                currency_id,
+                1.0,
+                gross if state != "paid" else 0.0,
+                0,
+                f"net {payment_terms_days} days",
+                "excl",
+                now if state == "approved" else None,
+                now,
+                f"https://app.billy.dk/invoices/{inv_id}/download"
+                if state == "approved"
+                else None,
                 None,
                 invoice_lines[0]["description"] if invoice_lines else "",
             ),
@@ -471,24 +528,31 @@ def create_invoice(
                     unit_price, unit, amount, tax)
                    VALUES (?,?,?,?,?,?,?,?,?)""",
                 (
-                    f"line_{inv_id}_{i}", inv_id, ln["product_id"], ln["description"],
-                    ln["quantity"], ln["unit_price"], ln["unit"], ln["amount"], ln["tax"],
+                    f"line_{inv_id}_{i}",
+                    inv_id,
+                    ln["product_id"],
+                    ln["description"],
+                    ln["quantity"],
+                    ln["unit_price"],
+                    ln["unit"],
+                    ln["amount"],
+                    ln["tax"],
                 ),
             )
 
     return {
-        "id":               inv_id,
-        "invoice_no":       inv_no,
-        "contact_id":       contact_id,
-        "entry_date":       inv_date,
-        "due_date":         due,
-        "state":            state,
-        "amount":           total_amount,
-        "tax":              total_tax,
-        "gross_amount":     gross,
-        "currency":         currency_id,
+        "id": inv_id,
+        "invoice_no": inv_no,
+        "contact_id": contact_id,
+        "entry_date": inv_date,
+        "due_date": due,
+        "state": state,
+        "amount": total_amount,
+        "tax": total_tax,
+        "gross_amount": gross,
+        "currency": currency_id,
         "line_description": invoice_lines[0]["description"] if invoice_lines else "",
-        "lines":            invoice_lines,
+        "lines": invoice_lines,
     }
 
 
@@ -496,11 +560,25 @@ def create_invoice(
 # Insight REST helpers — pre-aggregated data for frontend insight components
 # ---------------------------------------------------------------------------
 
-_MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+_MONTH_LABELS = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+]
 
 
-def get_insight_revenue_summary(fiscal_year: Optional[int] = None, month: Optional[int] = None) -> dict:
+def get_insight_revenue_summary(
+    fiscal_year: Optional[int] = None, month: Optional[int] = None
+) -> dict:
     """Revenue KPI cards: total invoiced, collected, outstanding, overdue with YoY delta.
 
     When `month` is provided (1–12), filters to that calendar month within the year.
@@ -519,10 +597,18 @@ def get_insight_revenue_summary(fiscal_year: Optional[int] = None, month: Option
         "fiscalYear": year,
         "currency": "DKK",
         "cards": [
-            {"label": "Total invoiced", "amount": cur["all"]["amount"],     "delta": _delta(cur["all"]["amount"],    prior["all"]["amount"])},
-            {"label": "Collected",      "amount": cur["paid"]["amount"],    "delta": _delta(cur["paid"]["amount"],   prior["paid"]["amount"])},
-            {"label": "Outstanding",    "amount": cur["unpaid"]["amount"],  "delta": None},
-            {"label": "Overdue",        "amount": cur["overdue"]["amount"], "delta": None},
+            {
+                "label": "Total invoiced",
+                "amount": cur["all"]["amount"],
+                "delta": _delta(cur["all"]["amount"], prior["all"]["amount"]),
+            },
+            {
+                "label": "Collected",
+                "amount": cur["paid"]["amount"],
+                "delta": _delta(cur["paid"]["amount"], prior["paid"]["amount"]),
+            },
+            {"label": "Outstanding", "amount": cur["unpaid"]["amount"], "delta": None},
+            {"label": "Overdue", "amount": cur["overdue"]["amount"], "delta": None},
         ],
     }
     if month is not None:
@@ -538,10 +624,26 @@ def get_insight_invoice_status(fiscal_year: Optional[int] = None) -> dict:
         "fiscalYear": year,
         "currency": "DKK",
         "segments": [
-            {"label": "Draft",             "count": s["draft"]["count"],   "amount": s["draft"]["amount"]},
-            {"label": "Approved & unpaid", "count": s["unpaid"]["count"],  "amount": s["unpaid"]["amount"]},
-            {"label": "Paid",              "count": s["paid"]["count"],    "amount": s["paid"]["amount"]},
-            {"label": "Overdue",           "count": s["overdue"]["count"], "amount": s["overdue"]["amount"]},
+            {
+                "label": "Draft",
+                "count": s["draft"]["count"],
+                "amount": s["draft"]["amount"],
+            },
+            {
+                "label": "Approved & unpaid",
+                "count": s["unpaid"]["count"],
+                "amount": s["unpaid"]["amount"],
+            },
+            {
+                "label": "Paid",
+                "count": s["paid"]["count"],
+                "amount": s["paid"]["amount"],
+            },
+            {
+                "label": "Overdue",
+                "count": s["overdue"]["count"],
+                "amount": s["overdue"]["amount"],
+            },
         ],
     }
 
@@ -565,7 +667,9 @@ def get_insight_monthly_revenue(fiscal_year: Optional[int] = None) -> dict:
             (year_prefix,),
         ).fetchall()
 
-    by_month: dict[int, dict] = {i + 1: {"invoiced": 0.0, "paid": 0.0} for i in range(12)}
+    by_month: dict[int, dict] = {
+        i + 1: {"invoiced": 0.0, "paid": 0.0} for i in range(12)
+    }
     for r in rows:
         m = int(r["month_no"])
         by_month[m] = {"invoiced": round(r["invoiced"], 2), "paid": round(r["paid"], 2)}
@@ -574,13 +678,19 @@ def get_insight_monthly_revenue(fiscal_year: Optional[int] = None) -> dict:
         "fiscalYear": year,
         "currency": "DKK",
         "months": [
-            {"month": _MONTH_LABELS[i], "invoiced": by_month[i + 1]["invoiced"], "paid": by_month[i + 1]["paid"]}
+            {
+                "month": _MONTH_LABELS[i],
+                "invoiced": by_month[i + 1]["invoiced"],
+                "paid": by_month[i + 1]["paid"],
+            }
             for i in range(12)
         ],
     }
 
 
-def get_insight_top_customers(fiscal_year: Optional[int] = None, limit: int = 10) -> dict:
+def get_insight_top_customers(
+    fiscal_year: Optional[int] = None, limit: int = 10
+) -> dict:
     """Top customers ranked by total invoiced amount."""
     year = fiscal_year or date.today().year
     year_prefix = f"{year}-%"
@@ -604,18 +714,22 @@ def get_insight_top_customers(fiscal_year: Optional[int] = None, limit: int = 10
     result = []
     for i, r in enumerate(rows):
         outstanding = round(r["invoiced"] - r["paid"], 2)
-        result.append({
-            "rank": i + 1,
-            "name": r["customer_name"],
-            "invoiced": round(r["invoiced"], 2),
-            "paid": round(r["paid"], 2),
-            "outstanding": outstanding,
-        })
+        result.append(
+            {
+                "rank": i + 1,
+                "name": r["customer_name"],
+                "invoiced": round(r["invoiced"], 2),
+                "paid": round(r["paid"], 2),
+                "outstanding": outstanding,
+            }
+        )
 
     return {"currency": "DKK", "rows": result}
 
 
-def get_insight_aging_report(contact_id: Optional[str] = None, contact_name: Optional[str] = None) -> dict:
+def get_insight_aging_report(
+    contact_id: Optional[str] = None, contact_name: Optional[str] = None
+) -> dict:
     """Unpaid approved invoices bucketed by days overdue.
 
     Optionally filtered to a single customer via contact_id or a partial
@@ -676,13 +790,15 @@ def get_insight_aging_report(contact_id: Optional[str] = None, contact_name: Opt
         else:
             bucket = "90+ days"
 
-        buckets[bucket].append({
-            "invoiceNo": r["invoice_no"],
-            "customer": r["customer_name"],
-            "dueDate": r["due_date"] or "",
-            "amount": round(r["amount"], 2),
-            "daysOverdue": days_over,
-        })
+        buckets[bucket].append(
+            {
+                "invoiceNo": r["invoice_no"],
+                "customer": r["customer_name"],
+                "dueDate": r["due_date"] or "",
+                "amount": round(r["amount"], 2),
+                "daysOverdue": days_over,
+            }
+        )
 
     result_buckets = [
         {
@@ -834,7 +950,9 @@ def send_invoice_reminder(invoice_id: str, message: Optional[str] = None) -> dic
             return {"error": f"Invoice '{invoice_id}' not found."}
         inv = dict(row)
     if inv["state"] != "approved":
-        return {"error": f"Invoice {invoice_id} is in '{inv['state']}' state. Only approved invoices can receive reminders."}
+        return {
+            "error": f"Invoice {invoice_id} is in '{inv['state']}' state. Only approved invoices can receive reminders."
+        }
     if inv["is_paid"]:
         return {"error": f"Invoice {invoice_id} is already paid."}
     to_email = inv.get("customer_email") or ""

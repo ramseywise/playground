@@ -6,10 +6,20 @@ from typing import Optional
 
 from app.db import get_conn, next_id
 
-_VALID_CATEGORIES = frozenset([
-    "rent", "salaries", "software", "marketing", "office",
-    "travel", "meals", "professional_services", "utilities", "other",
-])
+_VALID_CATEGORIES = frozenset(
+    [
+        "rent",
+        "salaries",
+        "software",
+        "marketing",
+        "office",
+        "travel",
+        "meals",
+        "professional_services",
+        "utilities",
+        "other",
+    ]
+)
 
 # VAT-exempt categories in Denmark
 _VAT_EXEMPT = frozenset({"rent", "salaries"})
@@ -150,9 +160,19 @@ def create_expense(
                 is_fixed, description, contact_id, status, created_time)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                new_id, vendor, amount, vat_amount, gross_amount, currency,
-                date, category, int(is_fixed), description, contact_id,
-                "approved", created_time,
+                new_id,
+                vendor,
+                amount,
+                vat_amount,
+                gross_amount,
+                currency,
+                date,
+                category,
+                int(is_fixed),
+                description,
+                contact_id,
+                "approved",
+                created_time,
             ),
         )
 
@@ -357,11 +377,15 @@ def get_gross_margin(
             month_end = q * 3
             inv_conditions.append("strftime('%Y', entry_date) = ?")
             inv_params.append(yr)
-            inv_conditions.append("CAST(strftime('%m', entry_date) AS INTEGER) BETWEEN ? AND ?")
+            inv_conditions.append(
+                "CAST(strftime('%m', entry_date) AS INTEGER) BETWEEN ? AND ?"
+            )
             inv_params.extend([month_start, month_end])
             exp_conditions.append("strftime('%Y', date) = ?")
             exp_params.append(yr)
-            exp_conditions.append("CAST(strftime('%m', date) AS INTEGER) BETWEEN ? AND ?")
+            exp_conditions.append(
+                "CAST(strftime('%m', date) AS INTEGER) BETWEEN ? AND ?"
+            )
             exp_params.extend([month_start, month_end])
         except Exception:
             pass

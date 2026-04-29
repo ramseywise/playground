@@ -106,22 +106,31 @@ def edit_customer(
     params: list = []
 
     if name is not None:
-        updates.append("name = ?"); params.append(name)
+        updates.append("name = ?")
+        params.append(name)
     if street is not None:
-        updates.append("street = ?"); params.append(street)
+        updates.append("street = ?")
+        params.append(street)
     if city_text is not None:
-        updates.append("city = ?"); params.append(city_text)
+        updates.append("city = ?")
+        params.append(city_text)
     if zipcode_text is not None:
-        updates.append("zipcode = ?"); params.append(zipcode_text)
+        updates.append("zipcode = ?")
+        params.append(zipcode_text)
     if phone is not None:
-        updates.append("phone = ?"); params.append(phone)
+        updates.append("phone = ?")
+        params.append(phone)
     if country_id is not None:
-        updates.append("country = ?"); params.append(country_id)
+        updates.append("country = ?")
+        params.append(country_id)
     if registration_no is not None:
-        updates.append("registration_no = ?"); params.append(registration_no)
+        updates.append("registration_no = ?")
+        params.append(registration_no)
     if contact_person_id and email is not None:
-        updates.append("email = ?"); params.append(email)
-        updates.append("contact_person_id = ?"); params.append(contact_person_id)
+        updates.append("email = ?")
+        params.append(email)
+        updates.append("contact_person_id = ?")
+        params.append(contact_person_id)
 
     with get_conn() as conn:
         if not conn.execute(
@@ -223,9 +232,18 @@ def create_customer(
                 contact_person_id, registration_no, is_customer, is_supplier, created_time)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,1,0,?)""",
             (
-                new_id, name, type, country_id,
-                street or "", city_text or "", zipcode_text or "",
-                phone or "", email or "", cp_id, registration_no, created_time,
+                new_id,
+                name,
+                type,
+                country_id,
+                street or "",
+                city_text or "",
+                zipcode_text or "",
+                phone or "",
+                email or "",
+                cp_id,
+                registration_no,
+                created_time,
             ),
         )
 

@@ -92,7 +92,9 @@ def customers_list(
     sort_property: str = "name",
     sort_direction: str = "ASC",
 ):
-    return list_customers(page, page_size, is_archived, name, sort_property, sort_direction)
+    return list_customers(
+        page, page_size, is_archived, name, sort_property, sort_direction
+    )
 
 
 @app.post("/customers", status_code=201)
@@ -148,8 +150,11 @@ def invoices_lines_summary(fiscal_year: Optional[int] = None):
 # Insights — pre-aggregated data for frontend insight panels
 # ---------------------------------------------------------------------------
 
+
 @app.get("/insights/revenue-summary")
-def insights_revenue_summary(fiscal_year: Optional[int] = None, month: Optional[int] = None):
+def insights_revenue_summary(
+    fiscal_year: Optional[int] = None, month: Optional[int] = None
+):
     return get_insight_revenue_summary(fiscal_year, month)
 
 
@@ -203,8 +208,15 @@ def invoices_list(
     sort_direction: str = "DESC",
 ):
     return list_invoices(
-        page, page_size, states, min_entry_date, max_entry_date,
-        contact_id, currency_id, sort_property, sort_direction,
+        page,
+        page_size,
+        states,
+        min_entry_date,
+        max_entry_date,
+        contact_id,
+        currency_id,
+        sort_property,
+        sort_direction,
     )
 
 
@@ -274,7 +286,9 @@ def products_list(
     sort_property: str = "name",
     sort_direction: str = "ASC",
 ):
-    return list_products(page_size, offset, is_archived, name, sort_property, sort_direction)
+    return list_products(
+        page_size, offset, is_archived, name, sort_property, sort_direction
+    )
 
 
 @app.post("/products", status_code=201)

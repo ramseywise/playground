@@ -54,9 +54,9 @@ def list_quotes(
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
     with get_conn() as conn:
-        total = conn.execute(
-            f"SELECT COUNT(*) FROM quotes {where}", params
-        ).fetchone()[0]
+        total = conn.execute(f"SELECT COUNT(*) FROM quotes {where}", params).fetchone()[
+            0
+        ]
         offset = (page - 1) * page_size
         rows = conn.execute(
             f"SELECT * FROM quotes {where} ORDER BY {col} {direction} LIMIT ? OFFSET ?",
@@ -113,15 +113,17 @@ def create_quote(
         price = float(ln.get("unit_price", 0))
         amount = qty * price
         tax = amount * 0.25
-        quote_lines.append({
-            "product_id": ln.get("product_id", ""),
-            "description": ln.get("description", ""),
-            "quantity": qty,
-            "unit_price": price,
-            "amount": amount,
-            "tax": tax,
-            "_idx": i,
-        })
+        quote_lines.append(
+            {
+                "product_id": ln.get("product_id", ""),
+                "description": ln.get("description", ""),
+                "quantity": qty,
+                "unit_price": price,
+                "amount": amount,
+                "tax": tax,
+                "_idx": i,
+            }
+        )
 
     total_amount = sum(ln["amount"] for ln in quote_lines)
     total_tax = sum(ln["tax"] for ln in quote_lines)
@@ -142,8 +144,20 @@ def create_quote(
                (id, quote_no, contact_id, customer_name, entry_date, expiry_date,
                 state, amount, tax, gross_amount, currency, created_time)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (q_id, q_no, contact_id, customer_name, q_date, expiry,
-             "open", total_amount, total_tax, gross, currency_id, created_time),
+            (
+                q_id,
+                q_no,
+                contact_id,
+                customer_name,
+                q_date,
+                expiry,
+                "open",
+                total_amount,
+                total_tax,
+                gross,
+                currency_id,
+                created_time,
+            ),
         )
 
         for i, ln in enumerate(quote_lines):
@@ -152,8 +166,16 @@ def create_quote(
                    (id, quote_id, product_id, description, quantity,
                     unit_price, amount, tax)
                    VALUES (?,?,?,?,?,?,?,?)""",
-                (f"qline_{q_id}_{i}", q_id, ln["product_id"], ln["description"],
-                 ln["quantity"], ln["unit_price"], ln["amount"], ln["tax"]),
+                (
+                    f"qline_{q_id}_{i}",
+                    q_id,
+                    ln["product_id"],
+                    ln["description"],
+                    ln["quantity"],
+                    ln["unit_price"],
+                    ln["amount"],
+                    ln["tax"],
+                ),
             )
 
     return {
@@ -209,9 +231,7 @@ def edit_quote(
     """
     _TERMINAL = {"invoiced", "closed"}
     with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM quotes WHERE id = ?", (quote_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM quotes WHERE id = ?", (quote_id,)).fetchone()
         if not row:
             return {"error": f"Quote '{quote_id}' not found."}
         quote = dict(row)
@@ -225,12 +245,15 @@ def edit_quote(
         updates: list[str] = []
         uparams: list = []
         if contact_id is not None:
-            updates.append("contact_id = ?"); uparams.append(contact_id)
+            updates.append("contact_id = ?")
+            uparams.append(contact_id)
         if expiry_days is not None:
             new_expiry = (date.today() + timedelta(days=expiry_days)).isoformat()
-            updates.append("expiry_date = ?"); uparams.append(new_expiry)
+            updates.append("expiry_date = ?")
+            uparams.append(new_expiry)
         if state is not None:
-            updates.append("state = ?"); uparams.append(state)
+            updates.append("state = ?")
+            uparams.append(state)
 
         if updates:
             conn.execute(
@@ -251,11 +274,26 @@ def edit_quote(
                     """INSERT INTO quote_lines
                        (id, quote_id, product_id, description, quantity, unit_price, amount, tax)
                        VALUES (?,?,?,?,?,?,?,?)""",
-                    (line_id, quote_id, ln.get("product_id", ""),
-                     ln.get("description", ""), qty, price, amount, tax),
+                    (
+                        line_id,
+                        quote_id,
+                        ln.get("product_id", ""),
+                        ln.get("description", ""),
+                        qty,
+                        price,
+                        amount,
+                        tax,
+                    ),
                 )
-                new_lines.append({"id": line_id, "quantity": qty, "unit_price": price,
-                                   "amount": amount, "tax": tax})
+                new_lines.append(
+                    {
+                        "id": line_id,
+                        "quantity": qty,
+                        "unit_price": price,
+                        "amount": amount,
+                        "tax": tax,
+                    }
+                )
 
             total_amount = sum(nl["amount"] for nl in new_lines)
             total_tax = sum(nl["tax"] for nl in new_lines)
@@ -265,31 +303,31 @@ def edit_quote(
                 (total_amount, total_tax, gross, quote_id),
             )
 
-        updated = dict(conn.execute(
-            "SELECT * FROM quotes WHERE id = ?", (quote_id,)
-        ).fetchone())
+        updated = dict(
+            conn.execute("SELECT * FROM quotes WHERE id = ?", (quote_id,)).fetchone()
+        )
         final_lines = _fetch_quote_lines(conn, quote_id)
 
     return {
-        "id":           updated["id"],
-        "quote_no":     updated["quote_no"],
-        "contact_id":   updated["contact_id"],
-        "entry_date":   updated["entry_date"],
-        "expiry_date":  updated["expiry_date"],
-        "state":        updated["state"],
-        "amount":       updated["amount"],
-        "tax":          updated["tax"],
+        "id": updated["id"],
+        "quote_no": updated["quote_no"],
+        "contact_id": updated["contact_id"],
+        "entry_date": updated["entry_date"],
+        "expiry_date": updated["expiry_date"],
+        "state": updated["state"],
+        "amount": updated["amount"],
+        "tax": updated["tax"],
         "gross_amount": updated["gross_amount"],
-        "currency":     updated["currency"],
+        "currency": updated["currency"],
         "lines": [
             {
-                "id":          ln["id"],
-                "product_id":  ln["product_id"],
+                "id": ln["id"],
+                "product_id": ln["product_id"],
                 "description": ln["description"],
-                "quantity":    ln["quantity"],
-                "unit_price":  ln["unit_price"],
-                "amount":      ln["amount"],
-                "tax":         ln["tax"],
+                "quantity": ln["quantity"],
+                "unit_price": ln["unit_price"],
+                "amount": ln["amount"],
+                "tax": ln["tax"],
             }
             for ln in final_lines
         ],
@@ -355,9 +393,7 @@ def create_invoice_from_quote(quote_id: str) -> dict:
         The newly created invoice record, or an error dict.
     """
     with get_conn() as conn:
-        row = conn.execute(
-            "SELECT * FROM quotes WHERE id = ?", (quote_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM quotes WHERE id = ?", (quote_id,)).fetchone()
         if not row:
             return {"error": f"Quote '{quote_id}' not found."}
         quote = dict(row)
@@ -389,9 +425,7 @@ def create_invoice_from_quote(quote_id: str) -> dict:
     )
 
     with get_conn() as conn:
-        conn.execute(
-            "UPDATE quotes SET state = 'invoiced' WHERE id = ?", (quote_id,)
-        )
+        conn.execute("UPDATE quotes SET state = 'invoiced' WHERE id = ?", (quote_id,))
 
     invoice["source_quote_id"] = quote_id
     return invoice

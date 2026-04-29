@@ -122,11 +122,14 @@ def edit_product(
     updates: list[str] = []
     params: list = []
     if name is not None:
-        updates.append("name = ?"); params.append(name)
+        updates.append("name = ?")
+        params.append(name)
     if description is not None:
-        updates.append("description = ?"); params.append(description)
+        updates.append("description = ?")
+        params.append(description)
     if product_no is not None:
-        updates.append("product_no = ?"); params.append(product_no)
+        updates.append("product_no = ?")
+        params.append(product_no)
 
     with get_conn() as conn:
         if not conn.execute(
@@ -146,24 +149,30 @@ def edit_product(
                 (unit_price, price_id, product_id),
             )
 
-        row = dict(conn.execute(
-            "SELECT * FROM products WHERE id = ?", (product_id,)
-        ).fetchone())
+        row = dict(
+            conn.execute(
+                "SELECT * FROM products WHERE id = ?", (product_id,)
+            ).fetchone()
+        )
         prices = _fetch_prices(conn, product_id)
 
     current_price = next(
         (p for p in prices if p["id"] == price_id), prices[0] if prices else None
     )
     return {
-        "id":          row["id"],
-        "name":        row["name"],
+        "id": row["id"],
+        "name": row["name"],
         "description": row["description"],
-        "product_no":  row["product_no"],
-        "unit":        row["unit"],
+        "product_no": row["product_no"],
+        "unit": row["unit"],
         "is_archived": bool(row["is_archived"]),
         "price": (
-            {"unit_price": current_price["unit_price"], "currency": current_price["currency"]}
-            if current_price else None
+            {
+                "unit_price": current_price["unit_price"],
+                "currency": current_price["currency"],
+            }
+            if current_price
+            else None
         ),
     }
 
@@ -189,7 +198,7 @@ def create_product(
     """
     with get_conn() as conn:
         n = next_id(conn, "product")
-        prod_id  = f"prod_{n:03d}"
+        prod_id = f"prod_{n:03d}"
         price_id = f"price_{n:03d}a"
 
         conn.execute(
@@ -203,9 +212,9 @@ def create_product(
         )
 
     return {
-        "id":          prod_id,
-        "name":        name,
+        "id": prod_id,
+        "name": name,
         "description": description or "",
-        "unit":        "pcs",
-        "price":       {"unit_price": unit_price, "currency": currency_id},
+        "unit": "pcs",
+        "price": {"unit_price": unit_price, "currency": currency_id},
     }

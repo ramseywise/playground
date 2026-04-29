@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 from typing import Optional
 
 import httpx
@@ -25,7 +25,9 @@ def _normalize_account(a: dict) -> dict:
 
 def _normalize_transaction(t: dict) -> dict:
     raw_type = (t.get("checkAccountTransactionType") or "").upper()
-    tx_type = "credit" if raw_type == "R" else ("debit" if raw_type == "Z" else raw_type)
+    tx_type = (
+        "credit" if raw_type == "R" else ("debit" if raw_type == "Z" else raw_type)
+    )
     account = t.get("checkAccount") or {}
     return {
         "id": t.get("id"),
@@ -188,7 +190,9 @@ async def get_cashflow_forecast(months: int = 3) -> dict:
         due = inv.get("due_date") or ""
         if due >= today_str and len(due) >= 7:
             month = due[:7]
-            future_inflows[month] = future_inflows.get(month, 0.0) + float(inv.get("gross_amount") or 0)
+            future_inflows[month] = future_inflows.get(month, 0.0) + float(
+                inv.get("gross_amount") or 0
+            )
 
     avg_outflow = await _avg_monthly_voucher_spend()
 
@@ -199,12 +203,14 @@ async def get_cashflow_forecast(months: int = 3) -> dict:
         mo = raw % 12 + 1
         label = f"{yr}-{mo:02d}"
         inflow = round(future_inflows.get(label, 0.0), 2)
-        forecast.append({
-            "month": label,
-            "projected_inflow": inflow,
-            "projected_outflow": avg_outflow,
-            "net": round(inflow - avg_outflow, 2),
-        })
+        forecast.append(
+            {
+                "month": label,
+                "projected_inflow": inflow,
+                "projected_outflow": avg_outflow,
+                "net": round(inflow - avg_outflow, 2),
+            }
+        )
 
     return {"currency": "EUR", "forecast": forecast}
 
@@ -224,7 +230,9 @@ async def get_runway_estimate() -> dict:
 
     balance = balance_data.get("total_balance", 0.0)
     avg_monthly_burn = await _avg_monthly_voucher_spend()
-    runway_months = round(balance / avg_monthly_burn, 1) if avg_monthly_burn > 0 else None
+    runway_months = (
+        round(balance / avg_monthly_burn, 1) if avg_monthly_burn > 0 else None
+    )
 
     return {
         "balance": balance,

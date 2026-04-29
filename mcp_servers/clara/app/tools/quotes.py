@@ -31,7 +31,8 @@ def _normalize_offer(o: dict) -> dict:
         "id": o.get("id"),
         "quote_no": o.get("offerNumber"),
         "contact_id": contact.get("id") if isinstance(contact, dict) else None,
-        "customer_name": o.get("contactName") or (contact.get("name") if isinstance(contact, dict) else None),
+        "customer_name": o.get("contactName")
+        or (contact.get("name") if isinstance(contact, dict) else None),
         "entry_date": _normalize_date(o.get("offerDate")),
         "expiry_date": _normalize_date(o.get("validUntil")),
         "state": _OFFER_STATUS.get(status_code, status_code),
@@ -190,7 +191,10 @@ async def create_quote(
     offer = objects.get("offer") if isinstance(objects, dict) else {}
     if isinstance(offer, dict) and offer:
         return _normalize_offer(offer)
-    return {"error": "Offer created but response shape unexpected.", "raw": str(objects)[:300]}
+    return {
+        "error": "Offer created but response shape unexpected.",
+        "raw": str(objects)[:300],
+    }
 
 
 async def edit_quote(
@@ -212,7 +216,9 @@ async def edit_quote(
     if status and status in _STATUS_TO_CODE:
         payload["status"] = _STATUS_TO_CODE[status]
     if expiry_days is not None:
-        payload["validUntil"] = _sevdesk_date((date.today() + timedelta(days=expiry_days)).isoformat())
+        payload["validUntil"] = _sevdesk_date(
+            (date.today() + timedelta(days=expiry_days)).isoformat()
+        )
 
     if len(payload) == 1:
         return {"error": "No fields provided to update."}
@@ -324,7 +330,9 @@ async def create_invoice_from_quote(quote_id: str) -> dict:
 
     # Mark offer as closed (750) — best-effort
     try:
-        await get_client().put(f"/Offer/{quote_id}", json={"objectName": "Offer", "status": "750"})
+        await get_client().put(
+            f"/Offer/{quote_id}", json={"objectName": "Offer", "status": "750"}
+        )
     except Exception:
         pass
 

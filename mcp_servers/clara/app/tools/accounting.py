@@ -9,7 +9,11 @@ import httpx
 
 from app.client import get_client
 from app.tools.expenses import _fetch_all_vouchers_for_year
-from app.tools.invoices import _fetch_all_invoices_for_year, _normalize_date, _sevdesk_date
+from app.tools.invoices import (
+    _fetch_all_invoices_for_year,
+    _normalize_date,
+    _sevdesk_date,
+)
 
 
 def _in_quarter(date_str: str, month_start: int, month_end: int) -> bool:
@@ -43,7 +47,10 @@ async def get_vat_summary(quarter: int, year: int) -> dict:
     month_start = (quarter - 1) * 3 + 1
     month_end = quarter * 3
 
-    invoices, vouchers = await _fetch_all_invoices_for_year(year), await _fetch_all_vouchers_for_year(year)
+    invoices, vouchers = (
+        await _fetch_all_invoices_for_year(year),
+        await _fetch_all_vouchers_for_year(year),
+    )
 
     output_vat = sum(
         float(inv.get("tax") or 0)
@@ -106,7 +113,9 @@ async def get_unreconciled_transactions(days_back: int = 30) -> dict:
             "date": _normalize_date(t.get("valueDate") or t.get("entryDate")),
             "description": t.get("paymtPurpose") or t.get("description"),
             "amount": float(t.get("amount") or 0),
-            "type": "credit" if (t.get("checkAccountTransactionType") or "").upper() == "R" else "debit",
+            "type": "credit"
+            if (t.get("checkAccountTransactionType") or "").upper() == "R"
+            else "debit",
         }
         for t in objects
     ]
@@ -139,7 +148,8 @@ async def get_audit_readiness_score() -> dict:
 
     draft_count = sum(1 for inv in invoices if inv.get("state") == "draft")
     overdue_count = sum(
-        1 for inv in invoices
+        1
+        for inv in invoices
         if inv.get("state") == "open" and (inv.get("due_date") or "") < today_str
     )
     missing_desc = sum(1 for v in vouchers if not (v.get("description") or "").strip())
@@ -169,7 +179,11 @@ async def get_audit_readiness_score() -> dict:
     ]
 
     _deductions = {"high": 20, "medium": 10, "low": 5}
-    score = max(0, 100 - sum(_deductions.get(c["severity"], 5) for c in checks if c["status"] != "ok"))
+    score = max(
+        0,
+        100
+        - sum(_deductions.get(c["severity"], 5) for c in checks if c["status"] != "ok"),
+    )
 
     missing_docs: list[str] = []
     recommendations: list[str] = []
@@ -182,7 +196,9 @@ async def get_audit_readiness_score() -> dict:
         recommendations.append("Send payment reminders for overdue invoices")
     if missing_desc > 0:
         missing_docs.append(f"{missing_desc} voucher(s) missing description")
-        recommendations.append("Add descriptions to all expense vouchers for documentation")
+        recommendations.append(
+            "Add descriptions to all expense vouchers for documentation"
+        )
 
     if not missing_docs:
         recommendations.append("Account is audit-ready — no action items found.")
@@ -219,10 +235,14 @@ async def get_period_summary(year: int, quarter: Optional[int] = None) -> dict:
 
     if quarter:
         ms, me = (quarter - 1) * 3 + 1, quarter * 3
-        invoices = [i for i in invoices if _in_quarter(i.get("invoice_date") or "", ms, me)]
+        invoices = [
+            i for i in invoices if _in_quarter(i.get("invoice_date") or "", ms, me)
+        ]
         vouchers = [v for v in vouchers if _in_quarter(v.get("date") or "", ms, me)]
 
-    active_invoices = [i for i in invoices if i.get("state") in ("open", "partially_paid", "paid")]
+    active_invoices = [
+        i for i in invoices if i.get("state") in ("open", "partially_paid", "paid")
+    ]
 
     revenue = sum(float(i.get("amount") or 0) for i in active_invoices)
     output_vat = sum(float(i.get("tax") or 0) for i in active_invoices)
@@ -285,7 +305,8 @@ async def generate_handoff_doc(year: int, quarter: Optional[int] = None) -> dict
         f"| Input VAT (paid) | {period['input_vat']:,.2f} |",
         f"| **Net VAT Position** | **{period['vat_position']:,.2f}** |",
         "",
-        "> Positive = VAT owed to tax authority" if period["vat_position"] >= 0
+        "> Positive = VAT owed to tax authority"
+        if period["vat_position"] >= 0
         else "> Negative = VAT refund position",
         "",
         "## Documentation Status",

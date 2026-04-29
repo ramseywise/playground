@@ -1,6 +1,5 @@
 """Unit tests for customer tools (no MCP transport needed)."""
 
-import pytest
 from app.tools import customers as mod
 
 

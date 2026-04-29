@@ -1,6 +1,5 @@
 """Integration tests for the Billy REST API (FastAPI)."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -50,16 +49,19 @@ class TestCustomersCreate:
         assert body["id"].startswith("cus_")
 
     def test_with_all_fields(self):
-        r = client.post("/customers", json={
-            "name": "Full Co",
-            "type": "company",
-            "country_id": "SE",
-            "street": "Storgatan 1",
-            "city_text": "Stockholm",
-            "zipcode_text": "11122",
-            "phone": "+46 8 000 0000",
-            "email": "info@full.se",
-        })
+        r = client.post(
+            "/customers",
+            json={
+                "name": "Full Co",
+                "type": "company",
+                "country_id": "SE",
+                "street": "Storgatan 1",
+                "city_text": "Stockholm",
+                "zipcode_text": "11122",
+                "phone": "+46 8 000 0000",
+                "email": "info@full.se",
+            },
+        )
         assert r.status_code == 201
         body = r.json()
         assert body["country"] == "SE"
@@ -78,10 +80,13 @@ class TestCustomersEdit:
         assert r.json()["name"] == "Acme Updated"
 
     def test_updates_email(self):
-        r = client.patch("/customers/cus_001", json={
-            "contact_person_id": "cp_001",
-            "email": "new@acme.dk",
-        })
+        r = client.patch(
+            "/customers/cus_001",
+            json={
+                "contact_person_id": "cp_001",
+                "email": "new@acme.dk",
+            },
+        )
         assert r.status_code == 200
         assert r.json()["email"] == "new@acme.dk"
 
@@ -139,10 +144,13 @@ class TestInvoicesList:
         assert r.json()["total"] == 2  # inv_001, inv_003
 
     def test_filter_by_date_range(self):
-        r = client.get("/invoices", params={
-            "min_entry_date": "2024-02-01",
-            "max_entry_date": "2024-02-28",
-        })
+        r = client.get(
+            "/invoices",
+            params={
+                "min_entry_date": "2024-02-01",
+                "max_entry_date": "2024-02-28",
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         assert body["total"] == 1
@@ -170,10 +178,15 @@ class TestInvoicesGet:
 
 class TestInvoicesCreate:
     def test_creates_invoice(self):
-        r = client.post("/invoices", json={
-            "contact_id": "cus_001",
-            "lines": [{"product_id": "prod_001", "quantity": 2, "unit_price": 1000}],
-        })
+        r = client.post(
+            "/invoices",
+            json={
+                "contact_id": "cus_001",
+                "lines": [
+                    {"product_id": "prod_001", "quantity": 2, "unit_price": 1000}
+                ],
+            },
+        )
         assert r.status_code == 201
         body = r.json()
         assert body["id"].startswith("inv_")
@@ -182,19 +195,27 @@ class TestInvoicesCreate:
         assert body["gross_amount"] == 2500.0
 
     def test_draft_state(self):
-        r = client.post("/invoices", json={
-            "contact_id": "cus_001",
-            "lines": [{"product_id": "prod_001", "quantity": 1, "unit_price": 500}],
-            "state": "draft",
-        })
+        r = client.post(
+            "/invoices",
+            json={
+                "contact_id": "cus_001",
+                "lines": [{"product_id": "prod_001", "quantity": 1, "unit_price": 500}],
+                "state": "draft",
+            },
+        )
         assert r.status_code == 201
         assert r.json()["state"] == "draft"
 
     def test_appears_in_list(self):
-        client.post("/invoices", json={
-            "contact_id": "cus_002",
-            "lines": [{"product_id": "prod_002", "quantity": 1, "unit_price": 5000}],
-        })
+        client.post(
+            "/invoices",
+            json={
+                "contact_id": "cus_002",
+                "lines": [
+                    {"product_id": "prod_002", "quantity": 1, "unit_price": 5000}
+                ],
+            },
+        )
         r = client.get("/invoices")
         assert r.json()["total"] == 4
 
@@ -216,9 +237,14 @@ class TestInvoicesEdit:
         assert r.json()["state"] == "approved"
 
     def test_update_lines_recalculates_totals(self):
-        r = client.patch("/invoices/inv_003", json={
-            "lines": [{"product_id": "prod_001", "quantity": 5, "unit_price": 1000}],
-        })
+        r = client.patch(
+            "/invoices/inv_003",
+            json={
+                "lines": [
+                    {"product_id": "prod_001", "quantity": 5, "unit_price": 1000}
+                ],
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         assert body["amount"] == 5000.0
@@ -232,22 +258,28 @@ class TestInvoicesEdit:
 
 class TestInvoicesSendEmail:
     def test_sends_to_known_contact(self):
-        r = client.post("/invoices/inv_001/send", json={
-            "contact_id": "cus_001",
-            "email_subject": "Your invoice",
-            "email_body": "Please pay.",
-        })
+        r = client.post(
+            "/invoices/inv_001/send",
+            json={
+                "contact_id": "cus_001",
+                "email_subject": "Your invoice",
+                "email_body": "Please pay.",
+            },
+        )
         assert r.status_code == 200
         body = r.json()
         assert body["success"] is True
         assert "kontakt@acme.dk" in body["message"]
 
     def test_fails_for_unknown_contact(self):
-        r = client.post("/invoices/inv_001/send", json={
-            "contact_id": "cus_999",
-            "email_subject": "X",
-            "email_body": "Y",
-        })
+        r = client.post(
+            "/invoices/inv_001/send",
+            json={
+                "contact_id": "cus_999",
+                "email_subject": "X",
+                "email_body": "Y",
+            },
+        )
         assert r.status_code == 200
         assert r.json()["success"] is False
 
@@ -297,11 +329,14 @@ class TestProductsCreate:
         assert body["price"]["unit_price"] == 99.0
 
     def test_custom_currency(self):
-        r = client.post("/products", json={
-            "name": "Euro Item",
-            "unit_price": 50.0,
-            "currency_id": "EUR",
-        })
+        r = client.post(
+            "/products",
+            json={
+                "name": "Euro Item",
+                "unit_price": 50.0,
+                "currency_id": "EUR",
+            },
+        )
         assert r.status_code == 201
         assert r.json()["price"]["currency"] == "EUR"
 
@@ -318,10 +353,13 @@ class TestProductsEdit:
         assert r.json()["name"] == "Updated Name"
 
     def test_updates_price(self):
-        r = client.patch("/products/prod_001", json={
-            "price_id": "price_001a",
-            "unit_price": 1500.0,
-        })
+        r = client.patch(
+            "/products/prod_001",
+            json={
+                "price_id": "price_001a",
+                "unit_price": 1500.0,
+            },
+        )
         assert r.status_code == 200
         assert r.json()["price"]["unit_price"] == 1500.0
 
@@ -360,12 +398,16 @@ class TestSupportSearch:
     def test_returns_list(self, mocker):
         mocker.patch(
             "app.tools.support_knowledge._retrieve_from_kb_raw",
-            return_value=[{
-                "score": 0.9,
-                "content": {"text": "Opret din første faktura i Billy."},
-                "location": {"webLocation": {"url": "https://billy.dk/support/faktura"}},
-                "metadata": {"title": "Faktura guide"},
-            }],
+            return_value=[
+                {
+                    "score": 0.9,
+                    "content": {"text": "Opret din første faktura i Billy."},
+                    "location": {
+                        "webLocation": {"url": "https://billy.dk/support/faktura"}
+                    },
+                    "metadata": {"title": "Faktura guide"},
+                }
+            ],
         )
         r = client.post("/support/search", json={"queries": ["faktura"]})
         assert r.status_code == 200

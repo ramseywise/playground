@@ -1,6 +1,5 @@
 """Unit tests for product tools."""
 
-import pytest
 from app.tools import products as mod
 
 
@@ -63,9 +62,13 @@ class TestEditProduct:
         assert "error" in result
 
     def test_omitted_fields_unchanged(self):
-        original_desc = mod.list_products(name="Konsulentydelser")["products"][0]["description"]
+        original_desc = mod.list_products(name="Konsulentydelser")["products"][0][
+            "description"
+        ]
         mod.edit_product("prod_001", name="X")
-        assert mod.list_products(name="X")["products"][0]["description"] == original_desc
+        assert (
+            mod.list_products(name="X")["products"][0]["description"] == original_desc
+        )
 
 
 class TestCreateProduct:

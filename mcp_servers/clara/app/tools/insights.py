@@ -35,8 +35,14 @@ async def _load_period(
             _, q_str = str(period).split("-Q")
             q = int(q_str)
             ms, me = (q - 1) * 3 + 1, q * 3
-            invoices = [i for i in invoices if _month_in_quarter(i.get("invoice_date", ""), ms, me)]
-            vouchers = [v for v in vouchers if _month_in_quarter(v.get("date", ""), ms, me)]
+            invoices = [
+                i
+                for i in invoices
+                if _month_in_quarter(i.get("invoice_date", ""), ms, me)
+            ]
+            vouchers = [
+                v for v in vouchers if _month_in_quarter(v.get("date", ""), ms, me)
+            ]
         except Exception:
             pass
     elif period:
@@ -106,14 +112,20 @@ async def get_margin_by_product(year: Optional[int] = None) -> dict:
         try:
             resp = await get_client().get(
                 "/InvoicePos",
-                params={"invoice[id]": inv_id, "invoice[objectName]": "Invoice", "limit": 100},
+                params={
+                    "invoice[id]": inv_id,
+                    "invoice[objectName]": "Invoice",
+                    "limit": 100,
+                },
             )
             resp.raise_for_status()
             return resp.json().get("objects") or []
         except (httpx.HTTPStatusError, httpx.RequestError):
             return []
 
-    position_groups = await asyncio.gather(*[_fetch_positions(inv_id) for inv_id in inv_ids])
+    position_groups = await asyncio.gather(
+        *[_fetch_positions(inv_id) for inv_id in inv_ids]
+    )
     all_positions = [pos for group in position_groups for pos in group]
 
     vouchers = await _fetch_all_vouchers_for_year(target_year)
@@ -132,20 +144,24 @@ async def get_margin_by_product(year: Optional[int] = None) -> dict:
     total_revenue = sum(p["revenue"] for p in by_product.values())
 
     products = []
-    for name, data in sorted(by_product.items(), key=lambda x: x[1]["revenue"], reverse=True):
+    for name, data in sorted(
+        by_product.items(), key=lambda x: x[1]["revenue"], reverse=True
+    ):
         rev = data["revenue"]
         share = rev / total_revenue if total_revenue > 0 else 0.0
         cogs = round(total_expenses * share, 2)
         gross_profit = round(rev - cogs, 2)
         margin_pct = round(gross_profit / rev * 100, 1) if rev > 0 else 0.0
-        products.append({
-            "product_name": name,
-            "revenue": round(rev, 2),
-            "qty_sold": round(data["qty_sold"], 2),
-            "cogs": cogs,
-            "gross_profit": gross_profit,
-            "margin_pct": margin_pct,
-        })
+        products.append(
+            {
+                "product_name": name,
+                "revenue": round(rev, 2),
+                "qty_sold": round(data["qty_sold"], 2),
+                "cogs": cogs,
+                "gross_profit": gross_profit,
+                "margin_pct": margin_pct,
+            }
+        )
 
     return {
         "year": target_year,
@@ -194,9 +210,13 @@ async def get_customer_concentration(year: Optional[int] = None) -> dict:
 
     ranked = sorted(by_customer.items(), key=lambda x: x[1]["revenue"], reverse=True)
     total_revenue = sum(d["revenue"] for _, d in ranked)
-    shares = [d["revenue"] / total_revenue for _, d in ranked] if total_revenue > 0 else [0.0] * len(ranked)
+    shares = (
+        [d["revenue"] / total_revenue for _, d in ranked]
+        if total_revenue > 0
+        else [0.0] * len(ranked)
+    )
 
-    hhi = round(sum(s ** 2 for s in shares) * 10000, 1)
+    hhi = round(sum(s**2 for s in shares) * 10000, 1)
     top_1_pct = round(shares[0] * 100, 1) if shares else 0.0
     top_3_pct = round(sum(shares[:3]) * 100, 1)
 
@@ -307,7 +327,9 @@ async def get_break_even_estimate() -> dict:
 
     avg_monthly = round(sum(monthly.values()) / len(monthly), 2) if monthly else 0.0
     total_variable = sum(float(v.get("amount") or 0) for v in all_vouchers)
-    variable_rate = round(total_variable / total_revenue, 4) if total_revenue > 0 else 0.0
+    variable_rate = (
+        round(total_variable / total_revenue, 4) if total_revenue > 0 else 0.0
+    )
 
     break_even: Optional[float] = None
     if variable_rate < 1.0 and avg_monthly > 0:
@@ -367,7 +389,9 @@ async def detect_anomaly(
             month = (inv.get("invoice_date") or "")[:7]
             if month:
                 monthly[month] = monthly.get(month, 0.0) + float(inv.get("amount") or 0)
-        data_points = [{"month": m, "value": round(v, 2)} for m, v in sorted(monthly.items())]
+        data_points = [
+            {"month": m, "value": round(v, 2)} for m, v in sorted(monthly.items())
+        ]
 
     elif metric == "expenses":
         vouchers = await _fetch_all_vouchers_for_year(target_year)
@@ -376,7 +400,9 @@ async def detect_anomaly(
             month = (v.get("date") or "")[:7]
             if month:
                 monthly[month] = monthly.get(month, 0.0) + float(v.get("amount") or 0)
-        data_points = [{"month": m, "value": round(v, 2)} for m, v in sorted(monthly.items())]
+        data_points = [
+            {"month": m, "value": round(v, 2)} for m, v in sorted(monthly.items())
+        ]
 
     elif metric == "overdue_rate":
         today_str = date.today().isoformat()
@@ -432,18 +458,20 @@ async def detect_anomaly(
     values = [p["value"] for p in data_points]
     mean = sum(values) / len(values)
     variance = sum((v - mean) ** 2 for v in values) / len(values)
-    std = variance ** 0.5
+    std = variance**0.5
 
     anomalies = []
     for p in data_points:
         z = (p["value"] - mean) / std if std > 0 else 0.0
         if abs(z) >= 1.5:
-            anomalies.append({
-                "month": p["month"],
-                "value": p["value"],
-                "z_score": round(z, 2),
-                "direction": "high" if z > 0 else "low",
-            })
+            anomalies.append(
+                {
+                    "month": p["month"],
+                    "value": p["value"],
+                    "z_score": round(z, 2),
+                    "direction": "high" if z > 0 else "low",
+                }
+            )
 
     return {
         "metric": metric,

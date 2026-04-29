@@ -256,7 +256,9 @@ def next_id(conn: sqlite3.Connection, counter_name: str) -> int:
     val = conn.execute(
         "SELECT value FROM counters WHERE name = ?", (counter_name,)
     ).fetchone()[0]
-    conn.execute("UPDATE counters SET value = value + 1 WHERE name = ?", (counter_name,))
+    conn.execute(
+        "UPDATE counters SET value = value + 1 WHERE name = ?", (counter_name,)
+    )
     return val
 
 
