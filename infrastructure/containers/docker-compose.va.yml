@@ -34,6 +34,7 @@ services:
       GATEWAY_API_KEY: "${GATEWAY_API_KEY:-}"
       BILLY_MCP_URL: "http://billy-mcp:8765/sse"
       BILLY_API_URL: "http://billy-mcp:8766"
+      HC_RAG_AGENT_URL: "http://va-support-rag:8002"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 15s
@@ -42,6 +43,8 @@ services:
       start_period: 15s
     depends_on:
       billy-mcp:
+        condition: service_healthy
+      va-support-rag:
         condition: service_healthy
 
   va-gateway-lg:
@@ -58,8 +61,11 @@ services:
       GATEWAY_API_KEY: "${GATEWAY_API_KEY:-}"
       BILLY_MCP_URL: "http://billy-mcp:8765/sse"
       BILLY_API_URL: "http://billy-mcp:8766"
+      HC_RAG_AGENT_URL: "http://va-support-rag:8002"
       LANGGRAPH_CHECKPOINTER: "${LANGGRAPH_CHECKPOINTER:-postgres}"
       POSTGRES_URL: "${POSTGRES_URL:-postgresql://va:${POSTGRES_PASSWORD:-va_dev}@postgres:5432/va_checkpoints}"
+      SESSION_TTL_SECONDS: "${SESSION_TTL_SECONDS:-1800}"
+      SESSION_MAXSIZE: "${SESSION_MAXSIZE:-500}"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 15s
@@ -69,6 +75,35 @@ services:
     depends_on:
       billy-mcp:
         condition: service_healthy
+      va-support-rag:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  va-support-rag:
+    build:
+      context: ../..
+      dockerfile: infrastructure/containers/va-support-rag/Dockerfile
+    ports:
+      - "8002:8002"
+    volumes:
+      - rag-data:/data/stores
+    environment:
+      LLM_PROVIDER: "${LLM_PROVIDER:-gemini}"
+      GOOGLE_API_KEY: "${GOOGLE_API_KEY}"
+      VECTORDB_PATH: "/data/stores/vectordb/clara.duckdb"
+      METADB_PATH: "/data/stores/metadb/clara_meta.db"
+      VECTOR_STORE_BACKEND: "duckdb"
+      CHECKPOINTER_BACKEND: "${CHECKPOINTER_BACKEND:-sqlite}"
+      DATABASE_URL: "${POSTGRES_URL:-postgresql://va:${POSTGRES_PASSWORD:-va_dev}@postgres:5432/va_support_rag}"
+      RAG_GUARDRAILS_ENABLED: "true"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
       postgres:
         condition: service_healthy
 
@@ -114,3 +149,4 @@ services:
 volumes:
   billy-data:
   postgres-data:
+  rag-data:

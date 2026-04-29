@@ -1,0 +1,110 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hc-rag-agent"
+version = "0.1.0"
+description = "Standalone agentic RAG service — LangGraph retrieval pipeline — help-centre corpus"
+readme = "README.md"
+requires-python = "==3.12.*"
+dependencies = [
+    # HTTP API
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sse-starlette>=2.0.0",
+    # Config + serialization
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.2.2",
+    "orjson>=3.11.5",
+    # Logging
+    "structlog>=25.5.0",
+    # Tokenization (RAG chunking)
+    "tiktoken>=0.12.0",
+    # LangChain / LangGraph
+    "langchain>=1.2.3",
+    "langchain-core>=1.2.7",
+    "langchain-google-genai>=3.0.0",
+    "langgraph>=1.0.6",
+    "langgraph-checkpoint>=4.0.0",
+    "langgraph-checkpoint-sqlite>=3.0.3",
+    "httpx>=0.28.0",
+    # RAG — embeddings + retrieval
+    "duckdb>=1.0",
+    "numpy>=1.26",
+    "scikit-learn>=1.4",
+]
+
+[project.optional-dependencies]
+# Cross-encoder reranking (pulls torch ~2GB — only needed if RAG_RERANKER=cross_encoder)
+cross-encoder = ["sentence-transformers>=5.4.1"]
+
+# Postgres checkpointer (production deployments)
+postgres = [
+    "langgraph-checkpoint-postgres>=2.0.0",
+    "psycopg[binary,pool]>=3.2.0",
+]
+
+# Observability (LangSmith tracing + Langfuse)
+observability = [
+    "langfuse>=2.0.0",
+    "langsmith>=0.6.2",
+]
+
+# Additional LLM providers (default: gemini via langchain-google-genai)
+anthropic = ["langchain-anthropic>=0.3.0"]
+openai    = ["langchain-openai>=1.1.7"]
+
+# Alternate vector backends (default: duckdb)
+chroma     = ["chromadb>=0.6"]
+opensearch = ["opensearch-py>=2.7.0"]
+
+# Evaluation harness
+eval = [
+    "datasets>=3.0.0",
+    "ragas>=0.2.0",
+    "deepeval>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-mock>=3.15.1",
+    "mypy>=1.10.0",
+    "ruff>=0.11.0",
+    "duckdb>=1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+markers = ["integration: tests that hit real services"]
+filterwarnings = [
+    "ignore::DeprecationWarning:google.genai",
+]
+
+[tool.ruff]
+target-version = "py312"
+src = ["orchestrator", "rag", "core", "clients", "guardrails", "evals", "ingest", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["\\.venv/", "build/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "langfuse.*", "chromadb.*", "sentence_transformers.*",
+    "ragas.*", "deepeval.*", "langgraph.*", "kuzu.*",
+]
+ignore_missing_imports = true
+ignore_errors = true
+
+[project.scripts]
+hc-rag = "orchestrator.langgraph.runner:run_graph_cli"
+ingest = "ingest.run_ingest:main"

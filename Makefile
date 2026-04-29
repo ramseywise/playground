@@ -1,5 +1,5 @@
 .PHONY: setup lint typecheck test test-librarian test-core test-eval eval-unit eval-regression eval-capability eval-compare eval-experiment \
-        va-up va-up-ui va-down va-smoke \
+        va-up va-up-ui va-rag-up va-down va-smoke \
         va-eval-ingest va-eval-review va-eval-pii-check va-eval-data
 
 setup:
@@ -97,6 +97,10 @@ va-up:
 va-up-ui:
 	$(COMPOSE) up --build frontend billy-mcp
 
+# RAG service only: va-support-rag + postgres
+va-rag-up:
+	$(COMPOSE) up --build va-support-rag postgres
+
 va-down:
 	$(COMPOSE) down
 
@@ -105,6 +109,8 @@ va-smoke:
 	@curl -sf http://localhost:3000/health || echo "FAIL :3000"
 	@echo "--- billy-mcp ---"
 	@curl -sf http://localhost:8766/docs > /dev/null && echo "OK :8766" || echo "FAIL :8766"
+	@echo "--- va-support-rag ---"
+	@curl -sf http://localhost:8002/health || echo "FAIL :8002"
 	@echo "--- va-gateway-adk ---"
 	@curl -sf http://localhost:8000/health || echo "FAIL :8000"
 	@echo "--- va-gateway-lg ---"

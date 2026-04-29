@@ -23,8 +23,9 @@ data/
 # Models
 models/
 
-# Notebooks with output
+# Notebooks with output (Jupyter .ipynb and checkpoint dirs)
 notebooks/
+!notebooks/*.py
 
 # Chainlit
 .chainlit/
@@ -55,6 +56,10 @@ logs/
 .claude/settings.local.json
 .claude/sessions/
 
+# Plans and reviews are local-only — only research/ and tooling/ are committed
+.claude/docs/plans/
+.claude/docs/reviews/
+
 # Docs (phase artifacts — except .claude/docs which is version-controlled)
 docs/
 !.claude/docs/
@@ -81,6 +86,9 @@ docs/
 
 # DeepEval cache
 .deepeval/
+
+# GDPR review working files — contain PII snippets, never commit
+va-langgraph/eval/ingest/gdpr_findings*.json
 
 # SQLite WAL journals
 *.db-shm

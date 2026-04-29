@@ -1,7 +1,7 @@
 [project]
-name = "billy-va"
+name = "playground"
 version = "0.1.0"
-description = "Billy virtual assistant — Google ADK and LangGraph implementations"
+description = "Billy VA — Google ADK and LangGraph implementations"
 requires-python = ">=3.12"
 dependencies = []
 
@@ -9,9 +9,19 @@ dependencies = []
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.uv.workspace]
+members = [
+    "va-langgraph",
+    "va-google-adk",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
+
+[tool.ruff.lint]
+# E402 fires on imports after load_dotenv() in entrypoint files — legitimate pattern
+per-file-ignores = { "**/gateway/main.py" = ["E402"], "**/app/main*.py" = ["E402"], "**/containers/*/server.py" = ["E402"] }

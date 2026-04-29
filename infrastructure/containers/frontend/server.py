@@ -10,7 +10,6 @@ import os
 import pathlib
 import re
 import sys
-import time
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -242,7 +241,9 @@ async def chat(agent_name: str, req: ChatRequest):
                         calls = [
                             {
                                 "name": p.function_call.name,
-                                "args": _safe_serialize(dict(p.function_call.args or {})),
+                                "args": _safe_serialize(
+                                    dict(p.function_call.args or {})
+                                ),
                             }
                             for p in event.content.parts
                             if p.function_call
@@ -250,7 +251,9 @@ async def chat(agent_name: str, req: ChatRequest):
                         responses = [
                             {
                                 "name": p.function_response.name,
-                                "response": _safe_serialize(p.function_response.response),
+                                "response": _safe_serialize(
+                                    p.function_response.response
+                                ),
                             }
                             for p in event.content.parts
                             if p.function_response
@@ -379,7 +382,9 @@ async def live_chat(
                         calls = [
                             {
                                 "name": p.function_call.name,
-                                "args": _safe_serialize(dict(p.function_call.args or {})),
+                                "args": _safe_serialize(
+                                    dict(p.function_call.args or {})
+                                ),
                             }
                             for p in event.content.parts
                             if p.function_call
@@ -387,7 +392,9 @@ async def live_chat(
                         responses = [
                             {
                                 "name": p.function_response.name,
-                                "response": _safe_serialize(p.function_response.response),
+                                "response": _safe_serialize(
+                                    p.function_response.response
+                                ),
                             }
                             for p in event.content.parts
                             if p.function_response
@@ -398,7 +405,9 @@ async def live_chat(
                             )
                         if responses:
                             await websocket.send_text(
-                                json.dumps({"type": "tool_responses", "responses": responses})
+                                json.dumps(
+                                    {"type": "tool_responses", "responses": responses}
+                                )
                             )
                     for part in event.content.parts:
                         if part.text:
