@@ -22,7 +22,7 @@ _HC_RAG_URL = os.getenv("HC_RAG_AGENT_URL", "http://localhost:8002")
 
 
 async def search_knowledge(query: str, tool_context: Any = None) -> str:
-    """Search the Billy help documentation for an answer to the user's question."""
+    """Search the Billy help documentation — returns docs + confidence for agent to synthesize answer."""
     thread_id = "adk-support"
     try:
         if tool_context is not None:
@@ -31,11 +31,32 @@ async def search_knowledge(query: str, tool_context: Any = None) -> str:
         pass
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(
-            f"{_HC_RAG_URL}/api/v1/chat",
+            f"{_HC_RAG_URL}/api/v1/retrieval",
             json={"thread_id": thread_id, "query": query},
         )
         r.raise_for_status()
-    return r.json().get("answer") or ""
+
+    result = r.json()
+    documents = result.get("documents") or []
+    confidence = result.get("confidence_score", 0.0)
+    escalated = result.get("escalated", False)
+
+    if escalated:
+        return f"[No docs found with confidence. Confidence: {confidence}. Consider escalating to support.]"
+
+    if not documents:
+        return "[No relevant documentation found.]"
+
+    doc_summary = "Found relevant documentation:\n"
+    for i, doc in enumerate(documents[:5], 1):
+        chunk = doc.get("chunk", {})
+        text = chunk.get("text", "")[:300]
+        metadata = chunk.get("metadata", {})
+        url = metadata.get("url", "")
+        doc_summary += f"\n{i}. {text}...\n   Source: {url}"
+
+    doc_summary += f"\n\nConfidence: {confidence:.2f}"
+    return doc_summary
 
 
 support_agent = Agent(
