@@ -35,8 +35,13 @@ How the project's dev tooling is configured.
 
 ---
 
-## plans/ and research/
+## What is and isn't tracked in git
 
-Active and recent planning artifacts. Plans are implementation-ready specs; research docs
-are decision support. See the folder contents directly — these evolve with active work and
-aren't indexed here.
+| Directory | Tracked | Notes |
+|-----------|---------|-------|
+| `research/` | ✅ yes | Permanent knowledge base — architecture decisions, evaluated patterns |
+| `tooling/` | ✅ yes | Curated reference for dev tooling |
+| `plans/` | ❌ no (gitignored) | Local-only implementation specs — delete after execution |
+| `reviews/` | ❌ no (gitignored) | Local-only code review artifacts — ephemeral |
+
+Active plans live in `plans/` (local only). When a plan is complete, promote the key decisions into a `research/` doc and delete the plan file.
