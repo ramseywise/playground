@@ -1,6 +1,6 @@
 .PHONY: setup lint typecheck test test-librarian test-core test-eval eval-unit eval-regression eval-capability eval-compare eval-experiment \
         va-up va-up-ui va-rag-up va-down va-smoke \
-        va-eval-ingest va-eval-review va-eval-pii-check va-eval-data
+        va-eval-ingest va-eval-review va-eval-pii-check va-eval-data va-eval-baseline
 
 setup:
 	bash setup.sh
@@ -84,6 +84,12 @@ va-eval-data:
 	$(MAKE) va-eval-ingest
 	$(MAKE) va-eval-review
 	$(MAKE) va-eval-pii-check
+
+# Baseline eval: run 278 Clara tickets against all 3 VA services
+# Requires all services running: make va-up
+va-eval-baseline:
+	mkdir -p results
+	cd va-eval-base && uv run python -m cli --output ../results/baseline-$(shell date +%s).json
 
 # ── VA agents (docker compose) ────────────────────────────────────────────────
 
