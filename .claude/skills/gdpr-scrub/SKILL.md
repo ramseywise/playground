@@ -1,94 +1,110 @@
 ---
 name: gdpr-scrub
-description: GDPR/PII compliance process for ingesting real customer service tickets into eval fixtures. Covers German-language sevdesk tickets: regex pre-pass, LLM review pass, placeholder convention, and commit checklist. Invoke before committing any fixture derived from real user data.
+description: GDPR/PII compliance process for ingesting real customer service tickets into eval fixtures. Covers German/Austrian-language sevdesk tickets: regex pre-pass, post-scrub quality review, placeholder convention, and commit checklist. Invoke AFTER the ingest script has run — never on raw ticket data.
 ---
 
 # GDPR Scrub: Eval Data Ingestion
 
 Use when ingesting real customer conversation data into the eval fixture pipeline. The goal is to remove all personal identifiers while preserving the semantic content needed to test the agent.
 
+> **GDPR compliance gate:** This skill operates on *post-regex* output only. Never invoke it on raw or unprocessed ticket data. Sending real PII to any external LLM API (including this one) before deterministic scrubbing is a GDPR violation — there is no legal basis for doing so without a signed Data Processing Agreement and a documented legitimate interest assessment.
+
 ---
 
 ## Scope
 
 Currently applies to:
-- `help-support-rag-agent/data/single_engagement_tickets.csv` → Billy VA eval fixtures
+- `help-support-rag-agent/data/single_engagement_tickets.csv` → Billy VA eval fixtures at `va-langgraph/tests/evalsuite/fixtures/sevdesk_tickets.json`
 - Any future import of real CS ticket data
 
 ---
 
-## Step 1: Run the Ingestion Script (deterministic regex pass)
+## Step 1: Run the Ingestion Script (deterministic regex pass — no LLM)
+
+Run this first, before any LLM is involved.
 
 ```bash
-cd va-langgraph
-uv run python eval/ingest/sevdesk_ingest.py \
-  --output tests/evalsuite/fixtures/sevdesk_tickets.json \
-  --n 50
+make va-eval-ingest
+# or directly:
+cd va-langgraph && uv run python eval/ingest/sevdesk_ingest.py
 ```
 
 The script automatically handles:
-- Email reply chain stripping (`Am ... schrieb`, `Von:`, `From:`, `-----Original`, etc.)
+- Email reply chain stripping (German: `Am ... schrieb`, `schrieb am`, `Von:`, `-----` separators)
+- Angle-bracket URLs from email clients (`<https://...>`)
+- Agent signature blocks (`Viele Grüße`, `Mit freundlichen Grüßen`, `Dein [Name]`)
+- Sevdesk ticket boilerplate footer (`Deine Ticketnummer:`)
+- TICAT classification notes leaked into CONTENT field
 - Email addresses → `[EMAIL]`
-- IBAN numbers → `[IBAN]`
-- German phone numbers (`+49` / `0` prefix) → `[PHONE]`
-- German postal code + city patterns → `[LOCATION]`
+- German/Austrian phone numbers (`+49`, `+43`, `T +43`, `0` prefix) → `[PHONE]`
+- IBANs (DE + 20 digits) → `[IBAN]`
+- German/Austrian postal code + city (5-digit DE, 4-digit AT) → `[LOCATION]`
 - Salutation names (`Hallo Nicole,` → `Hallo [NAME],`)
+- `Herr/Frau + Name` in body text → `Herr/Frau [NAME]`
+- Street addresses (Musterstraße 12, Hauptstr. 5a, Am Nelkenberg 13) → `[ADDRESS]`
+- Ticket/account refs (7+ digit IDs, `Kundennummer \d{6,}`, `Rechnung Nr. XXXXX`) → `[REF]`
+- Business registration IDs (UID, ATU, USt-IdNr, FN, HRA, HRB) → `[BIZ-ID]`
 - Skips subscription-cancellation tickets (sevdesk-meta, not Billy-relevant)
 
 ---
 
-## Step 2: LLM Review Pass
+## Step 2: Post-Scrub Quality Review (Claude review of already-scrubbed output)
 
-Run the review script — it batches all fixtures through Haiku and outputs structured findings.
+**Only run this after Step 1 is complete.** At this point the data contains placeholders, not real PII. The goal here is quality assurance — verify placeholders are correct, check for structural gaps the regex is known to miss, and confirm no obvious identifiers slipped through.
 
-```bash
-cd va-langgraph
+Read the post-regex fixtures and check for the following known regex gaps:
 
-# Calibration run first (14 fixtures, < $0.01) — review prompt before full batch
-uv run python eval/ingest/gdpr_review.py --sample 14
-
-# Full batch once prompt looks good
-uv run python eval/ingest/gdpr_review.py --findings eval/ingest/gdpr_findings.json
-```
-
-Review the findings, apply fixes manually to `sevdesk_tickets.json`, then re-run the
-pre-commit grep check in Step 4.
-
-The script uses `claude-haiku-4-5-20251001` by default (~$0.03 for 280 fixtures).
-Pass `--model claude-sonnet-4-6` for a more thorough pass on high-confidence findings.
-
-Common residual PII cases in German CS text that the regex misses:
-
-**Names in body text (not salutations)**
-- "Frau Müller hat angerufen" → "Frau [NAME] hat angerufen"
-- "Herr Schmidt aus Berlin" → "Herr [NAME] aus [LOCATION]"
-- Full names in email signatures → remove the signature block entirely
+**Names not following Herr/Frau or a salutation**
+- Full names mid-sentence: "Klaus Meier hat angerufen" → `[NAME]`
+- Slavic/compound names where regex replaces the stem but leaves a suffix: `[NAME]ć` → `[NAME]`
+- ALL-CAPS hyphenated names: `MARKUS-STRENZL` (not matched by `[A-ZÄÖÜ][a-z...]+` pattern)
 
 **Personal company names**
-- "Müller GmbH", "Becker & Partner Steuerberatung" → `[COMPANY]`
-- Generic forms ("GmbH", "UG", "AG" alone) are fine — leave them
+- `Müller GmbH`, `Becker & Partner Steuerberatung`, `Fa. Erich Wutzig` → `[COMPANY]`
+- Generic legal forms alone (`GmbH`, `UG`, `AG`) are fine — leave them
 
-**Street addresses**
-- "Musterstraße 12, 12345 Berlin" → `[ADDRESS]`
+**Personal URLs**
+- Individual's own website: `www.erikbender.de` → `[URL]`
+- Personal social media pages: `www.facebook.com/engelhardt.atelier` → `[URL]`
+- Screen recording links with session IDs: `https://demodesk.com/recordings/abc123` → `[URL]`
 
-**Account/customer IDs that re-identify**
-- Long numeric IDs appearing alongside other context → `[REF-XXXX]` (keep first 4 digits for category context)
+**Short account/invoice refs**
+- RE-prefix invoice numbers: `RE-1013` → `RE-[REF]`
+- 5-6 digit IDs without keyword context but clearly an account number
 
-**Agent signatures in ENGAGEMENT_MESSAGE**
-- "Viele Grüße, Marzena / Customer Success Manager" → strip from `expected_answer`; keep the substantive reply text only
+**Known false positives — do NOT flag**
+- `Hallo [NAME] [NAME],` — first + last name both correctly replaced by regex
+- `liebe [NAME]\n[NAME]` — salutation + closing signature, both already replaced
+- Two adjacent `[NAME]` tokens anywhere — means both are scrubbed
+- Public GitHub repository URLs — shared technical references, not personal PII
+- Known SaaS domains: sevdesk.de, stripe.com, help.sevdesk.de, etc.
+
+Apply fixes directly to `va-langgraph/tests/evalsuite/fixtures/sevdesk_tickets.json`.
+
+> **Note on `gdpr_review.py`:** The repo contains `eval/ingest/gdpr_review.py`, which batches fixtures through Gemini 2.5 Flash. Do not use this script unless a DPA covering EU customer data is in place with Google. Even post-regex output may contain residual PII that regex missed — that is the whole point of the review pass, and sending it externally without a DPA is non-compliant. Prefer this Claude-based review (Step 2 above) or a local model (Ollama) as the default path.
 
 ---
 
-## Step 3: Domain Adaptation (deferred — first batch ships as `sevdesk_raw`)
+## Step 3: Pre-Commit PII Check
 
-First 50 tickets are committed with `"source": "sevdesk_raw"` — sevdesk product refs intact.
-This lets us validate the harness before the adaptation pass.
+```bash
+make va-eval-pii-check
+# or:
+cd va-langgraph && uv run python eval/ingest/pii_check.py
+```
 
-When adapting a batch:
+Checks every fixture for: `@` characters, `DE\d{20}` IBANs, and 7+ digit numbers (with UUID
+and URL stripping to avoid false positives from error IDs). Must pass before `git add`.
+
+---
+
+## Step 4: Domain Adaptation (deferred — first batch ships as `sevdesk_raw`)
+
+Current fixtures use `"source": "sevdesk_raw"` — sevdesk product refs intact.
+When adapting a batch for Billy context:
 - `sevdesk` → `Billy`
-- `DATEV-Export` → `CSV-Export` or remove
 - `Hilfe.sevdesk.de` URLs → remove or replace with `[HELP_URL]`
-- "in sevdesk unter Einstellungen" → "in Billy under Settings"
+- `"in sevdesk unter Einstellungen"` → `"in Billy unter Einstellungen"`
 - Update `"source"` → `"sevdesk_adapted"`
 
 ---
@@ -102,54 +118,36 @@ When adapting a batch:
 | Personal name | `[NAME]` |
 | Personal company name | `[COMPANY]` |
 | Street address | `[ADDRESS]` |
-| German postal area | `[LOCATION]` |
+| Postal area | `[LOCATION]` |
 | IBAN | `[IBAN]` |
-| Ticket / account reference | `[REF-XXXX]` |
+| Ticket / account / invoice reference | `[REF]` |
+| Business registration ID | `[BIZ-ID]` |
+| Personal URL / recording link | `[URL]` |
 
 ---
 
-## Pre-Commit Checklist
+## Full Pipeline
 
-Run this before `git add` on any fixture file derived from real data:
-
-- [ ] No `@` character in any `query` or `expected_answer` value
-- [ ] No raw phone numbers (7+ consecutive digits not part of a known ID format)
-- [ ] No German postal codes (`\d{5}`) adjacent to city names
-- [ ] No `Hallo [FirstName],` / `Liebe[r] [FirstName]` with real names
-- [ ] No `DE\d{20}` IBAN patterns
-- [ ] No personal-surname company names
-- [ ] No agent full names in `expected_answer` (signature blocks stripped)
-- [ ] `"source"` field present on every record (`sevdesk_raw` or `sevdesk_adapted`)
-- [ ] Fixture file is in `.gitignore` or confirmed scrubbed before pushing
-
-Quick grep to verify:
 ```bash
-python3 -c "
-import json, re, sys
-data = json.load(open('tests/evalsuite/fixtures/sevdesk_tickets.json'))
-issues = []
-for r in data:
-    for field in ('query', 'expected_answer'):
-        v = r.get(field, '') or ''
-        if '@' in v:           issues.append(f'{r[\"id\"]}.{field}: contains @')
-        if re.search(r'\d{7,}', v): issues.append(f'{r[\"id\"]}.{field}: possible phone/ID')
-        if re.search(r'DE\d{20}', v): issues.append(f'{r[\"id\"]}.{field}: possible IBAN')
-if issues:
-    print('PII CHECK FAILED:')
-    for i in issues: print(' ', i)
-    sys.exit(1)
-else:
-    print('PII check passed.')
-"
+# Step 1 — deterministic, no LLM
+make va-eval-ingest
+
+# Step 2 — invoke this skill (Claude reviews post-regex output)
+# Run /gdpr-scrub after ingest completes
+
+# Step 3 — automated grep check
+make va-eval-pii-check
 ```
 
 ---
 
 ## What NOT to scrub
 
-- Generic business terms: "GmbH", "UG", "AG" used alone
-- Product names: "sevdesk", "DATEV", "Billy", "Stripe"
+- Generic business terms: `GmbH`, `UG`, `AG` used alone
+- Product names: `sevdesk`, `DATEV`, `Billy`, `Stripe`, `FinAPI`, `HubSpot`, `Revolut`
 - Category and intent labels
-- Generic greetings: "Hallo", "Sehr geehrte Damen und Herren"
+- Generic greetings: `Hallo`, `Sehr geehrte Damen und Herren`
 - CES ratings, timestamps, category strings
-- Agent role titles without names: "Customer Success Manager", "Support Team"
+- Agent role titles without names: `Customer Success Manager`, `Support Team`, `Ihr Team`
+- UUID error IDs: `Fehler-ID: a1c16c1e-92e9-43f0-...`
+- Public GitHub URLs shared by support agents

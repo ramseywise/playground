@@ -29,7 +29,7 @@ For each step in the plan:
    - Deviations: none | <description>
    ```
 6. **Mark done**: `Step N ✓ DONE — <date>` in plan file
-7. **Report**: step completion summary, suggest `/compact-session`, wait for user confirmation
+7. **Report**: step completion summary. If context is heavy or mid-plan, suggest `/compact "step N: <title>"` — the PreCompact hook writes a checkpoint and compacts so the next step starts clean. Wait for user confirmation.
 
 ## Hard stops — do not proceed if:
 
@@ -43,5 +43,8 @@ Flag any of these and wait for guidance.
 ## Deviations
 
 Any departure from the plan — even small — should be recorded in CHANGELOG.md when that artifact is part of the workflow: what the plan said, what was done, why. A clean execution has zero deviations. Deviations are not failures — hiding them is.
+
+**Phase checkpoint**: when all steps are done, call `/compact "phase: execute → review"` before switching.
+The PreCompact hook writes a final execute-phase snapshot and compacts so `/code-review` starts with clean context.
 
 **Next step**: `/code-review <name>` after all steps are complete.

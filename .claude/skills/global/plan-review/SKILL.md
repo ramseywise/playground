@@ -73,6 +73,7 @@ Check the active plan against its research:
 Output: `Verdict: [ ] Execute-ready | [ ] Needs iteration — [N] blockers`
 Flag issues as **BLOCKER** / **QUESTION** / **NOTE**.
 
-If execute-ready: suggest `/compact-session` then `/execute-plan`.
+If execute-ready: call `/compact "phase: plan → execute"` to snapshot and compact before implementing.
+The PreCompact hook writes a checkpoint to `~/.claude/sessions/` so the execute phase starts with clean context.
 
 **Next step**: `/plan-review review` to verify, then `/execute-plan` to implement.

@@ -7,12 +7,43 @@ description: >
   triggers when working on: component state with hooks, structured agent output schemas,
   FunctionTool definitions, NDJSON streaming, Tailwind dark mode, forwardRef forms, or
   postMessage iframe communication. Use for any work in ts_google_adk/ or librarian/app/ui/.
+  Triggers on: "add a UI component", "new agent tool", "new route", "output schema change",
+  "streaming endpoint", "Billy API call", "dark mode", "iframe navigation".
 ---
 
 # Next.js + React + ADK JS
 
 Rules for the `ts_google_adk` application: Next.js 16 App Router, React 19, TypeScript 5 strict,
 Tailwind CSS 4, Zod 4, Google ADK JS (`@google/adk`), MikroORM + PostgreSQL.
+
+## Before You Build
+
+Answer these before writing component or API code. A short design note here prevents schema breakage and avoids client/server boundary mistakes.
+
+**Routing & layout**
+- New page/route, or extending an existing one? Does it affect `layout.tsx`? (Layout changes hit all child routes.)
+- Where does the `"use client"` boundary go? Push it as far down the tree as possible — never on layouts or pages that can stay server components.
+
+**Data & streaming**
+- Fetched server-side (RSC) or client-side (hook in `src/app/types/`)?
+- Does it stream? → NDJSON via `/api/...` route + `use-chat.ts` pattern. Or SSE? (Use NDJSON — it's the project standard.)
+- What are the loading and error states? Are they already handled in the hook, or does this need new state?
+
+**Agent output schema** (`src/agents/accounting-schema.ts`)
+- Does this add a new UI element? → New **optional** field on `accountingOutputSchema`. Never add required fields — they break existing sessions.
+- Does it need a new `FunctionTool`? → One file per domain in `src/agents/tools/`. Add tool → register in agent → update system prompt → update schema.
+- Does the schema change need an end-to-end test? (LLM must emit valid JSON matching the new shape.)
+
+**Component design**
+- New hook slice in `src/app/types/`, or composing existing ones? (No prop drilling past 2 levels.)
+- Does it need an imperative ref? (Table row → form pre-fill → `forwardRef` pattern.)
+- Where does it render in `AssistantMessage`? Conditional on the new schema field?
+
+**Billy API**
+- What endpoints does this use? Does `billyRequest<T>()` support the needed options?
+- Any sideloading required? (`include: "invoice.lines,invoice.contact"`)
+
+---
 
 ## File layout
 

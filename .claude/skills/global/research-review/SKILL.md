@@ -59,4 +59,7 @@ One paragraph — what the research suggests, without prescribing implementation
 
 Do not plan. Do not implement.
 
+**Phase checkpoint**: when research is approved, call `/compact "phase: research → plan"` before switching.
+The PreCompact hook writes a snapshot to `~/.claude/sessions/` with the phase label and compacts context so `/plan-review` starts fresh.
+
 **Next step**: `/plan-review <name>` when research is reviewed and approved.

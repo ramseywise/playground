@@ -11,6 +11,26 @@ Preserve all in-flight work before compacting or ending a session. Detect mode f
 
 ---
 
+## 0. Classify this session
+
+Before writing the note, determine these three fields from the conversation:
+
+- **work_type** (pick ONE): `debug` | `feature` | `refactor` | `review` | `planning` | `research` | `config` | `chat`
+  - `debug` — fixing errors, tracing failures, resolving bugs
+  - `feature` — implementing new functionality
+  - `refactor` — restructuring or reorganizing existing code
+  - `review` — code review, PR review, security audit
+  - `planning` — plans, roadmaps, epics, task breakdown
+  - `research` — analysis, comparison, exploration, Q&A
+  - `config` — setup, environment, CI/CD, infra, tooling
+  - `chat` — discussion with no concrete code/doc output
+
+- **output_type** (pick ONE): `pr` | `plan_doc` | `code_change` | `decision` | `wiki_page` | `analysis` | `config_change` | `none`
+
+- **key_output** — one short phrase naming the specific artifact: a file path, PR title, or decision made (or `none`)
+
+---
+
 ## 1. Save active artifacts
 
 For each plan, research, or review doc discussed or edited this session:
@@ -22,8 +42,10 @@ For each plan, research, or review doc discussed or edited this session:
 
 ## 2. Write session note
 
-Write `.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Use current date/time for the stem.
+Write `~/.claude/sessions/{YYYY-MM-DD}T{HHMM}.md`. Use current date/time for the stem.
 Append `-checkpoint` to the stem if mid-session (e.g. `2026-04-11T1430-checkpoint.md`).
+
+> **Centralized**: always write to `~/.claude/sessions/`, never project-relative `.claude/sessions/`. This is where the PreCompact hook and cartographer read from.
 
 ```markdown
 ---
@@ -39,6 +61,9 @@ compacted: true|false
 skills_invoked: []
 skill_candidates: 0
 friction_count: 0
+work_type: {work_type from step 0}
+output_type: {output_type from step 0}
+key_output: {key_output from step 0}
 ---
 
 # Session — {YYYY-MM-DD}T{HHMM}

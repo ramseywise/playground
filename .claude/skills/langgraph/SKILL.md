@@ -1,11 +1,11 @@
 ---
 name: langgraph
 description: >
-  Use this skill when building, extending, or reviewing LangGraph agents, pipelines,
-  or multi-agent systems. Covers state design, node/edge patterns, HITL, checkpointing,
-  streaming, subgraphs, and production hardening. Triggers on: building a new graph,
-  adding nodes or edges, wiring HITL confirm gates, adding a checkpointer, debugging
-  state mutation issues, or standing up a new FastAPI + LangGraph service.
+  VA project-specific LangGraph context — extends global LangGraph patterns with
+  this project's graph topology, AgentState schema, MCP backends, and test conventions.
+  Use for any work in va-langgraph/: adding a domain subgraph, new node, routing change,
+  checkpointer config, HITL gate, streaming, or FastAPI gateway work. Also triggers when
+  wiring Billy MCP tools, Clara MCP tools, or adding a new domain to the intent router.
 wiki:
   - wiki/concepts/langgraph-crag-pipeline.md
   - wiki/concepts/langgraph-advanced-patterns.md
@@ -14,10 +14,75 @@ wiki:
   - wiki/concepts/agent-memory-types.md
   - wiki/concepts/hitl-annotation-pipeline.md
   - wiki/concepts/framework-selection.md
-updated: 2026-04-25
+updated: 2026-04-29
 ---
 
-# LangGraph
+# LangGraph — Billy VA
+
+## Project context
+
+**Stack:** `va-langgraph/` — LangGraph StateGraph, Gemini 2.5 Flash, Postgres checkpointing, FastAPI gateway.
+
+**MCP backends:**
+- `mcp_servers/billy/` — Billy billing API (invoices, quotes, customers, products, banking, expenses)
+- `mcp_servers/clara/` — sevdesk CRM backend (contacts, accounting, email, invitations)
+
+**Graph topology:**
+```
+START → guardrail → analyze → [domain subgraph] → format → END
+                 ↘ blocked → END
+                              ↘ direct → END   (out-of-domain / low confidence)
+                              ↘ memory → END   (preference save)
+                              ↘ escalation → END
+```
+
+**Domain subgraphs** (each in `graph/subgraphs/domains.py`):
+`invoice`, `quote`, `customer`, `product`, `email`, `invitation`, `insights`, `expense`, `banking`, `accounting`, `support`
+
+**`AgentState` fields** (`graph/state.py`):
+```python
+messages: Annotated[list[BaseMessage], add_messages]
+session_id: str
+user_id: str
+page_url: str | None
+user_preferences: list[dict[str, str]]   # loaded at turn start via memory_load
+intent: str | None
+routing_confidence: float
+tool_results: list[dict[str, Any]]       # accumulated across tool calls
+response: dict | None                    # serialised AssistantResponse
+blocked: bool
+block_reason: str | None
+```
+
+**Checkpointer:** `MemorySaver` in dev/tests; `AsyncPostgresSaver` for production Fargate.
+
+---
+
+## Before You Build
+
+Answer these before touching the graph. Write answers as a short design note — they become the PR description.
+
+**Routing**
+- Which intent label routes to this feature? Does it need a new entry in `_DOMAIN_NODES`?
+- Is confidence threshold handling correct? (Below `_LOW_CONF_THRESHOLD` → `direct`, not your node.)
+
+**State**
+- What new fields does this add to `AgentState`? Type, reducer, serialisable for Postgres checkpointer?
+- Are existing fields being repurposed? (Add a new field instead — repurposing breaks replay.)
+
+**MCP tools**
+- Does this use Billy tools, Clara tools, or both? Which specific tool functions?
+- Are the MCP tool schemas (Pydantic) already defined, or do they need adding?
+
+**Topology**
+- New domain subgraph (in `domains.py`) or extending an existing one?
+- Where does it join/leave the main flow? Update `_DOMAIN_NODES` and `_route_intent` accordingly.
+
+**Testing**
+- New domain → new fixtures in `tests/evalsuite/fixtures/sevdesk_tickets.json`?
+- Can the subgraph be unit-tested with a mock `AgentState` dict before wiring into the graph?
+
+---
 
 ## Source of truth
 

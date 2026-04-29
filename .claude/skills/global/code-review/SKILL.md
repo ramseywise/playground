@@ -69,6 +69,9 @@ After writing review.md, if verdict is "Needs changes" or "Approved with minor f
 
 Each blocking finding must have a Status of `open` until resolved. Update the table (do not create a new one) on subsequent review passes.
 
-## If approved: PR description
+## If approved: phase checkpoint + PR description
 
-Title under 60 chars, imperative mood. Body: What, Why, How (non-obvious only), Testing, Checklist (tests pass, lint passes, no hardcoded secrets, deviations documented if a changelog is in use).
+Call `/compact "phase: review → done"` to snapshot the review phase before opening the PR.
+The PreCompact hook writes the checkpoint to `~/.claude/sessions/`, then context is compacted.
+
+PR description — title under 60 chars, imperative mood. Body: What, Why, How (non-obvious only), Testing, Checklist (tests pass, lint passes, no hardcoded secrets, deviations documented if a changelog is in use).

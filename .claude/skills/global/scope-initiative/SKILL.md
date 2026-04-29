@@ -31,3 +31,9 @@ Scope the following initiative into a Linear-ready backlog: `$ARGUMENTS`
 - Every task traces to at least one failure mode
 - T-shirt sizes: S (<1wk, few unknowns), M (1-2wk, some unknowns), L (2-4wk, significant unknowns), XL (>sprint, major decisions)
 - Day-one decisions (embedding model, schema, vector store) appear first in critical path
+
+---
+
+**Upstream**: `/design-sprint` if still ideating what to build — run that first to get named initiatives and workstream clusters.
+
+**Next step**: `/doc-to-linear-tickets` to push the task backlog (Section 6 Linear hierarchy) into actual Linear issues once the scope is reviewed and agreed.

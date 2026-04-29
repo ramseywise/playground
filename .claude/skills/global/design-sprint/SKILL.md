@@ -29,3 +29,7 @@ Run a full design sprint using IDEO / Stanford d.school HMW methodology for: `$A
 - Use real numbers, benchmarks, and named tools where they exist
 - Cite analogous systems or prior art
 - If multilingual requirements exist, call them out as day-one decisions
+
+---
+
+**Next step**: `/scope-initiative <initiative-name>` for each named initiative once the workstream list is agreed. `design-sprint` answers *what* to build; `scope-initiative` answers *how* — failure modes, backward mapping, task backlog, Linear hierarchy.
